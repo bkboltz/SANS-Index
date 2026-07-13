@@ -1,0 +1,8 @@
+﻿node_modules/
+sans_index.json
+backups/
+.DS_Store
+Thumbs.db
+npm-debug.log*
+.gemini/
+.agents/

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SANS Study Indexer</title>
+  <!-- Google Fonts: Inter and Roboto Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- SANS Course Catalog Data -->
+  <script src="sans_courses.js"></script>
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-theme">
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar no-print">
+      <div class="sidebar-header">
+        <div class="logo">
+          <i data-lucide="book-marked" class="logo-icon"></i>
+          <span>SANS Indexer</span>
+        </div>
+        <div class="app-subtitle">Active Study Partner</div>
+      </div>
+
+
+
+      <!-- Course Selection Segment -->
+      <div class="sidebar-section">
+        <div class="section-title">
+          <span>Active Course</span>
+          <button id="add-course-btn" class="icon-btn-small" title="Add Course">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+        <div class="select-container">
+          <select id="course-select">
+            <!-- Populated by JavaScript -->
+          </select>
+          <div class="course-actions">
+            <button id="edit-course-btn" class="icon-btn-text" title="Rename Course">
+              <i data-lucide="edit-3"></i>
+            </button>
+            <button id="delete-course-btn" class="icon-btn-text danger" title="Delete Course">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Book Manager Segment -->
+      <div class="sidebar-section">
+        <div class="section-title">
+          <span>Course Books</span>
+          <button id="add-book-btn" class="icon-btn-small" title="Add Book">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+        <div id="books-list" class="books-list">
+          <!-- Populated by JavaScript, Draggable -->
+        </div>
+      </div>
+
+      <!-- Data Portability Segment -->
+      <div class="sidebar-section backup-restore">
+        <div class="section-title">Data & Storage</div>
+        <div class="backup-actions">
+          <button id="export-csv-btn" class="btn btn-secondary btn-full">
+            <i data-lucide="download"></i>
+            <span>Export to CSV</span>
+          </button>
+          <button id="export-json-btn" class="btn btn-secondary btn-full">
+            <i data-lucide="archive"></i>
+            <span>Export Backup</span>
+          </button>
+          <button id="import-btn" class="btn btn-secondary btn-full">
+            <i data-lucide="upload"></i>
+            <span>Import Data</span>
+          </button>
+        </div>
+        <div class="backup-info">
+          <div class="info-row">
+            <span>Disk file:</span>
+            <span class="highlight">sans_index.json</span>
+          </div>
+          <div class="info-row">
+            <span>Last Save:</span>
+            <span id="last-save-time">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="sidebar-footer">
+        <div class="keyboard-tip">
+          <div class="tip-title">Keyboard Shortcuts:</div>
+          <div class="shortcut-item"><kbd>Enter</kbd> <span>Save Entry (from form)</span></div>
+          <div class="shortcut-item"><kbd>Alt + N</kbd> <span>Focus Topic</span></div>
+          <div class="shortcut-item"><kbd>Esc</kbd> <span>Clear input / Edit</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Content -->
+    <main id="main-workspace" class="main-content">
+      
+      <!-- Collapsible Sidebar Toggle Button -->
+      <button id="sidebar-toggle-btn" class="sidebar-toggle-btn no-print" title="Toggle Sidebar">
+        <i data-lucide="chevron-left"></i>
+      </button>
+      
+      <!-- Top Stats & Print Actions (Hidden in Quiz mode) -->
+      <header class="main-header no-print no-print-in-quiz">
+        <div class="header-intro">
+          <h1 id="current-course-title">SEC504: Hacker Tools & Techniques</h1>
+          <p class="summary-text">Alphabetize your index topics for rapid lookups during your open-book exam.</p>
+        </div>
+        <div class="header-actions">
+          <button id="print-index-btn" class="btn btn-primary">
+            <i data-lucide="printer"></i>
+            <span>Print Index</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Stats Bar (Hidden in Quiz mode) -->
+      <section class="stats-bar no-print no-print-in-quiz">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total-entries">0</div>
+          <div class="stat-label">Total Index Entries</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-book-count">0</div>
+          <div class="stat-label">Indexed Books</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-last-added">-</div>
+          <div class="stat-label">Last Added Topic</div>
+        </div>
+      </section>
+
+      <!-- Sticky Fast Entry Section (Hidden in Quiz mode) -->
+      <section class="entry-form-container no-print no-print-in-quiz">
+        <h2 class="form-title">
+          <i data-lucide="sparkles" class="title-icon"></i>
+          <span id="form-action-title">Add Index Entry</span>
+        </h2>
+        <form id="entry-form" autocomplete="off">
+          <input type="hidden" id="entry-id-input">
+          
+          <div class="form-grid">
+            <!-- Book Select -->
+            <div class="form-group flex-1">
+              <label for="entry-book-select">Book</label>
+              <select id="entry-book-select" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+
+            <!-- Topic (Autocompleting) -->
+            <div class="form-group flex-2 relative">
+              <label for="entry-topic-input">Topic</label>
+              <input type="text" id="entry-topic-input" placeholder="e.g., DNS Spoofing, Nmap scripts" required>
+              <div id="autocomplete-list" class="autocomplete-items hidden"></div>
+            </div>
+
+            <!-- Pages -->
+            <div class="form-group flex-1">
+              <label for="entry-pages-input">Page(s)</label>
+              <input type="text" id="entry-pages-input" placeholder="e.g., 45, 112" required>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group flex-3">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin-bottom: 6px;">
+                <label for="entry-notes-input" style="margin-bottom: 0;">Notes / Details</label>
+                <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 500;">
+                  Format: **bold**, *italic*, __underline__, ==highlight==
+                </span>
+              </div>
+              <input type="text" id="entry-notes-input" placeholder="Brief hint or reference details (supports markdown formatting)">
+            </div>
+            
+            <!-- Submit/Reset button -->
+            <div class="form-actions-row">
+              <button type="submit" id="save-entry-btn" class="btn btn-accent">
+                <i data-lucide="save"></i>
+                <span>Save</span>
+              </button>
+              <button type="button" id="cancel-edit-btn" class="btn btn-secondary hidden">
+                <span>Cancel</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+
+
+      <!-- Shared Search & Table container -->
+      <div id="shared-table-container">
+        
+        <!-- Search & Filters -->
+        <section class="table-controls-container no-print">
+          <div class="search-wrapper">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="table-search-input" placeholder="Search by topic, notes, or pages...">
+          </div>
+          <div class="filters-wrapper">
+            <select id="filter-book-select">
+              <option value="all">All Books</option>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+        </section>
+
+        <!-- Main Index Data List -->
+        <section class="table-wrapper">
+          <div class="print-header">
+            <h1 id="print-course-title">SEC504: Hacker Tools & Techniques</h1>
+            <div class="print-meta">
+              <span>SANS Exam Index</span>
+              <span id="print-date">Date Printed</span>
+              <span>Total Entries: <span id="print-total-count">0</span></span>
+            </div>
+          </div>
+
+          <div id="index-table-container">
+            <table class="index-table">
+              <thead>
+                <tr>
+                  <th class="col-book sortable" data-sort="book">Book <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                  <th class="col-pages sortable" data-sort="pages">Pages <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                  <th class="col-topic sortable sorted-asc" data-sort="topic">Topic <i class="sort-icon" data-lucide="chevron-up"></i></th>
+                  <th class="col-notes sortable" data-sort="notes">Notes / Reference Details <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                  <th class="col-actions no-print">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="index-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- MODAL DIALOGS -->
+  
+  <!-- Add/Edit Course Modal (Preloaded Autocomplete catalog) -->
+  <dialog id="course-dialog" class="custom-dialog">
+    <div class="dialog-content">
+      <h3 id="course-dialog-title">Manage Course</h3>
+      <form id="course-dialog-form" autocomplete="off">
+        <input type="hidden" id="dialog-course-id">
+        <div class="form-group relative">
+          <label for="dialog-course-name">Course Code & Name</label>
+          <input type="text" id="dialog-course-name" placeholder="Search SANS code or type name (e.g. SEC565, FOR508)" required>
+          <div id="course-autocomplete-list" class="autocomplete-items hidden"></div>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+          <button type="submit" class="btn btn-accent">Save Course</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Add/Edit Book Modal -->
+  <dialog id="book-dialog" class="custom-dialog">
+    <div class="dialog-content">
+      <h3 id="book-dialog-title">Manage Book</h3>
+      <form id="book-dialog-form">
+        <input type="hidden" id="dialog-book-id">
+        <div class="form-group">
+          <label for="dialog-book-name">Book Title/Number</label>
+          <input type="text" id="dialog-book-name" placeholder="e.g., Book 1: Windows Security" required>
+        </div>
+        <div class="form-group">
+          <label for="dialog-book-color">Color Identifier (for Physical Book Bindings)</label>
+          <div class="color-picker-container">
+            <input type="color" id="dialog-book-color" value="#0d9488">
+            <div class="color-presets">
+              <span class="color-preset" style="background-color: #0d9488" data-color="#0d9488"></span>
+              <span class="color-preset" style="background-color: #2563eb" data-color="#2563eb"></span>
+              <span class="color-preset" style="background-color: #7c3aed" data-color="#7c3aed"></span>
+              <span class="color-preset" style="background-color: #db2777" data-color="#db2777"></span>
+              <span class="color-preset" style="background-color: #ea580c" data-color="#ea580c"></span>
+              <span class="color-preset" style="background-color: #16a34a" data-color="#16a34a"></span>
+              <span class="color-preset" style="background-color: #ca8a04" data-color="#ca8a04"></span>
+              <span class="color-preset" style="background-color: #4b5563" data-color="#4b5563"></span>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+          <button type="submit" class="btn btn-accent">Save Book</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Import Modal -->
+  <dialog id="import-dialog" class="custom-dialog">
+    <div class="dialog-content">
+      <h3>Import Index Data</h3>
+      <p class="dialog-text">Importing data will merge or replace your current index. Select a JSON backup or a CSV file formatted with Topic, Notes, Pages, and Book.</p>
+      
+      <div class="import-tabs">
+        <label class="import-tab-btn active" data-tab="tab-json">JSON Backup</label>
+        <label class="import-tab-btn" data-tab="tab-csv">CSV Format</label>
+      </div>
+
+      <div id="tab-json" class="import-tab-content">
+        <div class="form-group">
+          <label for="import-json-file">Select JSON Backup File</label>
+          <input type="file" id="import-json-file" accept=".json">
+        </div>
+      </div>
+
+      <div id="tab-csv" class="import-tab-content hidden">
+        <div class="form-group">
+          <label for="import-csv-file">Select CSV File</label>
+          <input type="file" id="import-csv-file" accept=".csv">
+          <div class="csv-help">
+            Expected headers: <code>Topic</code>, <code>Pages</code>, <code>Notes</code>, <code>Book</code> (optional).
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="confirm-import-btn" class="btn btn-accent">Process Import</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Print Preview Modal -->
+  <dialog id="print-preview-dialog" class="print-preview-modal no-print">
+    <div class="print-preview-modal-header">
+      <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="printer"></i>
+        <span>Print Preview</span>
+      </h3>
+      <div class="print-preview-actions">
+        <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; margin-right: 8px;">
+          <option value="standard">Standard Format (Continuous)</option>
+          <option value="booklet">Booklet Format (Per-Book Booklets + Cover)</option>
+        </select>
+        <button id="print-preview-confirm-btn" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 6px;">
+          <i data-lucide="printer"></i>
+          <span>Print</span>
+        </button>
+        <button type="button" class="btn btn-secondary close-dialog-btn">Close</button>
+      </div>
+    </div>
+    <div class="print-preview-modal-body">
+      <div id="print-preview-page-container" class="print-preview-page-container">
+        <!-- Rendered preview content goes here -->
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Print only container -->
+  <div id="print-only-container" class="print-only"></div>
+
+  <!-- Renderer application logic script load -->
+  <script src="renderer.js"></script>
+</body>
+</html>

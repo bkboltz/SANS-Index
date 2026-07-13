@@ -1,0 +1,21 @@
+{
+  "name": "sans-indexing-app",
+  "version": "1.0.0",
+  "description": "Desktop app to index SANS course books and print highly optimized physical indexes.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-packager . \"SANS Study Indexer\" --overwrite"
+  },
+  "keywords": [
+    "sans",
+    "indexing",
+    "study"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^43.1.0",
+    "electron-packager": "^17.1.2"
+  }
+}
