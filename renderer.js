@@ -77,7 +77,12 @@ const elements = {
   printPreviewPageContainer: document.getElementById('print-preview-page-container'),
   printPreviewConfirmBtn: document.getElementById('print-preview-confirm-btn'),
   printFormatSelect: document.getElementById('print-format-select'),
-  printOnlyContainer: document.getElementById('print-only-container')
+  printOnlyContainer: document.getElementById('print-only-container'),
+
+  // Sidebar To-Do
+  todoInput: document.getElementById('todo-input'),
+  addTodoBtn: document.getElementById('add-todo-btn'),
+  todoList: document.getElementById('todo-list')
 };
 
 // Application State Store
@@ -85,6 +90,7 @@ let state = {
   courses: [],
   books: [],
   entries: [],
+  todos: [],
   currentCourseId: null
 };
 
@@ -108,6 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.courses = loadedData.courses || [];
     state.books = loadedData.books || [];
     state.entries = loadedData.entries || [];
+    state.todos = loadedData.todos || [];
     
     if (state.courses.length > 0) {
       state.currentCourseId = state.courses[0].id;
@@ -142,6 +149,7 @@ function renderAll() {
   renderBooks();
   renderEntries();
   renderStats();
+  renderTodos();
 }
 
 function renderCourses() {
@@ -237,6 +245,70 @@ function renderBooks() {
 
   // Enable HTML5 Drag and Drop reordering
   makeBooksDraggable();
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderTodos() {
+  elements.todoList.innerHTML = '';
+  
+  if (!state.currentCourseId) {
+    elements.todoList.innerHTML = `<li style="color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 8px;">No active course</li>`;
+    return;
+  }
+  
+  const activeTodos = state.todos.filter(todo => todo && todo.courseId === state.currentCourseId);
+  
+  if (activeTodos.length === 0) {
+    elements.todoList.innerHTML = `<li style="color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 8px;">No tasks. Add one above!</li>`;
+    return;
+  }
+  
+  activeTodos.forEach(todo => {
+    const li = document.createElement('li');
+    li.className = 'todo-item';
+    li.innerHTML = `
+      <div class="todo-item-left">
+        <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
+        <span class="todo-text">${escapeHtml(todo.text)}</span>
+      </div>
+      <button class="delete-todo-btn" title="Delete Task">
+        <i data-lucide="x"></i>
+      </button>
+    `;
+    
+    // Bind toggle completed event
+    const checkbox = li.querySelector('.todo-checkbox');
+    checkbox.addEventListener('change', () => {
+      todo.completed = checkbox.checked;
+      saveState();
+    });
+    
+    // Bind delete todo event
+    const deleteBtn = li.querySelector('.delete-todo-btn');
+    deleteBtn.addEventListener('click', () => {
+      state.todos = state.todos.filter(t => t.id !== todo.id);
+      saveState();
+      renderTodos();
+    });
+    
+    elements.todoList.appendChild(li);
+  });
+  
+  // Create icons for the close icons inside list items
+  lucide.createIcons({
+    attrs: { class: 'lucide-icon' },
+    nameAttr: 'data-lucide',
+    nodeList: elements.todoList.querySelectorAll('[data-lucide]')
+  });
 }
 
 function renderEntries() {
@@ -1530,6 +1602,37 @@ function initEventBindings() {
     state.currentCourseId = e.target.value;
     endEditEntry();
     renderAll();
+  });
+  
+  // Add To-Do Item
+  const handleAddTodo = () => {
+    const text = elements.todoInput.value.trim();
+    if (!text) return;
+    if (!state.currentCourseId) {
+      alert("Please select or create a course first!");
+      return;
+    }
+    
+    const newTodo = {
+      id: 'todo-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+      courseId: state.currentCourseId,
+      text: text,
+      completed: false,
+      createdAt: new Date().toISOString()
+    };
+    
+    state.todos.push(newTodo);
+    elements.todoInput.value = '';
+    saveState();
+    renderTodos();
+  };
+  
+  elements.addTodoBtn.addEventListener('click', handleAddTodo);
+  elements.todoInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTodo();
+    }
   });
   
   elements.addCourseBtn.addEventListener('click', () => openCourseDialog());
