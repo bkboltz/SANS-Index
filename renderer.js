@@ -84,7 +84,9 @@ const elements = {
   // Sidebar To-Do
   todoInput: document.getElementById('todo-input'),
   addTodoBtn: document.getElementById('add-todo-btn'),
-  todoList: document.getElementById('todo-list')
+  todoListActive: document.getElementById('todo-list-active'),
+  todoListCompleted: document.getElementById('todo-list-completed'),
+  todoCompletedSection: document.getElementById('todo-completed-section')
 };
 
 // Application State Store
@@ -259,58 +261,212 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+let activeSubtaskInputTodoId = null;
+
 function renderTodos() {
-  elements.todoList.innerHTML = '';
+  elements.todoListActive.innerHTML = '';
+  elements.todoListCompleted.innerHTML = '';
   
   if (!state.currentCourseId) {
-    elements.todoList.innerHTML = `<li style="color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 8px;">No active course</li>`;
+    elements.todoListActive.innerHTML = `<li style="color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 8px;">No active course</li>`;
+    elements.todoCompletedSection.classList.add('hidden');
     return;
   }
   
-  const activeTodos = state.todos.filter(todo => todo && todo.courseId === state.currentCourseId);
+  const courseTodos = state.todos.filter(todo => todo && todo.courseId === state.currentCourseId);
+  const activeTodos = courseTodos.filter(todo => !todo.completed);
+  const completedTodos = courseTodos.filter(todo => todo.completed);
   
+  // 1. Render Active Tasks
   if (activeTodos.length === 0) {
-    elements.todoList.innerHTML = `<li style="color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 8px;">No tasks. Add one above!</li>`;
-    return;
+    elements.todoListActive.innerHTML = `<li style="color: var(--text-muted); font-size: 0.75rem; text-align: center; padding: 8px;">No active tasks. Add one!</li>`;
+  } else {
+    activeTodos.forEach(todo => {
+      const container = document.createElement('li');
+      container.className = 'todo-item-container';
+      container.setAttribute('data-id', todo.id);
+      
+      // Main Task Row
+      const todoItem = document.createElement('div');
+      todoItem.className = 'todo-item';
+      todoItem.innerHTML = `
+        <div class="todo-item-left">
+          <div class="todo-drag-handle" title="Drag to Reorder">
+            <i data-lucide="grip-vertical"></i>
+          </div>
+          <input type="checkbox" class="todo-checkbox">
+          <span class="todo-text">${escapeHtml(todo.text)}</span>
+        </div>
+        <div class="todo-actions-right">
+          <button class="add-subtask-btn" title="Add Sub-Task">
+            <i data-lucide="corner-down-right"></i>
+          </button>
+          <button class="delete-todo-btn" title="Delete Task">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      `;
+      
+      // Bind toggle completed
+      const checkbox = todoItem.querySelector('.todo-checkbox');
+      checkbox.addEventListener('change', () => {
+        todo.completed = true;
+        saveState();
+        renderTodos();
+      });
+      
+      // Bind delete todo
+      const deleteBtn = todoItem.querySelector('.delete-todo-btn');
+      deleteBtn.addEventListener('click', () => {
+        state.todos = state.todos.filter(t => t.id !== todo.id);
+        saveState();
+        renderTodos();
+      });
+      
+      // Bind show subtask input
+      const addSubtaskBtn = todoItem.querySelector('.add-subtask-btn');
+      addSubtaskBtn.addEventListener('click', () => {
+        activeSubtaskInputTodoId = (activeSubtaskInputTodoId === todo.id) ? null : todo.id;
+        renderTodos();
+      });
+      
+      container.appendChild(todoItem);
+      
+      // Render Sub-tasks
+      const subtasks = todo.subtasks || [];
+      if (subtasks.length > 0) {
+        const subList = document.createElement('ul');
+        subList.className = 'subtask-list';
+        
+        subtasks.forEach(sub => {
+          const subItem = document.createElement('li');
+          subItem.className = 'subtask-item';
+          subItem.innerHTML = `
+            <div class="todo-item-left">
+              <input type="checkbox" class="todo-checkbox" ${sub.completed ? 'checked' : ''}>
+              <span class="subtask-text">${escapeHtml(sub.text)}</span>
+            </div>
+            <button class="delete-todo-btn delete-subtask-btn" title="Delete Sub-Task">
+              <i data-lucide="x"></i>
+            </button>
+          `;
+          
+          const subCheckbox = subItem.querySelector('.todo-checkbox');
+          subCheckbox.addEventListener('change', () => {
+            sub.completed = subCheckbox.checked;
+            saveState();
+          });
+          
+          const subDeleteBtn = subItem.querySelector('.delete-subtask-btn');
+          subDeleteBtn.addEventListener('click', () => {
+            todo.subtasks = todo.subtasks.filter(s => s.id !== sub.id);
+            saveState();
+            renderTodos();
+          });
+          
+          subList.appendChild(subItem);
+        });
+        
+        container.appendChild(subList);
+      }
+      
+      // Render Inline Subtask Input Form
+      if (activeSubtaskInputTodoId === todo.id) {
+        const inputContainer = document.createElement('div');
+        inputContainer.className = 'subtask-input-container';
+        inputContainer.innerHTML = `
+          <input type="text" class="subtask-input" placeholder="Add sub-task..." maxlength="100" autofocus>
+          <button class="icon-btn-small save-subtask-btn" title="Save Sub-Task">
+            <i data-lucide="check"></i>
+          </button>
+        `;
+        
+        const subInput = inputContainer.querySelector('.subtask-input');
+        const saveSubtask = () => {
+          const subText = subInput.value.trim();
+          if (!subText) return;
+          
+          if (!todo.subtasks) todo.subtasks = [];
+          todo.subtasks.push({
+            id: 'subtodo-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            text: subText,
+            completed: false
+          });
+          
+          activeSubtaskInputTodoId = null;
+          saveState();
+          renderTodos();
+        };
+        
+        subInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            saveSubtask();
+          }
+        });
+        
+        inputContainer.querySelector('.save-subtask-btn').addEventListener('click', saveSubtask);
+        container.appendChild(inputContainer);
+      }
+      
+      elements.todoListActive.appendChild(container);
+    });
   }
   
-  activeTodos.forEach(todo => {
-    const li = document.createElement('li');
-    li.className = 'todo-item';
-    li.innerHTML = `
-      <div class="todo-item-left">
-        <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
-        <span class="todo-text">${escapeHtml(todo.text)}</span>
-      </div>
-      <button class="delete-todo-btn" title="Delete Task">
-        <i data-lucide="x"></i>
-      </button>
-    `;
+  // 2. Render Completed Tasks
+  if (completedTodos.length === 0) {
+    elements.todoCompletedSection.classList.add('hidden');
+  } else {
+    elements.todoCompletedSection.classList.remove('hidden');
     
-    // Bind toggle completed event
-    const checkbox = li.querySelector('.todo-checkbox');
-    checkbox.addEventListener('change', () => {
-      todo.completed = checkbox.checked;
-      saveState();
+    completedTodos.forEach(todo => {
+      const li = document.createElement('li');
+      li.className = 'todo-item';
+      li.innerHTML = `
+        <div class="todo-item-left">
+          <input type="checkbox" class="todo-checkbox" checked>
+          <span class="todo-text" style="text-decoration: line-through; color: var(--text-muted);">${escapeHtml(todo.text)}</span>
+        </div>
+        <button class="delete-todo-btn" title="Delete Task">
+          <i data-lucide="x"></i>
+        </button>
+      `;
+      
+      // Bind toggle incomplete
+      const checkbox = li.querySelector('.todo-checkbox');
+      checkbox.addEventListener('change', () => {
+        todo.completed = false;
+        saveState();
+        renderTodos();
+      });
+      
+      // Bind delete todo
+      const deleteBtn = li.querySelector('.delete-todo-btn');
+      deleteBtn.addEventListener('click', () => {
+        state.todos = state.todos.filter(t => t.id !== todo.id);
+        saveState();
+        renderTodos();
+      });
+      
+      elements.todoListCompleted.appendChild(li);
     });
-    
-    // Bind delete todo event
-    const deleteBtn = li.querySelector('.delete-todo-btn');
-    deleteBtn.addEventListener('click', () => {
-      state.todos = state.todos.filter(t => t.id !== todo.id);
-      saveState();
-      renderTodos();
-    });
-    
-    elements.todoList.appendChild(li);
-  });
+  }
   
-  // Create icons for the close icons inside list items
+  // Create icons for all elements in both lists
   lucide.createIcons({
     attrs: { class: 'lucide-icon' },
     nameAttr: 'data-lucide',
-    nodeList: elements.todoList.querySelectorAll('[data-lucide]')
+    nodeList: elements.todoListActive.querySelectorAll('[data-lucide]')
   });
+  
+  lucide.createIcons({
+    attrs: { class: 'lucide-icon' },
+    nameAttr: 'data-lucide',
+    nodeList: elements.todoListCompleted.querySelectorAll('[data-lucide]')
+  });
+  
+  // Enable Drag-and-Drop on Active Tasks
+  makeTodosDraggable();
 }
 
 function renderEntries() {
@@ -705,6 +861,83 @@ function makeBooksDraggable() {
         i.style.borderTop = '';
         i.style.borderBottom = '';
       });
+    });
+  });
+}
+
+function makeTodosDraggable() {
+  const todoContainers = elements.todoListActive.querySelectorAll('.todo-item-container');
+  let draggedTodoId = null;
+  
+  todoContainers.forEach(container => {
+    const todoId = container.getAttribute('data-id');
+    container.setAttribute('draggable', 'true');
+    
+    container.addEventListener('dragstart', (e) => {
+      // Only drag if the target or its ancestor is the drag handle
+      if (!e.target.closest('.todo-drag-handle')) {
+        e.preventDefault();
+        return;
+      }
+      draggedTodoId = todoId;
+      container.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', todoId);
+    });
+    
+    container.addEventListener('dragend', () => {
+      container.classList.remove('dragging');
+      todoContainers.forEach(c => {
+        c.style.borderTop = '';
+        c.style.borderBottom = '';
+      });
+    });
+    
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const bounding = container.getBoundingClientRect();
+      const offset = e.clientY - bounding.top;
+      if (offset > bounding.height / 2) {
+        container.style.borderBottom = '2px solid var(--accent-light)';
+        container.style.borderTop = '';
+      } else {
+        container.style.borderTop = '2px solid var(--accent-light)';
+        container.style.borderBottom = '';
+      }
+    });
+    
+    container.addEventListener('dragleave', () => {
+      container.style.borderTop = '';
+      container.style.borderBottom = '';
+    });
+    
+    container.addEventListener('drop', (e) => {
+      e.preventDefault();
+      container.style.borderTop = '';
+      container.style.borderBottom = '';
+      
+      const targetTodoId = todoId;
+      if (draggedTodoId === targetTodoId) return;
+      
+      const draggedIndex = state.todos.findIndex(t => t.id === draggedTodoId);
+      const targetIndex = state.todos.findIndex(t => t.id === targetTodoId);
+      
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        const [draggedTodo] = state.todos.splice(draggedIndex, 1);
+        let newTargetIndex = state.todos.findIndex(t => t.id === targetTodoId);
+        
+        const bounding = container.getBoundingClientRect();
+        const offset = e.clientY - bounding.top;
+        if (offset > bounding.height / 2) {
+          state.todos.splice(newTargetIndex + 1, 0, draggedTodo);
+        } else {
+          state.todos.splice(newTargetIndex, 0, draggedTodo);
+        }
+        
+        saveState();
+        renderTodos();
+      }
     });
   });
 }

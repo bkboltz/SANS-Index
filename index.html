@@ -82,9 +82,15 @@
             <i data-lucide="plus"></i>
           </button>
         </div>
-        <ul id="todo-list" class="todo-list">
+        <ul id="todo-list-active" class="todo-list">
           <!-- Populated by JavaScript -->
         </ul>
+        <div id="todo-completed-section" class="todo-completed-section hidden">
+          <div class="todo-completed-header">Completed</div>
+          <ul id="todo-list-completed" class="todo-list completed-list">
+            <!-- Populated by JavaScript -->
+          </ul>
+        </div>
       </div>
 
       <!-- Data Portability Segment -->
