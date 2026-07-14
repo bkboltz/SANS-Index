@@ -12,6 +12,8 @@ const elements = {
   deleteCourseBtn: document.getElementById('delete-course-btn'),
   booksList: document.getElementById('books-list'),
   addBookBtn: document.getElementById('add-book-btn'),
+  booksSidebarSection: document.getElementById('books-sidebar-section'),
+  booksToggleBtn: document.getElementById('books-toggle-btn'),
   
   exportCsvBtn: document.getElementById('export-csv-btn'),
   exportJsonBtn: document.getElementById('export-json-btn'),
@@ -1633,6 +1635,12 @@ function initEventBindings() {
       e.preventDefault();
       handleAddTodo();
     }
+  });
+  
+  // Toggle Collapsible Books Section
+  elements.booksToggleBtn.addEventListener('click', (e) => {
+    if (e.target.closest('#add-book-btn')) return;
+    elements.booksSidebarSection.classList.toggle('collapsed');
   });
   
   elements.addCourseBtn.addEventListener('click', () => openCourseDialog());
