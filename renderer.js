@@ -1013,9 +1013,18 @@ function makeTodosDraggable() {
     const todoId = container.getAttribute('data-id');
     container.setAttribute('draggable', 'true');
     
+    let canDrag = false;
+    
+    container.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.todo-drag-handle')) {
+        canDrag = true;
+      } else {
+        canDrag = false;
+      }
+    });
+    
     container.addEventListener('dragstart', (e) => {
-      // Only drag if the target or its ancestor is the drag handle
-      if (!e.target.closest('.todo-drag-handle')) {
+      if (!canDrag) {
         e.preventDefault();
         return;
       }
