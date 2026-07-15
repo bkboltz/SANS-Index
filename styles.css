@@ -2054,4 +2054,120 @@ tr.starred-row td:first-child {
   line-height: 1.4;
 }
 
+/* Exam Date Alert Banners */
+.exam-notification-banner {
+  background: linear-gradient(135deg, rgba(217, 119, 6, 0.95), rgba(245, 158, 11, 0.95));
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  margin: 16px 24px 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transition: opacity 0.3s, transform 0.3s;
+  animation: bannerSlideIn 0.4s ease-out;
+}
+
+.exam-notification-banner .banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.exam-notification-banner .banner-icon {
+  width: 18px;
+  height: 18px;
+  color: #fff;
+}
+
+.exam-notification-banner .btn-accent {
+  background-color: #ffffff;
+  color: #d97706;
+  border: 1px solid #ffffff;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border-radius: var(--radius-sm);
+  font-weight: bold;
+}
+
+.exam-notification-banner .btn-accent:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #b45309;
+}
+
+.exam-notification-banner .close-banner-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+
+.exam-notification-banner .close-banner-btn:hover {
+  opacity: 1;
+}
+
+.exam-caution-banner {
+  background: rgba(217, 119, 6, 0.08);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  margin: 16px 24px 0 24px;
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  animation: bannerFadeIn 0.3s ease-out;
+}
+
+.exam-caution-banner .caution-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fbbf24;
+}
+
+.exam-caution-banner .caution-icon {
+  width: 14px;
+  height: 14px;
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
+.exam-caution-banner a {
+  color: var(--accent-light);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.exam-caution-banner a:hover {
+  color: #2dd4bf;
+}
+
+@keyframes bannerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bannerFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 

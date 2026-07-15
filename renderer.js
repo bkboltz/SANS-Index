@@ -86,7 +86,15 @@ const elements = {
   addTodoBtn: document.getElementById('add-todo-btn'),
   todoListActive: document.getElementById('todo-list-active'),
   todoListCompleted: document.getElementById('todo-list-completed'),
-  todoCompletedSection: document.getElementById('todo-completed-section')
+  todoCompletedSection: document.getElementById('todo-completed-section'),
+
+  // Exam Date Alert Banners & Modal
+  examNotificationBanner: document.getElementById('exam-notification-banner'),
+  examCautionBanner: document.getElementById('exam-caution-banner'),
+  testDateDialog: document.getElementById('test-date-dialog'),
+  testDateDialogForm: document.getElementById('test-date-dialog-form'),
+  dialogTestDate: document.getElementById('dialog-test-date'),
+  clearTestDateBtn: document.getElementById('clear-test-date-btn')
 };
 
 // Application State Store
@@ -104,6 +112,8 @@ let sortField = 'default'; // Default: custom book order -> topic -> page
 let sortAsc = true;
 let activeAutocompleteIndex = -1;
 let courseAutocompleteIndex = -1;
+let bannerTimeoutId = null;
+let promptedCourses = new Set();
 
 // ==========================================================================
 // APP INITIALIZATION & SYNC
@@ -132,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Initial Render
   renderAll();
+  checkExamDateAlerts();
 });
 
 // Save state to disk
@@ -781,6 +792,37 @@ function renderStats() {
     elements.statLastAdded.textContent = "-";
     elements.statLastAdded.title = "";
   }
+
+  // Update Countdown vs. Indexed Books stats card
+  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+  const statCard = elements.statBookCount.closest('.stat-card');
+  const statLabel = statCard.querySelector('.stat-label');
+  
+  if (activeCourse && activeCourse.testDate) {
+    const examDate = new Date(activeCourse.testDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffTime = examDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      elements.statBookCount.textContent = "Passed";
+      statLabel.textContent = `Exam Date (${activeCourse.testDate})`;
+    } else {
+      elements.statBookCount.textContent = diffDays;
+      statLabel.textContent = diffDays === 1 ? "Day Until Exam" : "Days Until Exam";
+    }
+    statCard.style.cursor = 'pointer';
+    statCard.title = `Projected exam date: ${activeCourse.testDate}. Click to modify or remove.`;
+  } else {
+    // Default back to Indexed Books
+    const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
+    elements.statBookCount.textContent = activeBooks.length;
+    statLabel.textContent = "Indexed Books";
+    
+    statCard.style.cursor = 'pointer';
+    statCard.title = "No exam date configured. Click to set countdown date!";
+  }
 }
 
 // Utility to highlight search matches (HTML-tag-safe)
@@ -1212,6 +1254,86 @@ function deleteCourse() {
     }
     
     saveState();
+    renderAll();
+    checkExamDateAlerts();
+  }
+}
+
+// ==========================================================================
+// EXAM COUNTDOWN MANAGEMENT
+// ==========================================================================
+function checkExamDateAlerts() {
+  if (bannerTimeoutId) {
+    clearTimeout(bannerTimeoutId);
+    bannerTimeoutId = null;
+  }
+
+  // Hide banners by default
+  elements.examNotificationBanner.classList.add('hidden');
+  elements.examCautionBanner.classList.add('hidden');
+
+  if (!state.currentCourseId) return;
+
+  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+  if (!activeCourse) return;
+
+  if (activeCourse.testDate) {
+    // Exam date is set: no banners needed
+    return;
+  }
+
+  // Exam date is missing
+  if (!promptedCourses.has(state.currentCourseId)) {
+    elements.examNotificationBanner.classList.remove('hidden');
+    promptedCourses.add(state.currentCourseId);
+    
+    // Auto fade-out after 15 seconds
+    bannerTimeoutId = setTimeout(() => {
+      elements.examNotificationBanner.classList.add('hidden');
+      elements.examCautionBanner.classList.remove('hidden');
+    }, 15000);
+  } else {
+    // Already prompted in this session, show caution banner directly
+    elements.examCautionBanner.classList.remove('hidden');
+  }
+}
+
+function openTestDateDialog() {
+  if (!state.currentCourseId) {
+    alert("Please select or create a course first!");
+    return;
+  }
+  
+  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+  if (!activeCourse) return;
+
+  if (activeCourse.testDate) {
+    elements.dialogTestDate.value = activeCourse.testDate;
+    elements.clearTestDateBtn.classList.remove('hidden');
+  } else {
+    elements.dialogTestDate.value = '';
+    elements.clearTestDateBtn.classList.add('hidden');
+  }
+
+  elements.testDateDialog.showModal();
+}
+
+function handleTestDateDialogSubmit(e) {
+  e.preventDefault();
+  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+  if (activeCourse) {
+    activeCourse.testDate = elements.dialogTestDate.value;
+    saveState();
+    elements.testDateDialog.close();
+    
+    // Clear and hide active banners
+    if (bannerTimeoutId) {
+      clearTimeout(bannerTimeoutId);
+      bannerTimeoutId = null;
+    }
+    elements.examNotificationBanner.classList.add('hidden');
+    elements.examCautionBanner.classList.add('hidden');
+    
     renderAll();
   }
 }
@@ -1906,6 +2028,7 @@ function initEventBindings() {
     state.currentCourseId = e.target.value;
     endEditEntry();
     renderAll();
+    checkExamDateAlerts();
   });
   
   // Add To-Do Item
@@ -2116,6 +2239,68 @@ function initEventBindings() {
   });
 
   elements.printFormatSelect.addEventListener('change', renderPrintPreview);
+
+  // Close button on floating exam date notification banner
+  const closeBannerBtn = elements.examNotificationBanner.querySelector('.close-banner-btn');
+  if (closeBannerBtn) {
+    closeBannerBtn.addEventListener('click', () => {
+      if (bannerTimeoutId) {
+        clearTimeout(bannerTimeoutId);
+        bannerTimeoutId = null;
+      }
+      elements.examNotificationBanner.classList.add('hidden');
+      elements.examCautionBanner.classList.remove('hidden');
+    });
+  }
+
+  // Click banner / "Set Date" buttons to open dialog
+  const setExamDateBtn = elements.examNotificationBanner.querySelector('.set-exam-date-banner-btn');
+  if (setExamDateBtn) {
+    setExamDateBtn.addEventListener('click', openTestDateDialog);
+  }
+  const setExamDateLink = elements.examCautionBanner.querySelector('.set-exam-date-link');
+  if (setExamDateLink) {
+    setExamDateLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      openTestDateDialog();
+    });
+  }
+
+  // Click stats card to set/change exam date
+  const statCardBookCount = elements.statBookCount.closest('.stat-card');
+  if (statCardBookCount) {
+    statCardBookCount.addEventListener('click', openTestDateDialog);
+  }
+
+  // Exam Date Dialog bindings
+  if (elements.testDateDialogForm) {
+    elements.testDateDialogForm.addEventListener('submit', handleTestDateDialogSubmit);
+  }
+  const closeTestDateDialogBtn = elements.testDateDialog.querySelector('.close-dialog-btn');
+  if (closeTestDateDialogBtn) {
+    closeTestDateDialogBtn.addEventListener('click', () => {
+      elements.testDateDialog.close();
+    });
+  }
+  if (elements.clearTestDateBtn) {
+    elements.clearTestDateBtn.addEventListener('click', () => {
+      const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+      if (activeCourse) {
+        delete activeCourse.testDate;
+        saveState();
+        elements.testDateDialog.close();
+        
+        if (bannerTimeoutId) {
+          clearTimeout(bannerTimeoutId);
+          bannerTimeoutId = null;
+        }
+        elements.examNotificationBanner.classList.add('hidden');
+        elements.examCautionBanner.classList.remove('hidden');
+        
+        renderAll();
+      }
+    });
+  }
 
 function openPrintPreview() {
   elements.printFormatSelect.value = 'standard';

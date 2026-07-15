@@ -130,6 +130,23 @@
     <!-- Main Workspace Content -->
     <main id="main-workspace" class="main-content">
       
+      <!-- Exam Date Alert Banners -->
+      <div id="exam-notification-banner" class="exam-notification-banner hidden no-print">
+        <div class="banner-content">
+          <i data-lucide="calendar" class="banner-icon"></i>
+          <span class="banner-text">No exam date configured for this course. Click to set your countdown!</span>
+          <button type="button" class="btn btn-accent btn-sm set-exam-date-banner-btn">Set Date</button>
+        </div>
+        <button type="button" class="close-banner-btn">&times;</button>
+      </div>
+
+      <div id="exam-caution-banner" class="exam-caution-banner hidden no-print">
+        <div class="caution-content">
+          <i data-lucide="alert-triangle" class="caution-icon"></i>
+          <span>No exam date set. <a href="#" class="set-exam-date-link">Configure now</a> to enable study countdown.</span>
+        </div>
+      </div>
+      
       <!-- Collapsible Sidebar Toggle Button -->
       <button id="sidebar-toggle-btn" class="sidebar-toggle-btn no-print" title="Toggle Sidebar">
         <i data-lucide="chevron-left"></i>
@@ -335,6 +352,22 @@
         <div class="dialog-actions">
           <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
           <button type="submit" class="btn btn-accent">Save Book</button>
+        </div>
+      </form>
+    </div>
+  <!-- Set Test Date Modal -->
+  <dialog id="test-date-dialog" class="custom-dialog">
+    <div class="dialog-content">
+      <h3 id="test-date-dialog-title">Configure Exam Date</h3>
+      <form id="test-date-dialog-form">
+        <div class="form-group">
+          <label for="dialog-test-date">Projected Exam Date</label>
+          <input type="date" id="dialog-test-date" required style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-family: inherit;">
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+          <button type="button" id="clear-test-date-btn" class="btn btn-danger">Remove Date</button>
+          <button type="submit" class="btn btn-accent">Save Exam Date</button>
         </div>
       </form>
     </div>
