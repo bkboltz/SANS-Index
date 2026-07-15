@@ -1473,6 +1473,7 @@ function handleEntrySubmit(e) {
     elements.entryTopicInput.value = '';
     elements.entryPagesInput.value = '';
     elements.entryNotesInput.value = '';
+    elements.entryNotesInput.style.height = '38px';
     
     // Trigger pulses
     triggerStatPulse(elements.statTotalEntries.closest('.stat-card'));
@@ -1916,6 +1917,12 @@ function initEventBindings() {
   // Entry CRUD Submit
   elements.entryForm.addEventListener('submit', handleEntrySubmit);
   elements.cancelEditBtn.addEventListener('click', endEditEntry);
+  
+  // Auto-expanding textarea for notes
+  elements.entryNotesInput.addEventListener('input', () => {
+    elements.entryNotesInput.style.height = 'auto';
+    elements.entryNotesInput.style.height = (elements.entryNotesInput.scrollHeight) + 'px';
+  });
   
   // Auto-suggestion listener for SANS Courses in modal dialog
   elements.dialogCourseName.addEventListener('input', (e) => {

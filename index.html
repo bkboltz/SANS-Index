@@ -198,13 +198,13 @@
 
             <!-- Notes -->
             <div class="form-group flex-3">
-              <div style="display: flex; justify-content: space-between; align-items: baseline; width: 100%; margin-bottom: 6px;">
-                <label for="entry-notes-input" style="margin-bottom: 0;">Notes / Details</label>
-                <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 500;">
-                  Format: **bold**, *italic*, __underline__, ==highlight==
+              <div class="notes-label-container">
+                <label for="entry-notes-input">Notes / Details</label>
+                <span class="markdown-legend">
+                  Format: **bold** | *italic* | __underline__ | ==highlight==
                 </span>
               </div>
-              <input type="text" id="entry-notes-input" placeholder="Brief hint or reference details (supports markdown formatting)">
+              <textarea id="entry-notes-input" placeholder="Brief hint or reference details (supports markdown formatting)" rows="1"></textarea>
             </div>
             
             <!-- Submit/Reset button -->
