@@ -807,10 +807,10 @@ function renderStats() {
     
     if (diffDays < 0) {
       elements.statBookCount.textContent = "Passed";
-      statLabel.textContent = `Exam Date (${activeCourse.testDate})`;
+      statLabel.innerHTML = `Exam Date (${activeCourse.testDate}) <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
     } else {
       elements.statBookCount.textContent = diffDays;
-      statLabel.textContent = diffDays === 1 ? "Day Until Exam" : "Days Until Exam";
+      statLabel.innerHTML = `${diffDays === 1 ? "Day Until Exam" : "Days Until Exam"} <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
     }
     statCard.style.cursor = 'pointer';
     statCard.title = `Projected exam date: ${activeCourse.testDate}. Click to modify or remove.`;
@@ -818,7 +818,7 @@ function renderStats() {
     // Default back to Indexed Books
     const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
     elements.statBookCount.textContent = activeBooks.length;
-    statLabel.textContent = "Indexed Books";
+    statLabel.innerHTML = `Indexed Books <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Configure Date</span>`;
     
     statCard.style.cursor = 'pointer';
     statCard.title = "No exam date configured. Click to set countdown date!";

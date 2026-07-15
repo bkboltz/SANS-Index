@@ -2170,4 +2170,17 @@ tr.starred-row td:first-child {
   }
 }
 
+/* Native Calendar Picker Icon styling for dark mode inputs */
+#dialog-test-date::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.9);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, filter 0.15s;
+}
+
+#dialog-test-date::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  filter: invert(1) brightness(1) drop-shadow(0 0 2px var(--accent-light));
+}
+
 
