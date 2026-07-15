@@ -143,6 +143,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Bind Event Listeners
   initEventBindings();
   
+  // Close all custom select dropdown panels when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select-panel').forEach(p => {
+      p.classList.add('hidden');
+    });
+  });
+
+  // Convert static print format dropdown to custom select
+  makeCustomSelect(elements.printFormatSelect);
+
   // Initial Render
   renderAll();
   checkExamDateAlerts();
@@ -192,6 +202,8 @@ function renderCourses() {
     elements.currentCourseTitle.textContent = activeCourse.name;
     elements.printCourseTitle.textContent = activeCourse.name;
   }
+  
+  makeCustomSelect(elements.courseSelect);
 }
 
 function renderBooks() {
@@ -263,6 +275,10 @@ function renderBooks() {
 
   // Enable HTML5 Drag and Drop reordering
   makeBooksDraggable();
+
+  // Convert book selects to custom selects
+  makeCustomSelect(elements.entryBookSelect);
+  makeCustomSelect(elements.filterBookSelect);
 }
 
 function escapeHtml(text) {
@@ -667,6 +683,11 @@ function renderEntries() {
   // Bind inline keyboard events
   const inlineEditingRow = elements.indexTableBody.querySelector('tr[style*="rgba(20, 184, 166"]');
   if (inlineEditingRow) {
+    const inlineSelect = inlineEditingRow.querySelector('.inline-book-select');
+    if (inlineSelect) {
+      makeCustomSelect(inlineSelect);
+    }
+
     inlineEditingRow.querySelectorAll('.inline-edit-input').forEach(input => {
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -1380,6 +1401,116 @@ function handleTestDateDialogSubmit(e) {
     
     renderAll();
   }
+}
+
+// ==========================================================================
+// CUSTOM STYLED SELECT DROPDOWNS CONTROLLER
+// ==========================================================================
+function makeCustomSelect(selectElement) {
+  if (!selectElement) return;
+  
+  if (selectElement.__customSelect) {
+    syncCustomSelect(selectElement);
+    return;
+  }
+  
+  selectElement.style.display = 'none';
+  
+  const container = document.createElement('div');
+  container.className = 'custom-select-container';
+  if (selectElement.classList.contains('flex-1')) {
+    container.classList.add('flex-1');
+  }
+  
+  const trigger = document.createElement('div');
+  trigger.className = 'custom-select-trigger';
+  
+  // Style match properties from native select
+  trigger.style.backgroundColor = selectElement.style.backgroundColor || 'var(--bg-app)';
+  trigger.style.border = selectElement.style.border || '1px solid var(--border-color)';
+  trigger.style.color = selectElement.style.color || 'var(--text-primary)';
+  trigger.style.borderRadius = selectElement.style.borderRadius || 'var(--radius-sm)';
+  trigger.style.fontSize = selectElement.style.fontSize || '0.85rem';
+  trigger.style.padding = selectElement.style.padding || '8px 12px';
+  trigger.style.height = selectElement.style.height || '38px';
+  trigger.style.minHeight = selectElement.style.minHeight || 'auto';
+  trigger.style.width = '100%';
+  
+  const triggerText = document.createElement('span');
+  triggerText.className = 'custom-select-trigger-text';
+  
+  const chevron = document.createElement('i');
+  chevron.setAttribute('data-lucide', 'chevron-down');
+  chevron.className = 'custom-select-chevron';
+  
+  trigger.appendChild(triggerText);
+  trigger.appendChild(chevron);
+  
+  const panel = document.createElement('div');
+  panel.className = 'custom-select-panel hidden no-print';
+  
+  container.appendChild(trigger);
+  container.appendChild(panel);
+  
+  selectElement.parentNode.insertBefore(container, selectElement.nextSibling);
+  
+  selectElement.__customSelect = {
+    container,
+    trigger,
+    triggerText,
+    panel
+  };
+  
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.custom-select-panel').forEach(p => {
+      if (p !== panel) p.classList.add('hidden');
+    });
+    panel.classList.toggle('hidden');
+  });
+  
+  syncCustomSelect(selectElement);
+}
+
+function syncCustomSelect(selectElement) {
+  const custom = selectElement.__customSelect;
+  if (!custom) return;
+  
+  const { triggerText, panel } = custom;
+  panel.innerHTML = '';
+  
+  const options = Array.from(selectElement.options);
+  const selectedOption = selectElement.options[selectElement.selectedIndex];
+  triggerText.textContent = selectedOption ? selectedOption.text : '';
+  
+  options.forEach((opt) => {
+    const item = document.createElement('div');
+    item.className = 'custom-select-option';
+    if (opt.disabled) {
+      item.classList.add('disabled');
+    }
+    if (opt.selected) {
+      item.classList.add('selected');
+    }
+    item.textContent = opt.text;
+    
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (opt.disabled) return;
+      
+      selectElement.value = opt.value;
+      selectElement.dispatchEvent(new Event('change'));
+      panel.classList.add('hidden');
+    });
+    
+    panel.appendChild(item);
+  });
+  
+  lucide.createIcons({
+    attrs: { class: 'lucide-icon' },
+    nameAttr: 'data-lucide',
+    nodeList: custom.container.querySelectorAll('[data-lucide]')
+  });
 }
 
 // ==========================================================================
@@ -2365,6 +2496,7 @@ function initEventBindings() {
 
 function openPrintPreview() {
   elements.printFormatSelect.value = 'standard';
+  syncCustomSelect(elements.printFormatSelect);
   renderPrintPreview();
   elements.printPreviewDialog.showModal();
 }
