@@ -679,6 +679,9 @@ function renderEntries() {
 
       // Click listeners for inline formatting toolbar buttons
       inlineEditingRow.querySelectorAll('.inline-format-btn').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // Prevents selection loss
+        });
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           const format = btn.getAttribute('data-format');
@@ -728,7 +731,7 @@ function saveInlineEntry(entryId, rowElement) {
   const bookId = rowElement.querySelector('.inline-book-select').value;
   const topic = rowElement.querySelector('.inline-topic-input').value.trim();
   const pages = rowElement.querySelector('.inline-pages-input').value.trim();
-  const notes = rowElement.querySelector('.inline-notes-input').value.trim();
+  const notes = htmlToMarkdown(rowElement.querySelector('.inline-notes-input').innerHTML).trim();
 
   if (!bookId) {
     alert("Please select a book first!");
@@ -801,8 +804,6 @@ function highlightText(htmlText, query) {
   return highlightedParts.join('');
 }
 
-// Helper to parse Markdown-like markup in SANS notes:
-// ==highlight==, **bold**, __underline__, *italic*
 function formatNoteMarkup(text) {
   if (!text) return '';
   
@@ -811,8 +812,11 @@ function formatNoteMarkup(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
     
+  // Convert newlines to breaks
+  escaped = escaped.replace(/\n/g, '<br>');
+  
   // 1. Highlight: ==text==
-  escaped = escaped.replace(/==(.*?)==/g, '<mark class="note-highlight">$1</mark>');
+  escaped = escaped.replace(/==(.*?)==/g, '<span class="note-highlight">$1</span>');
   
   // 2. Bold: **text**
   escaped = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -822,6 +826,34 @@ function formatNoteMarkup(text) {
   
   // 4. Italics: *text*
   escaped = escaped.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Convert lines starting with "- " or "* " to styled bullets with a bit of indentation
+  const lines = escaped.split('<br>');
+  const processed = lines.map(line => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('- ')) {
+      return `<div class="published-bullet-item"><span class="bullet-dot">•</span><span class="bullet-content">${trimmed.substring(2)}</span></div>`;
+    } else if (trimmed.startsWith('* ')) {
+      return `<div class="published-bullet-item"><span class="bullet-dot">•</span><span class="bullet-content">${trimmed.substring(2)}</span></div>`;
+    }
+    return line;
+  });
+  
+  // Join back, skipping breaks between consecutive list items
+  let joined = '';
+  for (let i = 0; i < processed.length; i++) {
+    if (i > 0) {
+      const prevIsBullet = processed[i-1].startsWith('<div class="published-bullet-item"');
+      const curIsBullet = processed[i].startsWith('<div class="published-bullet-item"');
+      if (prevIsBullet && curIsBullet) {
+        joined += ''; // No break between bullets
+      } else {
+        joined += '<br>';
+      }
+    }
+    joined += processed[i];
+  }
+  escaped = joined;
   
   return escaped;
 }
@@ -1964,6 +1996,9 @@ function initEventBindings() {
 
   // Handle main entry form formatting toolbar click events
   document.querySelectorAll('.format-btn').forEach(btn => {
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // Prevents selection loss
+    });
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const format = btn.getAttribute('data-format');
