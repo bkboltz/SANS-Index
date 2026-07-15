@@ -1489,6 +1489,22 @@ function makeCustomSelect(selectElement) {
     panel.classList.toggle('hidden');
   });
   
+  selectElement.addEventListener('change', () => {
+    const selectedOption = selectElement.options[selectElement.selectedIndex];
+    triggerText.textContent = selectedOption ? selectedOption.text : '';
+    
+    panel.querySelectorAll('.custom-select-option').forEach((item, idx) => {
+      const opt = selectElement.options[idx];
+      if (opt) {
+        if (opt.selected) {
+          item.classList.add('selected');
+        } else {
+          item.classList.remove('selected');
+        }
+      }
+    });
+  });
+  
   syncCustomSelect(selectElement);
 }
 
