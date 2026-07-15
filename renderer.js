@@ -100,7 +100,56 @@ const elements = {
   dialogTestDate: document.getElementById('dialog-test-date'),
   clearTestDateBtn: document.getElementById('clear-test-date-btn'),
   dismissForeverBannerBtn: document.querySelector('.dismiss-forever-banner-btn'),
-  dismissForeverCautionLink: document.querySelector('.dismiss-forever-caution-link')
+  dismissForeverCautionLink: document.querySelector('.dismiss-forever-caution-link'),
+  
+  // Workspace Views & Tabs
+  manualIndexView: document.getElementById('manual-index-view'),
+  autoIndexView: document.getElementById('auto-index-view'),
+  autoIndexNavBtn: document.getElementById('auto-index-nav-btn'),
+  manualIndexNavBtn: document.querySelector('.workspace-tabs button[data-view-tab="manual-index"]'),
+  
+  // Dependency checks
+  depPython: document.getElementById('dep-python'),
+  depQpdf: document.getElementById('dep-qpdf'),
+  depPdftotext: document.getElementById('dep-pdftotext'),
+  depOcr: document.getElementById('dep-ocr'),
+  depWarnings: document.getElementById('dep-warnings'),
+  depInstallConsole: document.getElementById('dep-install-console'),
+  depInstallActiveTxt: document.getElementById('dep-install-active-txt'),
+  depInstallLogTerminal: document.getElementById('dep-install-log-terminal'),
+
+  // Auto Index Form
+  autoIndexForm: document.getElementById('auto-index-form'),
+  autoIndexBookSelect: document.getElementById('auto-index-book-select'),
+  autoIndexFileBtn: document.getElementById('auto-index-file-btn'),
+  autoIndexFileName: document.getElementById('auto-index-file-name'),
+  autoIndexPassword: document.getElementById('auto-index-password'),
+  autoIndexSettingsToggle: document.getElementById('auto-index-settings-toggle'),
+  autoIndexSettingsContent: document.getElementById('auto-index-settings-content'),
+  autoIndexOffset: document.getElementById('auto-index-offset'),
+  autoIndexMinLen: document.getElementById('auto-index-min-len'),
+  autoIndexMaxLen: document.getElementById('auto-index-max-len'),
+  autoIndexZipf: document.getElementById('auto-index-zipf'),
+  autoIndexMinFreq: document.getElementById('auto-index-min-freq'),
+  autoIndexMaxFreq: document.getElementById('auto-index-max-freq'),
+  autoIndexUseOcr: document.getElementById('auto-index-use-ocr'),
+  startIndexingBtn: document.getElementById('start-indexing-btn'),
+
+  // Progress
+  indexingProgressSection: document.getElementById('indexing-progress-section'),
+  indexingProgressStatus: document.getElementById('indexing-progress-status'),
+  indexingProgressSubtext: document.getElementById('indexing-progress-subtext'),
+
+  // Verification Preview
+  verificationPreviewSection: document.getElementById('verification-preview-section'),
+  previewSelectedCount: document.getElementById('preview-selected-count'),
+  previewImportCheckedBtn: document.getElementById('preview-import-checked-btn'),
+  previewCancelBtn: document.getElementById('preview-cancel-btn'),
+  previewSearchInput: document.getElementById('preview-search-input'),
+  previewSelectAll: document.getElementById('preview-select-all'),
+  previewSelectNone: document.getElementById('preview-select-none'),
+  previewTableBody: document.getElementById('preview-table-body'),
+  previewHeaderCheckbox: document.getElementById('preview-header-checkbox')
 };
 
 // Application State Store
@@ -214,6 +263,7 @@ function renderBooks() {
   elements.booksList.innerHTML = '';
   elements.entryBookSelect.innerHTML = '<option value="" disabled selected>Select Book</option>';
   elements.filterBookSelect.innerHTML = '<option value="all">All Books</option>';
+  elements.autoIndexBookSelect.innerHTML = '<option value="" disabled selected>Select Target Book</option>';
   
   // Filter books for active course
   const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
@@ -250,6 +300,12 @@ function renderBooks() {
     optionFilter.value = book.id;
     optionFilter.textContent = book.name;
     elements.filterBookSelect.appendChild(optionFilter);
+
+    // 4. Auto Index Target Book Select Option
+    const optionAuto = document.createElement('option');
+    optionAuto.value = book.id;
+    optionAuto.textContent = book.name;
+    elements.autoIndexBookSelect.appendChild(optionAuto);
   });
   
   // Re-initialize icons inside books list
@@ -282,6 +338,7 @@ function renderBooks() {
   // Convert book selects to custom selects
   makeCustomSelect(elements.entryBookSelect);
   makeCustomSelect(elements.filterBookSelect);
+  makeCustomSelect(elements.autoIndexBookSelect);
 }
 
 function escapeHtml(text) {
@@ -746,6 +803,13 @@ function renderEntries() {
       
       const starClass = entry.starred ? 'star-active' : 'star-inactive';
       
+      if (entry.source === 'auto') {
+        tr.classList.add('auto-row');
+      }
+      const autoBadgeHtml = entry.source === 'auto'
+        ? `<span class="auto-badge no-print">Auto</span><span class="auto-badge-print">[Auto]</span>`
+        : '';
+      
       tr.innerHTML = `
         <td class="col-book">
           <div class="book-badge-container">
@@ -759,7 +823,7 @@ function renderEntries() {
           </div>
         </td>
         <td class="col-pages">${entry.pages}</td>
-        <td class="col-topic">${highlightText(entry.topic, query)}</td>
+        <td class="col-topic">${highlightText(entry.topic, query)}${autoBadgeHtml}</td>
         <td class="col-notes">${entry.notes ? highlightText(formatNoteMarkup(entry.notes), query) : ''}</td>
         <td class="col-actions no-print">
           <button class="icon-btn-small edit-entry" data-id="${entry.id}" title="Edit Entry">
@@ -2708,8 +2772,15 @@ function generateStandardPrintHTML(activeEntries) {
     const bookColor = book ? book.color : '#4b5563';
     const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
     
+    const isAuto = entry.source === 'auto';
+    const rowClass = [
+      entry.starred ? 'starred-row' : '',
+      isAuto ? 'auto-row' : ''
+    ].filter(Boolean).join(' ');
+    const autoBadge = isAuto ? '<span class="auto-badge-print">[Auto]</span>' : '';
+    
     return `
-      <tr class="${entry.starred ? 'starred-row' : ''}">
+      <tr class="${rowClass}">
         <td class="col-book">
           <span class="book-badge" style="color: ${bookColor}">
             <span class="badge-dot" style="background-color: ${bookColor}"></span>
@@ -2717,7 +2788,7 @@ function generateStandardPrintHTML(activeEntries) {
           </span>
         </td>
         <td class="col-pages">${entry.pages}</td>
-        <td class="col-topic">${entry.topic}</td>
+        <td class="col-topic">${entry.topic}${autoBadge}</td>
         <td class="col-notes">${formattedNotes}</td>
       </tr>
     `;
@@ -2756,9 +2827,11 @@ function generateBookletPrintHTML(activeEntries) {
     const bookNameFull = book ? book.name : 'Unknown';
     const bookNameShort = bookNameFull.includes(':') ? bookNameFull.split(':')[0].trim() : bookNameFull;
     const bookColor = book ? book.color : '#4b5563';
+    const isAuto = entry.source === 'auto';
+    const autoBadge = isAuto ? '<span class="auto-badge-print">[Auto]</span>' : '';
     return `
-      <tr>
-        <td class="col-topic" style="font-weight: 600;">${entry.topic}</td>
+      <tr class="${isAuto ? 'auto-row' : ''}">
+        <td class="col-topic" style="font-weight: 600;">${entry.topic}${autoBadge}</td>
         <td class="col-book">
           <span class="book-badge" style="color: ${bookColor}">
             <span class="badge-dot" style="background-color: ${bookColor}"></span>
@@ -2809,10 +2882,16 @@ function generateBookletPrintHTML(activeEntries) {
 
     const bookRowsHtml = sortedBookEntries.map(entry => {
       const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
+      const isAuto = entry.source === 'auto';
+      const rowClass = [
+        entry.starred ? 'starred-row' : '',
+        isAuto ? 'auto-row' : ''
+      ].filter(Boolean).join(' ');
+      const autoBadge = isAuto ? '<span class="auto-badge-print">[Auto]</span>' : '';
       return `
-        <tr class="${entry.starred ? 'starred-row' : ''}">
+        <tr class="${rowClass}">
           <td class="col-pages" style="font-weight: 700;">${entry.pages}</td>
-          <td class="col-topic" style="font-weight: 600;">${entry.topic}</td>
+          <td class="col-topic" style="font-weight: 600;">${entry.topic}${autoBadge}</td>
           <td class="col-notes">${formattedNotes}</td>
         </tr>
       `;
@@ -2894,6 +2973,9 @@ function generateBookletPrintHTML(activeEntries) {
       endEditEntry();
     }
   });
+  
+  // Initialize Auto-indexing events
+  initAutoIndexingBindings();
 }
 
 function htmlToMarkdown(html) {
@@ -3018,5 +3100,440 @@ function applyFormatting(textarea, formatType) {
     document.execCommand('underline', false, null);
   } else if (formatType === 'bullet') {
     document.execCommand('insertUnorderedList', false, null);
+  }
+}
+
+// ==========================================================================
+/* AUTO-INDEXING SYSTEM CLIENT-SIDE CONTROLLER */
+// ==========================================================================
+let autoExtractedEntries = [];
+let selectedPdfPath = '';
+
+function initAutoIndexingBindings() {
+  // Native File Picker Trigger
+  if (elements.autoIndexFileBtn) {
+    elements.autoIndexFileBtn.addEventListener('click', async () => {
+      const filePath = await window.api.selectPdfFile();
+      if (filePath) {
+        selectedPdfPath = filePath;
+        elements.autoIndexFileName.textContent = filePath.split(/[\\/]/).pop();
+        elements.autoIndexFileName.title = filePath;
+      }
+    });
+  }
+  // Tab Switching
+  const tabButtons = document.querySelectorAll('.workspace-tabs .tab-btn');
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      const targetTab = btn.getAttribute('data-view-tab');
+      if (targetTab === 'manual-index') {
+        elements.manualIndexView.classList.remove('hidden');
+        elements.autoIndexView.classList.add('hidden');
+      } else if (targetTab === 'auto-index') {
+        elements.manualIndexView.classList.add('hidden');
+        elements.autoIndexView.classList.remove('hidden');
+        runDependencyCheck();
+      }
+    });
+  });
+
+  // Settings Accordion
+  if (elements.autoIndexSettingsToggle) {
+    elements.autoIndexSettingsToggle.addEventListener('click', () => {
+      elements.autoIndexSettingsToggle.classList.toggle('active');
+      elements.autoIndexSettingsContent.classList.toggle('hidden');
+      const icon = elements.autoIndexSettingsToggle.querySelector('.collapse-icon');
+      if (icon) {
+        icon.style.transform = elements.autoIndexSettingsToggle.classList.contains('active') ? 'rotate(90deg)' : 'rotate(0deg)';
+      }
+    });
+  }
+
+  // Generic Dependency Installation Triggers
+  const installButtons = document.querySelectorAll('.dep-install-btn');
+  installButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const dependencyName = btn.getAttribute('data-dep');
+      const element = btn.closest('.dependency-item');
+      handleDependencyInstall(dependencyName, element);
+    });
+  });
+
+  // Auto Index Form Submission
+  if (elements.autoIndexForm) {
+    elements.autoIndexForm.addEventListener('submit', handleAutoIndexSubmit);
+  }
+
+  // Verification preview actions
+  if (elements.previewSelectAll) {
+    elements.previewSelectAll.addEventListener('click', () => {
+      const checkboxes = elements.previewTableBody.querySelectorAll('.preview-row-checkbox');
+      checkboxes.forEach(cb => cb.checked = true);
+      updateSelectedCount();
+    });
+  }
+
+  if (elements.previewSelectNone) {
+    elements.previewSelectNone.addEventListener('click', () => {
+      const checkboxes = elements.previewTableBody.querySelectorAll('.preview-row-checkbox');
+      checkboxes.forEach(cb => cb.checked = false);
+      updateSelectedCount();
+    });
+  }
+
+  if (elements.previewHeaderCheckbox) {
+    elements.previewHeaderCheckbox.addEventListener('change', (e) => {
+      const checkboxes = elements.previewTableBody.querySelectorAll('.preview-row-checkbox');
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
+      updateSelectedCount();
+    });
+  }
+
+  if (elements.previewSearchInput) {
+    elements.previewSearchInput.addEventListener('keyup', () => {
+      filterPreviewTable();
+    });
+  }
+
+  if (elements.previewCancelBtn) {
+    elements.previewCancelBtn.addEventListener('click', () => {
+      elements.verificationPreviewSection.classList.add('hidden');
+      elements.autoIndexForm.closest('section').classList.remove('hidden');
+    });
+  }
+
+  if (elements.previewImportCheckedBtn) {
+    elements.previewImportCheckedBtn.addEventListener('click', handleImportCheckedEntries);
+  }
+}
+
+async function runDependencyCheck() {
+  document.querySelectorAll('.dep-progress-container').forEach(c => c.classList.add('hidden'));
+  document.querySelectorAll('.dep-install-btn').forEach(b => b.classList.add('hidden'));
+  document.querySelectorAll('.dep-action-container').forEach(a => a.classList.remove('hidden'));
+
+  updateDependencyUI(elements.depPython, 'Checking...', 'circle-help', 'warning');
+  updateDependencyUI(elements.depQpdf, 'Checking...', 'circle-help', 'warning');
+  updateDependencyUI(elements.depPdftotext, 'Checking...', 'circle-help', 'warning');
+  updateDependencyUI(elements.depOcr, 'Checking...', 'circle-help', 'warning');
+  
+  elements.depWarnings.classList.add('hidden');
+  elements.startIndexingBtn.disabled = true;
+
+  try {
+    const deps = await window.api.checkDependencies();
+    
+    // Python
+    if (deps.python) {
+      updateDependencyUI(elements.depPython, 'Installed', 'check-circle-2', 'success', false, 'python');
+    } else {
+      updateDependencyUI(elements.depPython, 'Missing', 'alert-circle', 'error', true, 'python');
+    }
+
+    // qpdf
+    if (deps.qpdf) {
+      updateDependencyUI(elements.depQpdf, 'Installed', 'check-circle-2', 'success', false, 'qpdf');
+    } else {
+      updateDependencyUI(elements.depQpdf, 'Missing', 'alert-circle', 'error', true, 'qpdf');
+    }
+
+    // pdftotext
+    if (deps.pdftotext) {
+      updateDependencyUI(elements.depPdftotext, 'Installed', 'check-circle-2', 'success', false, 'pdftotext');
+    } else {
+      updateDependencyUI(elements.depPdftotext, 'Not Found (Fallback active)', 'alert-triangle', 'warning', true, 'pdftotext');
+    }
+
+    // OCR
+    if (deps.ocr) {
+      updateDependencyUI(elements.depOcr, 'Ready', 'check-circle-2', 'success', false, 'ocr');
+      elements.autoIndexUseOcr.disabled = false;
+    } else {
+      updateDependencyUI(elements.depOcr, 'Not Installed', 'alert-triangle', 'warning', deps.python, 'ocr');
+      elements.autoIndexUseOcr.disabled = true;
+      elements.autoIndexUseOcr.checked = false;
+    }
+
+    // Setup Warnings Alerts
+    const warnings = [];
+    if (!deps.python) {
+      warnings.push("<li><strong>Python is missing:</strong> Python 3.10+ is required. Click Install, or run <code>winget install Python.Python.3.12</code></li>");
+    }
+    if (!deps.qpdf) {
+      warnings.push("<li><strong>qpdf is missing:</strong> Decryption of password-protected SANS books will fail. Click Install, or run <code>winget install QPDF.QPDF</code></li>");
+    }
+    if (!deps.pdftotext) {
+      warnings.push("<li><strong>pdftotext not found:</strong> The app will fall back to direct PDF text extraction. Click Install, or run <code>winget install oschwartz10612.Poppler</code></li>");
+    }
+
+    if (warnings.length > 0) {
+      elements.depWarnings.innerHTML = `<strong>Attention Required:</strong><ul>${warnings.join('')}</ul>`;
+      elements.depWarnings.classList.remove('hidden');
+    }
+
+    if (deps.python && deps.qpdf) {
+      elements.startIndexingBtn.disabled = false;
+    }
+
+  } catch (err) {
+    console.error("Dependency check failed:", err);
+  }
+}
+
+function updateDependencyUI(element, label, iconName, statusClass, showInstall = false, depName = '') {
+  element.className = `dependency-item ${statusClass}`;
+  const icon = element.querySelector('.status-icon');
+  if (icon) {
+    icon.setAttribute('data-lucide', iconName);
+  }
+  const labelSpan = element.querySelector('.status-label');
+  if (labelSpan) {
+    labelSpan.textContent = label;
+  }
+  
+  const installBtn = element.querySelector('.dep-install-btn');
+  if (installBtn) {
+    if (showInstall) {
+      installBtn.classList.remove('hidden');
+    } else {
+      installBtn.classList.add('hidden');
+    }
+  }
+
+  lucide.createIcons({
+    attrs: { class: 'lucide-icon status-icon' },
+    nameAttr: 'data-lucide',
+    nodeList: [icon]
+  });
+}
+
+async function handleDependencyInstall(dependencyName, element) {
+  const actionContainer = element.querySelector('.dep-action-container');
+  if (actionContainer) actionContainer.classList.add('hidden');
+  
+  const progressContainer = element.querySelector('.dep-progress-container');
+  progressContainer.classList.remove('hidden');
+  
+  const fill = progressContainer.querySelector('.progress-bar-fill');
+  const percentLabel = progressContainer.querySelector('.dep-progress-label');
+  fill.style.width = '5%';
+  percentLabel.textContent = '5%';
+
+  // Show log console
+  elements.depInstallConsole.classList.remove('hidden');
+  elements.depInstallActiveTxt.textContent = `Installing ${dependencyName}...`;
+  elements.depInstallLogTerminal.textContent = `Starting installer for ${dependencyName}...\n`;
+
+  window.api.onDepInstallStatus((data) => {
+    if (data.dependency === dependencyName) {
+      fill.style.width = `${data.percent}%`;
+      percentLabel.textContent = `${data.percent}%`;
+      const labelSpan = element.querySelector('.status-label');
+      if (labelSpan) {
+        labelSpan.textContent = data.status;
+      }
+    }
+  });
+
+  window.api.onDepInstallLog((log) => {
+    elements.depInstallLogTerminal.textContent += log;
+    elements.depInstallLogTerminal.scrollTop = elements.depInstallLogTerminal.scrollHeight;
+  });
+
+  try {
+    const res = await window.api.installDependency(dependencyName);
+    if (res.success) {
+      alert(`Successfully installed ${dependencyName}!`);
+    }
+  } catch (err) {
+    alert(`Failed to install ${dependencyName}: ${err.message}\n\nPlease try installing manually.`);
+  } finally {
+    window.api.removeListener('dep-install-status');
+    window.api.removeListener('dep-install-log');
+    runDependencyCheck();
+  }
+}
+
+async function handleAutoIndexSubmit(e) {
+  e.preventDefault();
+  
+  if (!state.currentCourseId) {
+    alert("Please select or create a course first!");
+    return;
+  }
+  
+  const bookId = elements.autoIndexBookSelect.value;
+  if (!bookId) {
+    alert("Please select a target book to assign the index terms.");
+    return;
+  }
+
+  if (!selectedPdfPath) {
+    alert("Please select a SANS PDF book first using the Select SANS PDF Book button.");
+    return;
+  }
+
+  const pdfPath = selectedPdfPath;
+  const password = elements.autoIndexPassword.value.trim();
+  
+  const settings = {
+    offset: parseInt(elements.autoIndexOffset.value) || 0,
+    minLength: parseInt(elements.autoIndexMinLen.value) || 2,
+    maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
+    minFrequency: parseInt(elements.autoIndexMinFreq.value) || 1,
+    maxFrequency: parseInt(elements.autoIndexMaxFreq.value) || 10,
+    zipf: parseFloat(elements.autoIndexZipf.value) || 4.0,
+    useOcr: elements.autoIndexUseOcr.checked
+  };
+
+  elements.autoIndexForm.closest('section').classList.add('hidden');
+  elements.indexingProgressSection.classList.remove('hidden');
+  elements.indexingProgressStatus.textContent = 'Initializing Auto-Indexer...';
+  
+  window.api.onAutoIndexProgress((progress) => {
+    elements.indexingProgressStatus.textContent = progress.message;
+  });
+
+  try {
+    const result = await window.api.runAutoIndex({ pdfPath, password, settings });
+    elements.indexingProgressSection.classList.add('hidden');
+    
+    if (result.success) {
+      autoExtractedEntries = result.entries;
+      if (autoExtractedEntries.length === 0) {
+        alert("Auto-indexing completed, but no words or phrases matched your filter settings. Try adjusting the parameters and try again.");
+        elements.autoIndexForm.closest('section').classList.remove('hidden');
+      } else {
+        elements.verificationPreviewSection.classList.remove('hidden');
+        renderVerificationTable();
+      }
+    } else {
+      alert("Error building index: " + result.error);
+      elements.autoIndexForm.closest('section').classList.remove('hidden');
+    }
+  } catch (err) {
+    alert("An unexpected error occurred during indexing: " + err.message);
+    elements.indexingProgressSection.classList.add('hidden');
+    elements.autoIndexForm.closest('section').classList.remove('hidden');
+  } finally {
+    window.api.removeListener('auto-index-progress');
+  }
+}
+
+function renderVerificationTable() {
+  elements.previewTableBody.innerHTML = '';
+  elements.previewHeaderCheckbox.checked = true;
+  elements.previewSearchInput.value = '';
+
+  autoExtractedEntries.forEach((entry, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'preview-row';
+    tr.innerHTML = `
+      <td style="text-align: center;">
+        <input type="checkbox" class="preview-row-checkbox" checked data-idx="${idx}">
+      </td>
+      <td>
+        <input type="text" class="preview-topic-input" value="${escapeHtml(entry.topic)}" data-idx="${idx}">
+      </td>
+      <td style="width: 150px;">
+        <input type="text" class="preview-pages-input" value="${escapeHtml(entry.pages)}" data-idx="${idx}">
+      </td>
+      <td>
+        <input type="text" class="preview-notes-input" placeholder="Optional notes context..." data-idx="${idx}">
+      </td>
+    `;
+    elements.previewTableBody.appendChild(tr);
+  });
+
+  elements.previewTableBody.querySelectorAll('.preview-row-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => {
+      updateSelectedCount();
+    });
+  });
+
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const selectedCbs = elements.previewTableBody.querySelectorAll('.preview-row-checkbox:checked');
+  elements.previewSelectedCount.textContent = `${selectedCbs.length} items selected`;
+  if (elements.previewImportCheckedBtn) {
+    elements.previewImportCheckedBtn.disabled = (selectedCbs.length === 0);
+  }
+}
+
+function filterPreviewTable() {
+  const query = elements.previewSearchInput.value.toLowerCase().trim();
+  const rows = elements.previewTableBody.querySelectorAll('.preview-row');
+  
+  rows.forEach(row => {
+    const topicVal = row.querySelector('.preview-topic-input').value.toLowerCase();
+    const pagesVal = row.querySelector('.preview-pages-input').value.toLowerCase();
+    const notesVal = row.querySelector('.preview-notes-input').value.toLowerCase();
+    
+    if (!query || topicVal.includes(query) || pagesVal.includes(query) || notesVal.includes(query)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}
+
+async function handleImportCheckedEntries() {
+  const selectedRows = elements.previewTableBody.querySelectorAll('.preview-row');
+  const targetBookId = elements.autoIndexBookSelect.value;
+  
+  let importCount = 0;
+  selectedRows.forEach(row => {
+    const checkbox = row.querySelector('.preview-row-checkbox');
+    if (checkbox.checked) {
+      const idx = checkbox.getAttribute('data-idx');
+      const topicInput = row.querySelector('.preview-topic-input');
+      const pagesInput = row.querySelector('.preview-pages-input');
+      const notesInput = row.querySelector('.preview-notes-input');
+      
+      const newEntry = {
+        id: 'entry-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9) + '-' + importCount,
+        courseId: state.currentCourseId,
+        bookId: targetBookId,
+        topic: topicInput.value.trim(),
+        pages: pagesInput.value.trim(),
+        notes: notesInput.value.trim(),
+        source: 'auto',
+        createdAt: new Date().toISOString()
+      };
+      
+      state.entries.push(newEntry);
+      importCount++;
+    }
+  });
+
+  if (importCount > 0) {
+    await saveState();
+    
+    alert(`Successfully imported ${importCount} auto-indexed entries!`);
+    
+    elements.verificationPreviewSection.classList.add('hidden');
+    elements.autoIndexForm.closest('section').classList.remove('hidden');
+    selectedPdfPath = '';
+    elements.autoIndexFileName.textContent = 'No file selected';
+    elements.autoIndexFileName.title = '';
+    elements.autoIndexPassword.value = '';
+    
+    const tabButtons = document.querySelectorAll('.workspace-tabs .tab-btn');
+    tabButtons.forEach(b => {
+      b.classList.remove('active');
+      if (b.getAttribute('data-view-tab') === 'manual-index') {
+        b.classList.add('active');
+      }
+    });
+    
+    elements.manualIndexView.classList.remove('hidden');
+    elements.autoIndexView.classList.add('hidden');
+    
+    renderAll();
   }
 }

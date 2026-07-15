@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, MenuItem } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { exec, spawn, execSync } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 
 let mainWindow;
 const DATA_FILE = path.join(__dirname, 'sans_index.json');
@@ -234,4 +237,556 @@ ipcMain.handle('print-app', async () => {
     }
   });
   return true;
+});
+
+async function checkCommand(command) {
+  return new Promise((resolve) => {
+    exec(command, (error) => {
+      if (error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("not recognized") || msg.includes("cannot find") || msg.includes("no such file") || msg.includes("not found")) {
+          resolve(false);
+          return;
+        }
+      }
+      resolve(true);
+    });
+  });
+}
+
+// Helper to resolve QPDF path on Windows
+function resolveQpdfPath() {
+  if (process.platform !== 'win32') return 'qpdf';
+  
+  try {
+    execSync('qpdf --version', { stdio: 'ignore' });
+    return 'qpdf';
+  } catch (e) {
+    // Ignore
+  }
+
+  const searchDirs = ['C:\\Program Files', 'C:\\Program Files (x86)'];
+  for (const dir of searchDirs) {
+    if (fs.existsSync(dir)) {
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        if (item.toLowerCase().startsWith('qpdf')) {
+          const binaryPath = path.join(dir, item, 'bin', 'qpdf.exe');
+          if (fs.existsSync(binaryPath)) {
+            return binaryPath;
+          }
+        }
+      }
+    }
+  }
+
+  return 'qpdf';
+}
+
+// Helper to resolve pdftotext path on Windows
+function resolvePdftotextPath() {
+  if (process.platform !== 'win32') return 'pdftotext';
+
+  try {
+    execSync('pdftotext -v', { stdio: 'ignore' });
+    return 'pdftotext';
+  } catch (e) {
+    // Ignore
+  }
+
+  const gitPath = 'C:\\Program Files\\Git\\mingw64\\bin\\pdftotext.exe';
+  if (fs.existsSync(gitPath)) {
+    return gitPath;
+  }
+
+  const searchDirs = ['C:\\Program Files', 'C:\\Program Files (x86)'];
+  for (const dir of searchDirs) {
+    if (fs.existsSync(dir)) {
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        if (item.toLowerCase().includes('poppler')) {
+          const binaryPath = path.join(dir, item, 'bin', 'pdftotext.exe');
+          if (fs.existsSync(binaryPath)) {
+            return binaryPath;
+          }
+        }
+      }
+    }
+  }
+
+  return 'pdftotext';
+}
+
+// IPC Handler: Check Auto-Indexing Dependencies
+ipcMain.handle('check-dependencies', async () => {
+  const python = await checkCommand('python --version');
+  const resolvedQpdf = resolveQpdfPath();
+  const resolvedPdftotext = resolvePdftotextPath();
+  
+  const qpdf = resolvedQpdf !== 'qpdf' || await checkCommand('qpdf --version');
+  const pdftotext = resolvedPdftotext !== 'pdftotext' || await checkCommand('pdftotext -v');
+  
+  const venvPath = path.join(__dirname, 'engine', '.venv');
+  const venvExists = fs.existsSync(venvPath);
+  
+  let ocr = false;
+  if (python) {
+    ocr = await new Promise((resolve) => {
+      exec('python -c "import doctr, torch; print(\'ok\')"', (error, stdout) => {
+        if (!error && stdout.trim() === 'ok') {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
+  }
+  
+  let venvOcr = false;
+  if (venvExists) {
+    const venvPython = process.platform === 'win32' 
+      ? path.join(venvPath, 'Scripts', 'python.exe')
+      : path.join(venvPath, 'bin', 'python');
+    
+    venvOcr = await new Promise((resolve) => {
+      exec(`"${venvPython}" -c "import doctr, torch; print(\'ok\')"`, (error, stdout) => {
+        if (!error && stdout.trim() === 'ok') {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
+  }
+  
+  return {
+    python,
+    qpdf,
+    pdftotext,
+    ocr: ocr || venvOcr,
+    venvExists,
+  };
+});
+
+// IPC Handler: Select PDF File
+ipcMain.handle('select-pdf-file', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select SANS PDF Book',
+    properties: ['openFile'],
+    filters: [
+      { name: 'PDF Files', extensions: ['pdf'] }
+    ]
+  });
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+  return result.filePaths[0];
+});
+
+// IPC Handler: Install OCR Dependencies (virtual environment creation and pip install)
+ipcMain.handle('install-ocr', async (event) => {
+  return new Promise((resolve, reject) => {
+    const engineDir = path.join(__dirname, 'engine');
+    const venvPath = path.join(engineDir, '.venv');
+    
+    event.sender.send('ocr-install-status', 'Creating virtual environment (engine/.venv)...');
+    
+    const venvSpawn = spawn('python', ['-m', 'venv', '.venv'], { cwd: engineDir });
+    
+    venvSpawn.on('close', (code) => {
+      if (code !== 0) {
+        event.sender.send('ocr-install-status', 'Failed to create virtual environment.');
+        reject(new Error('Failed to create virtual environment'));
+        return;
+      }
+      
+      event.sender.send('ocr-install-status', 'Installing libraries (PyTorch, DocTR, and requirements.txt)... This can take 5-10 minutes.');
+      
+      const pipPath = process.platform === 'win32'
+        ? path.join(venvPath, 'Scripts', 'pip.exe')
+        : path.join(venvPath, 'bin', 'pip');
+        
+      const pipSpawn = spawn(pipPath, ['install', '-r', 'requirements.txt'], { cwd: engineDir });
+      
+      pipSpawn.stdout.on('data', (data) => {
+        event.sender.send('ocr-install-log', data.toString());
+      });
+      
+      pipSpawn.stderr.on('data', (data) => {
+        event.sender.send('ocr-install-log', data.toString());
+      });
+      
+      pipSpawn.on('close', (pipCode) => {
+        if (pipCode !== 0) {
+          event.sender.send('ocr-install-status', 'Failed to install requirements.');
+          reject(new Error('Failed to install requirements'));
+        } else {
+          event.sender.send('ocr-install-status', 'OCR dependencies successfully installed!');
+          resolve({ success: true });
+        }
+      });
+    });
+  });
+});
+
+// IPC Handler: Install System Dependencies (Python, qpdf, Poppler pdftotext, OCR)
+ipcMain.handle('install-dependency', async (event, dependencyName) => {
+  return new Promise((resolve, reject) => {
+    if (dependencyName === 'ocr') {
+      const engineDir = path.join(__dirname, 'engine');
+      const venvPath = path.join(engineDir, '.venv');
+      
+      event.sender.send('dep-install-status', {
+        dependency: 'ocr',
+        status: 'Creating virtual environment (engine/.venv)...',
+        percent: 10
+      });
+      
+      const venvSpawn = spawn('python', ['-m', 'venv', '.venv'], { cwd: engineDir });
+      
+      venvSpawn.stdout.on('data', (data) => {
+        event.sender.send('dep-install-log', data.toString());
+      });
+      venvSpawn.stderr.on('data', (data) => {
+        event.sender.send('dep-install-log', data.toString());
+      });
+      
+      venvSpawn.on('close', (code) => {
+        if (code !== 0) {
+          event.sender.send('dep-install-status', {
+            dependency: 'ocr',
+            status: 'Failed to create virtual environment.',
+            percent: 0
+          });
+          reject(new Error('Failed to create virtual environment'));
+          return;
+        }
+        
+        event.sender.send('dep-install-status', {
+          dependency: 'ocr',
+          status: 'Installing libraries (PyTorch, DocTR, and requirements.txt)... This can take 5-10 minutes.',
+          percent: 40
+        });
+        
+        const pipPath = process.platform === 'win32'
+          ? path.join(venvPath, 'Scripts', 'pip.exe')
+          : path.join(venvPath, 'bin', 'pip');
+          
+        const pipSpawn = spawn(pipPath, ['install', '-r', 'requirements.txt'], { cwd: engineDir });
+        
+        pipSpawn.stdout.on('data', (data) => {
+          const text = data.toString();
+          event.sender.send('dep-install-log', text);
+          if (text.includes('Downloading')) {
+            event.sender.send('dep-install-status', {
+              dependency: 'ocr',
+              status: 'Downloading Python OCR libraries...',
+              percent: 50
+            });
+          } else if (text.includes('Installing collected packages')) {
+            event.sender.send('dep-install-status', {
+              dependency: 'ocr',
+              status: 'Installing/Building Python packages...',
+              percent: 85
+            });
+          }
+        });
+        
+        pipSpawn.stderr.on('data', (data) => {
+          event.sender.send('dep-install-log', data.toString());
+        });
+        
+        pipSpawn.on('close', (pipCode) => {
+          if (pipCode !== 0) {
+            event.sender.send('dep-install-status', {
+              dependency: 'ocr',
+              status: 'Failed to install OCR packages.',
+              percent: 0
+            });
+            reject(new Error('Failed to install requirements'));
+          } else {
+            event.sender.send('dep-install-status', {
+              dependency: 'ocr',
+              status: 'OCR dependencies successfully installed!',
+              percent: 100
+            });
+            resolve({ success: true });
+          }
+        });
+      });
+      return;
+    }
+
+    let command = 'winget';
+    let args = [];
+    
+    if (dependencyName === 'python') {
+      args = ['install', 'Python.Python.3.12', '--accept-source-agreements', '--accept-package-agreements'];
+    } else if (dependencyName === 'qpdf') {
+      args = ['install', 'QPDF.QPDF', '--accept-source-agreements', '--accept-package-agreements'];
+    } else if (dependencyName === 'pdftotext') {
+      args = ['install', 'oschwartz10612.Poppler', '--accept-source-agreements', '--accept-package-agreements'];
+    } else {
+      reject(new Error(`Unknown dependency: ${dependencyName}`));
+      return;
+    }
+
+    event.sender.send('dep-install-status', {
+      dependency: dependencyName,
+      status: `Starting installation of ${dependencyName}...`,
+      percent: 5
+    });
+
+    const installerProcess = spawn(command, args, { shell: true });
+    let logBuffer = '';
+
+    installerProcess.stdout.on('data', (data) => {
+      const text = data.toString();
+      event.sender.send('dep-install-log', text);
+      logBuffer += text;
+
+      const pctMatch = text.match(/(\d+)\s*%/);
+      if (pctMatch) {
+        const pct = parseInt(pctMatch[1]);
+        event.sender.send('dep-install-status', {
+          dependency: dependencyName,
+          status: `Downloading/Installing ${dependencyName}...`,
+          percent: Math.min(95, Math.max(5, pct))
+        });
+      } else if (text.includes('Successfully installed') || text.includes('Installer exit code: 0')) {
+        event.sender.send('dep-install-status', {
+          dependency: dependencyName,
+          status: `Installation of ${dependencyName} succeeded!`,
+          percent: 100
+        });
+      } else if (text.includes('Downloading')) {
+        event.sender.send('dep-install-status', {
+          dependency: dependencyName,
+          status: `Downloading ${dependencyName}...`,
+          percent: 25
+        });
+      } else if (text.includes('Installing')) {
+        event.sender.send('dep-install-status', {
+          dependency: dependencyName,
+          status: `Installing ${dependencyName}...`,
+          percent: 75
+        });
+      }
+    });
+
+    installerProcess.stderr.on('data', (data) => {
+      const text = data.toString();
+      event.sender.send('dep-install-log', `ERROR: ${text}`);
+    });
+
+    installerProcess.on('close', (code) => {
+      const isAlreadyInstalled = code === 2316632107 || 
+                                 logBuffer.includes('already installed') || 
+                                 logBuffer.includes('No newer package versions are available') || 
+                                 logBuffer.includes('No available upgrade found') ||
+                                 logBuffer.includes('Command line alias already exists');
+                                 
+      if (code === 0 || isAlreadyInstalled || logBuffer.includes('Successfully installed')) {
+        const statusMsg = isAlreadyInstalled 
+          ? `${dependencyName} is already installed!`
+          : `Successfully completed installation of ${dependencyName}!`;
+          
+        event.sender.send('dep-install-status', {
+          dependency: dependencyName,
+          status: statusMsg,
+          percent: 100
+        });
+        resolve({ success: true });
+      } else {
+        event.sender.send('dep-install-status', {
+          dependency: dependencyName,
+          status: `Failed to install ${dependencyName}. Exit code: ${code}`,
+          percent: 0
+        });
+        reject(new Error(`winget install exited with code ${code}. If you don't have winget, please install this dependency manually.`));
+      }
+    });
+  });
+});
+
+// IPC Handler: Run Auto-Indexing
+ipcMain.handle('run-auto-index', async (event, args) => {
+  const { pdfPath, password, settings } = args;
+  const tempDir = path.join(__dirname, 'temp_indexing');
+  
+  try {
+    if (fs.existsSync(tempDir)) {
+      const files = fs.readdirSync(tempDir);
+      for (const file of files) {
+        fs.unlinkSync(path.join(tempDir, file));
+      }
+    } else {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    const decryptedPdf = path.join(tempDir, 'decrypted.pdf');
+    const processedPdf = path.join(tempDir, 'processed.pdf');
+    const textFile = path.join(tempDir, 'text.txt');
+    const indexOutputFile = path.join(tempDir, 'index_output.txt');
+    
+    // Decrypt
+    event.sender.send('auto-index-progress', { step: 'decrypting', message: 'Decrypting PDF...' });
+    
+    let decryptArgs = [];
+    if (password) {
+      decryptArgs.push(`--password=${password}`);
+    }
+    decryptArgs.push('--decrypt', pdfPath, decryptedPdf);
+    
+    await new Promise((resolve, reject) => {
+      const qpdfProc = spawn(resolveQpdfPath(), decryptArgs);
+      let stderr = '';
+      qpdfProc.stderr.on('data', (data) => stderr += data.toString());
+      qpdfProc.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`Decryption failed: ${stderr || 'Wrong password or corrupted PDF'}`));
+        } else {
+          resolve();
+        }
+      });
+    });
+    
+    let sourceFile = decryptedPdf;
+    const venvPath = path.join(__dirname, 'engine', '.venv');
+    const venvExists = fs.existsSync(venvPath);
+    const pythonExe = venvExists
+      ? (process.platform === 'win32' ? path.join(venvPath, 'Scripts', 'python.exe') : path.join(venvPath, 'bin', 'python'))
+      : 'python';
+      
+    // OCR if enabled
+    if (settings.useOcr) {
+      event.sender.send('auto-index-progress', { step: 'ocr', message: 'Running OCR on images (this will take a while)...' });
+      const ocrScript = path.join(__dirname, 'engine', 'extract_img_text.py');
+      await new Promise((resolve, reject) => {
+        const ocrProc = spawn(pythonExe, [ocrScript, decryptedPdf, processedPdf]);
+        let stderr = '';
+        ocrProc.stderr.on('data', (data) => stderr += data.toString());
+        ocrProc.on('close', (code) => {
+          if (code !== 0) {
+            reject(new Error(`OCR failed: ${stderr}`));
+          } else {
+            resolve();
+          }
+        });
+      });
+      sourceFile = processedPdf;
+    }
+    
+    // Extract Text (pdftotext)
+    const resolvedPdftotext = resolvePdftotextPath();
+    const hasPdftotext = resolvedPdftotext !== 'pdftotext' || await checkCommand('pdftotext -v');
+    let usePdfDirectly = false;
+    
+    if (hasPdftotext) {
+      event.sender.send('auto-index-progress', { step: 'converting', message: 'Extracting text from PDF...' });
+      await new Promise((resolve) => {
+        const pdfToTextProc = spawn(resolvedPdftotext, [sourceFile, textFile]);
+        let stderr = '';
+        pdfToTextProc.stderr.on('data', (data) => stderr += data.toString());
+        pdfToTextProc.on('close', (code) => {
+          if (code !== 0) {
+            console.error(`pdftotext failed: ${stderr}. Falling back to direct PDF text extraction.`);
+            usePdfDirectly = true;
+          }
+          resolve();
+        });
+      });
+    } else {
+      usePdfDirectly = true;
+    }
+    
+    const indexInputFile = usePdfDirectly ? sourceFile : textFile;
+    
+    // Indexing
+    event.sender.send('auto-index-progress', { step: 'indexing', message: 'Generating index terms...' });
+    
+    const buildIndexScript = path.join(__dirname, 'engine', 'build_index.py');
+    const indexArgs = [buildIndexScript];
+    
+    if (settings.offset) indexArgs.push('-o', settings.offset.toString());
+    if (settings.minLength) indexArgs.push('-l', settings.minLength.toString());
+    if (settings.maxLength) indexArgs.push('-L', settings.maxLength.toString());
+    if (settings.minFrequency) indexArgs.push('-f', settings.minFrequency.toString());
+    if (settings.maxFrequency) indexArgs.push('-F', settings.maxFrequency.toString());
+    if (settings.zipf) indexArgs.push('-z', settings.zipf.toString());
+    
+    indexArgs.push('-r', '[a-zA-Z0-9 :.&_-]+');
+    indexArgs.push(indexInputFile, indexOutputFile);
+    
+    await new Promise((resolve, reject) => {
+      const indexProc = spawn(pythonExe, indexArgs, { cwd: path.join(__dirname, 'engine') });
+      let stderr = '';
+      indexProc.stderr.on('data', (data) => stderr += data.toString());
+      indexProc.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`Indexing failed: ${stderr}`));
+        } else {
+          resolve();
+        }
+      });
+    });
+    
+    // Parse
+    event.sender.send('auto-index-progress', { step: 'parsing', message: 'Parsing output...' });
+    if (!fs.existsSync(indexOutputFile)) {
+      throw new Error('Auto-index completed but output file was not found.');
+    }
+    
+    const indexContent = fs.readFileSync(indexOutputFile, 'utf8');
+    const entries = [];
+    const lines = indexContent.split('\n');
+    
+    for (let line of lines) {
+      line = line.replace(/\r/g, '');
+      if (!line.trim() || (line.startsWith('[') && line.endsWith(']'))) {
+        continue;
+      }
+      
+      const colonIndex = line.lastIndexOf(':');
+      if (colonIndex === -1) continue;
+      
+      const topic = line.substring(0, colonIndex).trim();
+      const pages = line.substring(colonIndex + 1).trim();
+      
+      if (topic && pages) {
+        entries.push({
+          topic: topic,
+          pages: pages,
+          notes: '',
+          source: 'auto'
+        });
+      }
+    }
+    
+    // Cleanup
+    try {
+      if (fs.existsSync(tempDir)) {
+        const files = fs.readdirSync(tempDir);
+        for (const file of files) {
+          fs.unlinkSync(path.join(tempDir, file));
+        }
+        fs.rmdirSync(tempDir);
+      }
+    } catch (e) {}
+    
+    return { success: true, entries };
+    
+  } catch (error) {
+    console.error('Auto-indexing pipeline error:', error);
+    try {
+      if (fs.existsSync(tempDir)) {
+        const files = fs.readdirSync(tempDir);
+        for (const file of files) {
+          fs.unlinkSync(path.join(tempDir, file));
+        }
+        fs.rmdirSync(tempDir);
+      }
+    } catch (e) {}
+    return { success: false, error: error.message };
+  }
 });

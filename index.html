@@ -175,6 +175,21 @@
         </div>
       </header>
 
+      <!-- Workspace Navigation Tabs -->
+      <div class="workspace-tabs no-print no-print-in-quiz">
+        <button class="tab-btn active" data-view-tab="manual-index">
+          <i data-lucide="edit-3"></i>
+          <span>Manual Indexing</span>
+        </button>
+        <button class="tab-btn" data-view-tab="auto-index" id="auto-index-nav-btn">
+          <i data-lucide="cpu"></i>
+          <span>Auto-Index PDF</span>
+        </button>
+      </div>
+
+      <!-- Manual Indexing Workspace View -->
+      <div id="manual-index-view" class="workspace-view">
+
       <!-- Stats Bar (Hidden in Quiz mode) -->
       <section class="stats-bar no-print no-print-in-quiz">
         <div class="stat-card">
@@ -301,6 +316,262 @@
               </thead>
               <tbody id="index-table-body">
                 <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div> <!-- Closes #shared-table-container -->
+      </div> <!-- Closes #manual-index-view -->
+
+      <!-- Auto-Indexing Workspace View -->
+      <div id="auto-index-view" class="workspace-view hidden no-print">
+        <!-- Dependency Status Banner / OCR Info -->
+        <section class="auto-index-header">
+          <h2>Auto-Index SANS Book PDF</h2>
+          <p class="summary-text">Upload a course PDF to automatically build a comprehensive index. (Requires Python, qpdf, and pdftotext installed on your system PATH).</p>
+        </section>
+
+        <!-- Dependency Checker Panel -->
+        <section class="dependency-panel panel-container">
+          <h3 class="panel-subtitle"><i data-lucide="shield-check"></i> System Dependencies Check</h3>
+          <div class="dependency-grid">
+            <!-- Python -->
+            <div class="dependency-item" id="dep-python">
+              <div class="dep-item-header">
+                <i data-lucide="circle-help" class="status-icon"></i>
+                <span class="dep-name">Python 3.10+</span>
+                <span class="status-label">Checking...</span>
+              </div>
+              <div class="dep-action-container">
+                <button class="dep-install-btn btn btn-xs hidden" data-dep="python">
+                  <i data-lucide="download-cloud"></i>
+                  <span>Install</span>
+                </button>
+              </div>
+              <div class="dep-progress-container hidden">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <div class="dep-progress-label">0%</div>
+              </div>
+            </div>
+
+            <!-- qpdf -->
+            <div class="dependency-item" id="dep-qpdf">
+              <div class="dep-item-header">
+                <i data-lucide="circle-help" class="status-icon"></i>
+                <span class="dep-name">qpdf (Decryption)</span>
+                <span class="status-label">Checking...</span>
+              </div>
+              <div class="dep-action-container">
+                <button class="dep-install-btn btn btn-xs hidden" data-dep="qpdf">
+                  <i data-lucide="download-cloud"></i>
+                  <span>Install</span>
+                </button>
+              </div>
+              <div class="dep-progress-container hidden">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <div class="dep-progress-label">0%</div>
+              </div>
+            </div>
+
+            <!-- pdftotext -->
+            <div class="dependency-item" id="dep-pdftotext">
+              <div class="dep-item-header">
+                <i data-lucide="circle-help" class="status-icon"></i>
+                <span class="dep-name">pdftotext (Poppler)</span>
+                <span class="status-label">Checking...</span>
+              </div>
+              <div class="dep-action-container">
+                <button class="dep-install-btn btn btn-xs hidden" data-dep="pdftotext">
+                  <i data-lucide="download-cloud"></i>
+                  <span>Install</span>
+                </button>
+              </div>
+              <div class="dep-progress-container hidden">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <div class="dep-progress-label">0%</div>
+              </div>
+            </div>
+
+            <!-- OCR -->
+            <div class="dependency-item" id="dep-ocr">
+              <div class="dep-item-header">
+                <i data-lucide="circle-help" class="status-icon"></i>
+                <span class="dep-name">OCR (torch & doctr)</span>
+                <span class="status-label">Checking...</span>
+              </div>
+              <div class="dep-action-container">
+                <button class="dep-install-btn btn btn-xs hidden" data-dep="ocr">
+                  <i data-lucide="download-cloud"></i>
+                  <span>Install</span>
+                </button>
+              </div>
+              <div class="dep-progress-container hidden">
+                <div class="progress-bar-track">
+                  <div class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+                <div class="dep-progress-label">0%</div>
+              </div>
+            </div>
+          </div>
+          <div id="dep-warnings" class="dep-warnings-container hidden">
+            <!-- Warnings or installation tips go here -->
+          </div>
+          <!-- Installation log console -->
+          <div id="dep-install-console" class="ocr-download-container hidden" style="margin-top: 16px; padding: 16px;">
+            <p class="ocr-download-text" style="margin-bottom: 8px;"><strong>Installation Progress Console:</strong> <span id="dep-install-active-txt">Idle</span></p>
+            <pre id="dep-install-log-terminal" class="terminal-log" style="margin-top: 8px; max-height: 120px;"></pre>
+          </div>
+        </section>
+
+        <!-- Auto Index Action Form -->
+        <section class="auto-index-form-container panel-container">
+          <form id="auto-index-form">
+            <div class="form-grid">
+              <!-- Book Select -->
+              <div class="form-group flex-1">
+                <label for="auto-index-book-select">Target Book</label>
+                <select id="auto-index-book-select">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <!-- PDF File -->
+              <div class="form-group flex-2">
+                <label>Course Book PDF File</label>
+                <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+                  <button type="button" id="auto-index-file-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; font-size: 0.85rem;">
+                    <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
+                    <span>Select SANS PDF Book</span>
+                  </button>
+                  <span id="auto-index-file-name" style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                </div>
+              </div>
+
+              <!-- Password -->
+              <div class="form-group flex-1">
+                <label for="auto-index-password">PDF Password (if encrypted)</label>
+                <input type="password" id="auto-index-password" placeholder="SANS Decryption Password">
+              </div>
+            </div>
+
+            <!-- Settings Accordion -->
+            <div class="advanced-settings-header collapsible-header" id="auto-index-settings-toggle">
+              <i data-lucide="settings" class="settings-icon"></i>
+              <span>Advanced Indexing Parameters (Optional)</span>
+              <i data-lucide="chevron-right" class="collapse-icon"></i>
+            </div>
+            
+            <div id="auto-index-settings-content" class="advanced-settings-content hidden">
+              <div class="form-grid">
+                <!-- Page Offset -->
+                <div class="form-group flex-1">
+                  <label for="auto-index-offset" title="Number of pages to skip at the start of the PDF (e.g. index/cover pages)">Page Number Offset</label>
+                  <input type="number" id="auto-index-offset" value="0" min="0">
+                </div>
+
+                <!-- Min Length -->
+                <div class="form-group flex-1">
+                  <label for="auto-index-min-len">Min Word Length</label>
+                  <input type="number" id="auto-index-min-len" value="2" min="1">
+                </div>
+
+                <!-- Max Length -->
+                <div class="form-group flex-1">
+                  <label for="auto-index-max-len">Max Word Length</label>
+                  <input type="number" id="auto-index-max-len" value="50" min="1">
+                </div>
+              </div>
+
+              <div class="form-grid" style="margin-top: 15px;">
+                <!-- Zipf Score -->
+                <div class="form-group flex-1">
+                  <label for="auto-index-zipf" title="Exclude words more common than this on a logarithmic scale (default 4.0). Lower = stricter filtering.">Max Zipf Frequency Score</label>
+                  <input type="number" id="auto-index-zipf" value="4.0" step="0.1" min="1.0" max="7.0">
+                </div>
+
+                <!-- Min Frequency -->
+                <div class="form-group flex-1">
+                  <label for="auto-index-min-freq" title="Exclude words that appear on fewer than N pages.">Min Page Frequency</label>
+                  <input type="number" id="auto-index-min-freq" value="1" min="1">
+                </div>
+
+                <!-- Max Frequency -->
+                <div class="form-group flex-1">
+                  <label for="auto-index-max-freq" title="Exclude words that appear on more than N pages (removes noise).">Max Page Frequency</label>
+                  <input type="number" id="auto-index-max-freq" value="10" min="1">
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 15px;">
+                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+                  <input type="checkbox" id="auto-index-use-ocr">
+                  <span>Use OCR Engine to scan image-only / scanned pages (Slow, requires OCR dependencies)</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-actions-row" style="margin-top: 20px;">
+              <button type="submit" id="start-indexing-btn" class="btn btn-accent btn-large">
+                <i data-lucide="play"></i>
+                <span>Build Index from PDF</span>
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Progress Spinner / Indicator -->
+        <section id="indexing-progress-section" class="panel-container hidden" style="text-align: center; padding: 40px;">
+          <div class="spinner-container">
+            <div class="spinner"></div>
+          </div>
+          <h3 id="indexing-progress-status" style="margin-top: 20px;">Decrypting PDF...</h3>
+          <p id="indexing-progress-subtext" style="color: var(--text-muted);">Please do not close the application.</p>
+        </section>
+
+        <!-- Import Verification Table View -->
+        <section id="verification-preview-section" class="panel-container hidden">
+          <div class="preview-header">
+            <h3><i data-lucide="check-square"></i> Verify Extracted Index Terms</h3>
+            <div class="preview-actions">
+              <span id="preview-selected-count" style="margin-right: 15px; color: var(--text-muted);">0 items selected</span>
+              <button id="preview-import-checked-btn" class="btn btn-accent">
+                <i data-lucide="plus-circle"></i>
+                <span>Import Selected Entries</span>
+              </button>
+              <button id="preview-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+          </div>
+
+          <div class="table-controls-container" style="border: none; padding: 15px 0 10px 0; background: transparent;">
+            <div class="search-wrapper">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="preview-search-input" placeholder="Search extracted terms...">
+            </div>
+            <div class="selection-shortcuts">
+              <button id="preview-select-all" class="btn btn-sm btn-secondary">Select All</button>
+              <button id="preview-select-none" class="btn btn-sm btn-secondary">Deselect All</button>
+            </div>
+          </div>
+
+          <div class="table-wrapper" style="max-height: 450px; overflow-y: auto;">
+            <table class="index-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px; text-align: center;"><input type="checkbox" id="preview-header-checkbox" checked></th>
+                  <th style="width: 250px;">Extracted Topic</th>
+                  <th style="width: 150px;">Page(s)</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="preview-table-body">
+                <!-- Extracted terms injected here -->
               </tbody>
             </table>
           </div>
