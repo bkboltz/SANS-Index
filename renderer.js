@@ -559,6 +559,9 @@ function renderEntries() {
               <button type="button" class="inline-format-btn" data-format="highlight" title="Highlight" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 2-3-3-9.5 9.5 3 3L22 2Z"/></svg>
               </button>
+              <button type="button" class="inline-format-btn" data-format="bullet" title="Bullet List" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </button>
             </div>
             <div contenteditable="true" class="inline-edit-input inline-notes-input notes-textarea-replacement" data-placeholder="Notes" style="background-color: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 8px; border-radius: 4px; font-size: 0.85rem; width: 100%; min-height: 32px; font-family: inherit; line-height: 1.4; box-sizing: border-box; display: block; outline: none; overflow-y: auto;">${markdownToHtml(entry.notes || '')}</div>
           </div>
@@ -2321,6 +2324,11 @@ function htmlToMarkdown(html) {
   md = md.replace(/<br\s*\/?>/gi, '\n');
   md = md.replace(/<div>(.*?)<\/div>/gi, '\n$1');
   
+  // Replace list items
+  md = md.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n');
+  md = md.replace(/<ul[^>]*>/gi, '');
+  md = md.replace(/<\/ul>/gi, '');
+  
   // Replace bold tags
   md = md.replace(/<(strong|b)>(.*?)<\/\1>/gi, '**$2**');
   // Replace italic tags
@@ -2329,10 +2337,9 @@ function htmlToMarkdown(html) {
   md = md.replace(/<u>(.*?)<\/u>/gi, '__$1__');
   
   // Replace highlight tags
-  md = md.replace(/<span[^>]*class="[^"]*note-highlight[^"]*">(.*?)<\/span>/gi, '==$1==');
-  md = md.replace(/<span[^>]*style="[^"]*background-color:[^"]*rgba?\(245,\s*158,\s*11[^"]*"(.*?)<\/span>/gi, '==$1==');
-  md = md.replace(/<span[^>]*style="[^"]*background-color:[^"]*"(.*?)<\/span>/gi, '==$1==');
-  md = md.replace(/<mark>(.*?)<\/mark>/gi, '==$1==');
+  md = md.replace(/<span[^>]*class="[^"]*note-highlight[^"]*"[^>]*>(.*?)<\/span>/gi, '==$1==');
+  md = md.replace(/<span[^>]*style="[^"]*background-color:[^"]*"[^>]*>(.*?)<\/span>/gi, '==$1==');
+  md = md.replace(/<mark[^>]*>(.*?)<\/mark>/gi, '==$1==');
   
   // Clean up any remaining HTML tags (like <div> or <span>)
   md = md.replace(/<[^>]+>/g, '');
@@ -2365,6 +2372,46 @@ function markdownToHtml(markdown) {
   // Replace highlight
   html = html.replace(/==(.*?)==/g, '<span class="note-highlight">$1</span>');
   
+  // Convert lines starting with "- " or "* " to ul/li tags
+  const lines = html.split('<br>');
+  let inList = false;
+  const processedLines = lines.map(line => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('- ')) {
+      const content = trimmed.substring(2);
+      let res = '';
+      if (!inList) {
+        res += '<ul>';
+        inList = true;
+      }
+      res += `<li>${content}</li>`;
+      return res;
+    } else if (trimmed.startsWith('* ')) {
+      const content = trimmed.substring(2);
+      let res = '';
+      if (!inList) {
+        res += '<ul>';
+        inList = true;
+      }
+      res += `<li>${content}</li>`;
+      return res;
+    } else {
+      let res = '';
+      if (inList) {
+        res += '</ul>';
+        inList = false;
+      }
+      res += line;
+      return res;
+    }
+  });
+  if (inList) {
+    processedLines.push('</ul>');
+  }
+  html = processedLines.join('<br>');
+  html = html.replace(/<br>\s*<ul>/g, '<ul>');
+  html = html.replace(/<\/ul>\s*<br>/g, '</ul>');
+  
   return html;
 }
 
@@ -2373,16 +2420,20 @@ function updateFormatButtonsActiveStates(container) {
   const italicBtn = container.querySelector('[data-format="italic"]');
   const underlineBtn = container.querySelector('[data-format="underline"]');
   const highlightBtn = container.querySelector('[data-format="highlight"]');
+  const bulletBtn = container.querySelector('[data-format="bullet"]');
   
   if (boldBtn) boldBtn.classList.toggle('active', document.queryCommandState('bold'));
   if (italicBtn) italicBtn.classList.toggle('active', document.queryCommandState('italic'));
   if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
+  if (bulletBtn) bulletBtn.classList.toggle('active', document.queryCommandState('insertUnorderedList'));
   
   if (highlightBtn) {
-    const curColor = document.queryCommandValue('backColor');
-    // Check if background-color matches highlight amber rgba(245, 158, 11) or similar rgb values
-    const isHighlighted = curColor && curColor !== 'rgba(0, 0, 0, 0)' && curColor !== 'transparent' && curColor !== 'rgb(0, 0, 0)';
-    highlightBtn.classList.toggle('active', isHighlighted);
+    // Check both backColor and hiliteColor
+    const curColor1 = document.queryCommandValue('backColor');
+    const curColor2 = document.queryCommandValue('hiliteColor');
+    const isHighlighted1 = curColor1 && curColor1 !== 'rgba(0, 0, 0, 0)' && curColor1 !== 'transparent' && curColor1 !== 'rgb(0, 0, 0)' && curColor1 !== 'none' && curColor1 !== 'currentColor';
+    const isHighlighted2 = curColor2 && curColor2 !== 'rgba(0, 0, 0, 0)' && curColor2 !== 'transparent' && curColor2 !== 'rgb(0, 0, 0)' && curColor2 !== 'none' && curColor2 !== 'currentColor';
+    highlightBtn.classList.toggle('active', isHighlighted1 || isHighlighted2);
   }
 }
 
@@ -2396,12 +2447,15 @@ function applyFormatting(textarea, formatType) {
   } else if (formatType === 'underline') {
     document.execCommand('underline', false, null);
   } else if (formatType === 'highlight') {
-    const curColor = document.queryCommandValue('backColor');
-    const isHighlighted = curColor && curColor !== 'rgba(0, 0, 0, 0)' && curColor !== 'transparent' && curColor !== 'rgb(0, 0, 0)';
+    const curColor = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor');
+    const isHighlighted = curColor && curColor !== 'rgba(0, 0, 0, 0)' && curColor !== 'transparent' && curColor !== 'rgb(0, 0, 0)' && curColor !== 'none' && curColor !== 'currentColor';
     if (isHighlighted) {
+      document.execCommand('hiliteColor', false, 'rgba(0,0,0,0)');
       document.execCommand('backColor', false, 'rgba(0,0,0,0)');
     } else {
-      document.execCommand('backColor', false, 'rgba(245,158,11,0.3)');
+      document.execCommand('hiliteColor', false, 'rgba(245,158,11,0.3)');
     }
+  } else if (formatType === 'bullet') {
+    document.execCommand('insertUnorderedList', false, null);
   }
 }
