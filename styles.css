@@ -382,6 +382,24 @@ textarea {
   border-color: var(--accent-light);
 }
 
+.format-btn.active, .inline-format-btn.active {
+  background: var(--accent-light) !important;
+  color: #0f172a !important; /* Dark contrast color for readability */
+  border-color: var(--accent-light) !important;
+  border-radius: var(--radius-sm) !important;
+  opacity: 1 !important;
+  /* Ensure clean dimensions for inline formatting buttons when active */
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+}
+
+/* Maintain original size for main format buttons */
+.format-btn.active {
+  width: 26px;
+  height: 26px;
+}
+
 .format-btn svg {
   width: 12px;
   height: 12px;
