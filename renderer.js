@@ -556,9 +556,6 @@ function renderEntries() {
               <button type="button" class="inline-format-btn" data-format="underline" title="Underline" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
               </button>
-              <button type="button" class="inline-format-btn" data-format="highlight" title="Highlight" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 2-3-3-9.5 9.5 3 3L22 2Z"/></svg>
-              </button>
               <button type="button" class="inline-format-btn" data-format="bullet" title="Bullet List" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </button>
@@ -694,9 +691,9 @@ function renderEntries() {
       inlineNotesInput.addEventListener('keydown', (e) => {
         if (e.ctrlKey || e.metaKey) {
           const key = e.key.toLowerCase();
-          if (['b', 'i', 'u', 'h'].includes(key)) {
+          if (['b', 'i', 'u'].includes(key)) {
             e.preventDefault();
-            const formatMap = { b: 'bold', i: 'italic', u: 'underline', h: 'highlight' };
+            const formatMap = { b: 'bold', i: 'italic', u: 'underline' };
             applyFormatting(inlineNotesInput, formatMap[key]);
             updateFormatButtonsActiveStates(inlineEditingRow);
           }
@@ -2023,10 +2020,6 @@ function initEventBindings() {
         e.preventDefault();
         applyFormatting(textarea, 'underline');
         updateFormatButtonsActiveStates(textarea.closest('.form-group') || textarea.closest('tr') || document);
-      } else if (key === 'h') {
-        e.preventDefault();
-        applyFormatting(textarea, 'highlight');
-        updateFormatButtonsActiveStates(textarea.closest('.form-group') || textarea.closest('tr') || document);
       }
     }
   };
@@ -2454,22 +2447,12 @@ function updateFormatButtonsActiveStates(container) {
   const boldBtn = container.querySelector('[data-format="bold"]');
   const italicBtn = container.querySelector('[data-format="italic"]');
   const underlineBtn = container.querySelector('[data-format="underline"]');
-  const highlightBtn = container.querySelector('[data-format="highlight"]');
   const bulletBtn = container.querySelector('[data-format="bullet"]');
   
   if (boldBtn) boldBtn.classList.toggle('active', document.queryCommandState('bold'));
   if (italicBtn) italicBtn.classList.toggle('active', document.queryCommandState('italic'));
   if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
   if (bulletBtn) bulletBtn.classList.toggle('active', document.queryCommandState('insertUnorderedList'));
-  
-  if (highlightBtn) {
-    // Check both backColor and hiliteColor
-    const curColor1 = document.queryCommandValue('backColor');
-    const curColor2 = document.queryCommandValue('hiliteColor');
-    const isHighlighted1 = curColor1 && curColor1 !== 'rgba(0, 0, 0, 0)' && curColor1 !== 'transparent' && curColor1 !== 'rgb(0, 0, 0)' && curColor1 !== 'none' && curColor1 !== 'currentColor';
-    const isHighlighted2 = curColor2 && curColor2 !== 'rgba(0, 0, 0, 0)' && curColor2 !== 'transparent' && curColor2 !== 'rgb(0, 0, 0)' && curColor2 !== 'none' && curColor2 !== 'currentColor';
-    highlightBtn.classList.toggle('active', isHighlighted1 || isHighlighted2);
-  }
 }
 
 function applyFormatting(textarea, formatType) {
@@ -2481,15 +2464,6 @@ function applyFormatting(textarea, formatType) {
     document.execCommand('italic', false, null);
   } else if (formatType === 'underline') {
     document.execCommand('underline', false, null);
-  } else if (formatType === 'highlight') {
-    const curColor = document.queryCommandValue('hiliteColor') || document.queryCommandValue('backColor');
-    const isHighlighted = curColor && curColor !== 'rgba(0, 0, 0, 0)' && curColor !== 'transparent' && curColor !== 'rgb(0, 0, 0)' && curColor !== 'none' && curColor !== 'currentColor';
-    if (isHighlighted) {
-      document.execCommand('hiliteColor', false, 'rgba(0,0,0,0)');
-      document.execCommand('backColor', false, 'rgba(0,0,0,0)');
-    } else {
-      document.execCommand('hiliteColor', false, 'rgba(245,158,11,0.3)');
-    }
   } else if (formatType === 'bullet') {
     document.execCommand('insertUnorderedList', false, null);
   }

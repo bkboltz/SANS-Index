@@ -6,10 +6,59 @@ let mainWindow;
 const DATA_FILE = path.join(__dirname, 'sans_index.json');
 const BACKUPS_DIR = path.join(__dirname, 'backups');
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
+const WINDOW_STATE_FILE = path.join(__dirname, 'window_state.json');
+
+function loadWindowState() {
+  try {
+    if (fs.existsSync(WINDOW_STATE_FILE)) {
+      return JSON.parse(fs.readFileSync(WINDOW_STATE_FILE, 'utf8'));
+    }
+  } catch (err) {
+    console.error("Error loading window state:", err);
+  }
+  return {
     width: 1200,
     height: 800,
+    isMaximized: true // Default to maximized
+  };
+}
+
+function saveWindowState() {
+  if (!mainWindow) return;
+  try {
+    const isMaximized = mainWindow.isMaximized();
+    // Only save bounds if not maximized to avoid saving maximized size as restore dimensions
+    const bounds = isMaximized ? null : mainWindow.getBounds();
+    const stateData = {
+      isMaximized
+    };
+    if (bounds) {
+      stateData.width = bounds.width;
+      stateData.height = bounds.height;
+      stateData.x = bounds.x;
+      stateData.y = bounds.y;
+    } else {
+      // If maximized, try to read loaded values as fallback
+      const oldState = loadWindowState();
+      stateData.width = oldState.width || 1200;
+      stateData.height = oldState.height || 800;
+      stateData.x = oldState.x;
+      stateData.y = oldState.y;
+    }
+    fs.writeFileSync(WINDOW_STATE_FILE, JSON.stringify(stateData), 'utf8');
+  } catch (err) {
+    console.error("Error saving window state:", err);
+  }
+}
+
+function createWindow() {
+  const windowState = loadWindowState();
+
+  mainWindow = new BrowserWindow({
+    width: windowState.width,
+    height: windowState.height,
+    x: windowState.x,
+    y: windowState.y,
     minWidth: 800,
     minHeight: 600,
     webPreferences: {
@@ -20,6 +69,15 @@ function createWindow() {
     },
     title: "SANS Study Indexer",
     icon: path.join(__dirname, 'icon.png') // Fallback icon
+  });
+
+  if (windowState.isMaximized) {
+    mainWindow.maximize();
+  }
+
+  // Save window state on close
+  mainWindow.on('close', () => {
+    saveWindowState();
   });
 
   mainWindow.loadFile('index.html');
