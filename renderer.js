@@ -88,6 +88,9 @@ const elements = {
   todoListActive: document.getElementById('todo-list-active'),
   todoListCompleted: document.getElementById('todo-list-completed'),
   todoCompletedSection: document.getElementById('todo-completed-section'),
+  todoSidebarSection: document.getElementById('todo-sidebar-section'),
+  todoToggleBtn: document.getElementById('todo-toggle-btn'),
+  todoPendingBadge: document.getElementById('todo-pending-badge'),
 
   // Exam Date Alert Banners & Modal
   examNotificationBanner: document.getElementById('exam-notification-banner'),
@@ -306,6 +309,14 @@ function renderTodos() {
   const courseTodos = state.todos.filter(todo => todo && todo.courseId === state.currentCourseId);
   const activeTodos = courseTodos.filter(todo => !todo.completed);
   const completedTodos = courseTodos.filter(todo => todo.completed);
+
+  // Update pending tasks badge
+  if (activeTodos.length > 0) {
+    elements.todoPendingBadge.textContent = activeTodos.length;
+    elements.todoPendingBadge.classList.remove('hidden');
+  } else {
+    elements.todoPendingBadge.classList.add('hidden');
+  }
   
   // 1. Render Active Tasks
   if (activeTodos.length === 0) {
@@ -2250,6 +2261,11 @@ function initEventBindings() {
   elements.booksToggleBtn.addEventListener('click', (e) => {
     if (e.target.closest('#add-book-btn')) return;
     elements.booksSidebarSection.classList.toggle('collapsed');
+  });
+
+  // Toggle Collapsible To-Do Section
+  elements.todoToggleBtn.addEventListener('click', () => {
+    elements.todoSidebarSection.classList.toggle('collapsed');
   });
   
   elements.addCourseBtn.addEventListener('click', () => openCourseDialog());

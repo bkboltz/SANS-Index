@@ -1736,8 +1736,6 @@ tr.starred-row td:first-child {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .todo-item {
@@ -1871,6 +1869,42 @@ tr.starred-row td:first-child {
   padding-bottom: 0 !important;
   margin: 0 !important;
   border: none !important;
+}
+
+.sidebar-section .todo-section-content {
+  max-height: 2000px;
+  opacity: 1;
+  transition: max-height 0.25s cubic-bezier(0, 1, 0, 1), opacity 0.2s ease;
+}
+
+.sidebar-section.collapsed .todo-section-content {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.todo-badge {
+  background-color: var(--accent-light);
+  color: #0f172a;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  min-width: 14px;
+  box-sizing: border-box;
+}
+
+.todo-badge.hidden {
+  display: none !important;
 }
 
 /* To-Do Completed Section */

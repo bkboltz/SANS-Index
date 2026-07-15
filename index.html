@@ -50,24 +50,31 @@
       </div>
 
       <!-- Review Later / To-Do Segment -->
-      <div class="sidebar-section todo-section">
-        <div class="section-title">
-          <span>Review Later / To-Do</span>
+      <div id="todo-sidebar-section" class="sidebar-section">
+        <div class="section-title collapsible-header" id="todo-toggle-btn">
+          <div class="title-left">
+            <i data-lucide="chevron-down" class="collapse-icon"></i>
+            <span>Review Later / To-Do</span>
+            <span id="todo-pending-badge" class="todo-badge hidden">0</span>
+          </div>
         </div>
-        <div class="todo-input-container">
-          <input type="text" id="todo-input" placeholder="e.g. Review lab 2.3..." maxlength="100">
-          <button id="add-todo-btn" class="icon-btn-small" title="Add To-Do">
-            <i data-lucide="plus"></i>
-          </button>
-        </div>
-        <ul id="todo-list-active" class="todo-list">
-          <!-- Populated by JavaScript -->
-        </ul>
-        <div id="todo-completed-section" class="todo-completed-section hidden">
-          <div class="todo-completed-header">Completed</div>
-          <ul id="todo-list-completed" class="todo-list completed-list">
+        
+        <div id="todo-section-content" class="todo-section-content">
+          <div class="todo-input-container">
+            <input type="text" id="todo-input" placeholder="e.g. Review lab 2.3..." maxlength="100">
+            <button id="add-todo-btn" class="icon-btn-small" title="Add To-Do">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+          <ul id="todo-list-active" class="todo-list">
             <!-- Populated by JavaScript -->
           </ul>
+          <div id="todo-completed-section" class="todo-completed-section hidden">
+            <div class="todo-completed-header">Completed</div>
+            <ul id="todo-list-completed" class="todo-list completed-list">
+              <!-- Populated by JavaScript -->
+            </ul>
+          </div>
         </div>
       </div>
 
