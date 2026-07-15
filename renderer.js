@@ -348,6 +348,46 @@ function renderTodos() {
         </div>
       `;
       
+      // Bind double-click inline edit
+      const todoTextSpan = todoItem.querySelector('.todo-text');
+      todoTextSpan.addEventListener('dblclick', () => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'todo-edit-input';
+        input.value = todo.text;
+        input.style.flex = '1';
+        input.style.backgroundColor = 'var(--bg-app)';
+        input.style.border = '1px solid var(--border-color)';
+        input.style.color = 'var(--text-primary)';
+        input.style.borderRadius = 'var(--radius-sm)';
+        input.style.padding = '2px 6px';
+        input.style.fontSize = '0.8rem';
+        input.style.outline = 'none';
+        
+        const saveEdit = () => {
+          const newVal = input.value.trim();
+          if (newVal) {
+            todo.text = newVal;
+            saveState();
+          }
+          renderTodos();
+        };
+        
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            saveEdit();
+          } else if (e.key === 'Escape') {
+            renderTodos();
+          }
+        });
+        
+        input.addEventListener('blur', saveEdit);
+        
+        todoTextSpan.replaceWith(input);
+        input.focus();
+        input.select();
+      });
+      
       // Bind toggle completed
       const checkbox = todoItem.querySelector('.todo-checkbox');
       checkbox.addEventListener('change', () => {
@@ -391,6 +431,46 @@ function renderTodos() {
               <i data-lucide="x"></i>
             </button>
           `;
+          
+          // Bind double-click inline edit
+          const subTextSpan = subItem.querySelector('.subtask-text');
+          subTextSpan.addEventListener('dblclick', () => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'todo-edit-input';
+            input.value = sub.text;
+            input.style.flex = '1';
+            input.style.backgroundColor = 'var(--bg-app)';
+            input.style.border = '1px solid var(--border-color)';
+            input.style.color = 'var(--text-primary)';
+            input.style.borderRadius = 'var(--radius-sm)';
+            input.style.padding = '2px 6px';
+            input.style.fontSize = '0.8rem';
+            input.style.outline = 'none';
+            
+            const saveEdit = () => {
+              const newVal = input.value.trim();
+              if (newVal) {
+                sub.text = newVal;
+                saveState();
+              }
+              renderTodos();
+            };
+            
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                saveEdit();
+              } else if (e.key === 'Escape') {
+                renderTodos();
+              }
+            });
+            
+            input.addEventListener('blur', saveEdit);
+            
+            subTextSpan.replaceWith(input);
+            input.focus();
+            input.select();
+          });
           
           const subCheckbox = subItem.querySelector('.todo-checkbox');
           subCheckbox.addEventListener('change', () => {
@@ -472,6 +552,46 @@ function renderTodos() {
           <i data-lucide="x"></i>
         </button>
       `;
+      
+      // Bind double-click inline edit
+      const todoTextSpan = li.querySelector('.todo-text');
+      todoTextSpan.addEventListener('dblclick', () => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'todo-edit-input';
+        input.value = todo.text;
+        input.style.flex = '1';
+        input.style.backgroundColor = 'var(--bg-app)';
+        input.style.border = '1px solid var(--border-color)';
+        input.style.color = 'var(--text-primary)';
+        input.style.borderRadius = 'var(--radius-sm)';
+        input.style.padding = '2px 6px';
+        input.style.fontSize = '0.8rem';
+        input.style.outline = 'none';
+        
+        const saveEdit = () => {
+          const newVal = input.value.trim();
+          if (newVal) {
+            todo.text = newVal;
+            saveState();
+          }
+          renderTodos();
+        };
+        
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            saveEdit();
+          } else if (e.key === 'Escape') {
+            renderTodos();
+          }
+        });
+        
+        input.addEventListener('blur', saveEdit);
+        
+        todoTextSpan.replaceWith(input);
+        input.focus();
+        input.select();
+      });
       
       // Bind toggle incomplete
       const checkbox = li.querySelector('.todo-checkbox');
@@ -588,16 +708,16 @@ function renderEntries() {
         <td class="col-notes">
           <div class="inline-notes-wrapper" style="display: flex; flex-direction: column; gap: 4px;">
             <div class="inline-formatting-toolbar" style="display: flex; gap: 4px;">
-              <button type="button" class="inline-format-btn" data-format="bold" title="Bold" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+              <button type="button" class="inline-format-btn" data-format="bold" title="Bold" tabindex="-1" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8H6z"/></svg>
               </button>
-              <button type="button" class="inline-format-btn" data-format="italic" title="Italic" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+              <button type="button" class="inline-format-btn" data-format="italic" title="Italic" tabindex="-1" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
               </button>
-              <button type="button" class="inline-format-btn" data-format="underline" title="Underline" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+              <button type="button" class="inline-format-btn" data-format="underline" title="Underline" tabindex="-1" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
               </button>
-              <button type="button" class="inline-format-btn" data-format="bullet" title="Bullet List" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+              <button type="button" class="inline-format-btn" data-format="bullet" title="Bullet List" tabindex="-1" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
               </button>
             </div>
@@ -702,6 +822,9 @@ function renderEntries() {
     inlineEditingRow.querySelectorAll('.inline-edit-input').forEach(input => {
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
+          if (input.classList.contains('inline-notes-input') && e.shiftKey) {
+            return;
+          }
           e.preventDefault();
           const entryId = inlineEditingRow.querySelector('.save-inline-entry').getAttribute('data-id');
           saveInlineEntry(entryId, inlineEditingRow);
@@ -2365,6 +2488,16 @@ function initEventBindings() {
 
   // Bind main entry notes hotkeys
   elements.entryNotesInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        // Shift+Enter allows newline insertion
+        return;
+      }
+      e.preventDefault();
+      // Publish the entry!
+      handleEntrySubmit(e);
+      return;
+    }
     handleTextareaHotkeys(e, elements.entryNotesInput);
   });
   
