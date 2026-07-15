@@ -200,9 +200,20 @@
             <div class="form-group flex-3">
               <div class="notes-label-container">
                 <label for="entry-notes-input">Notes / Details</label>
-                <span class="markdown-legend">
-                  Format: **bold** | *italic* | __underline__ | ==highlight==
-                </span>
+                <div class="formatting-toolbar">
+                  <button type="button" class="format-btn" data-format="bold" title="Bold (Ctrl+B)">
+                    <i data-lucide="bold"></i>
+                  </button>
+                  <button type="button" class="format-btn" data-format="italic" title="Italic (Ctrl+I)">
+                    <i data-lucide="italic"></i>
+                  </button>
+                  <button type="button" class="format-btn" data-format="underline" title="Underline (Ctrl+U)">
+                    <i data-lucide="underline"></i>
+                  </button>
+                  <button type="button" class="format-btn" data-format="highlight" title="Highlight (Ctrl+H)">
+                    <i data-lucide="highlighter"></i>
+                  </button>
+                </div>
               </div>
               <textarea id="entry-notes-input" placeholder="Brief hint or reference details (supports markdown formatting)" rows="1"></textarea>
             </div>

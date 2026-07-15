@@ -545,7 +545,23 @@ function renderEntries() {
           <input type="text" class="inline-edit-input inline-topic-input" value="${entry.topic}" style="background-color: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; width: 100%; font-weight: bold;">
         </td>
         <td class="col-notes">
-          <textarea class="inline-edit-input inline-notes-input" placeholder="Use: **bold**, *italic*, __underline__, ==highlight==" style="background-color: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 8px; border-radius: 4px; font-size: 0.85rem; width: 100%; resize: vertical; min-height: 32px; font-family: inherit; line-height: 1.4; box-sizing: border-box; display: block; overflow-y: hidden;">${entry.notes || ''}</textarea>
+          <div class="inline-notes-wrapper" style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="inline-formatting-toolbar" style="display: flex; gap: 4px;">
+              <button type="button" class="inline-format-btn" data-format="bold" title="Bold" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8H6z"/></svg>
+              </button>
+              <button type="button" class="inline-format-btn" data-format="italic" title="Italic" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
+              </button>
+              <button type="button" class="inline-format-btn" data-format="underline" title="Underline" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="M6 3v7a6 6 0 0 0 12 0V3"/><line x1="4" y1="21" x2="20" y2="21"/></svg>
+              </button>
+              <button type="button" class="inline-format-btn" data-format="highlight" title="Highlight" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 2px; display: inline-flex; align-items: center; justify-content: center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 2-3-3-9.5 9.5 3 3L22 2Z"/></svg>
+              </button>
+            </div>
+            <textarea class="inline-edit-input inline-notes-input" placeholder="Notes (supports markdown)" style="background-color: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 8px; border-radius: 4px; font-size: 0.85rem; width: 100%; resize: vertical; min-height: 32px; font-family: inherit; line-height: 1.4; box-sizing: border-box; display: block; overflow-y: hidden;">${entry.notes || ''}</textarea>
+          </div>
         </td>
         <td class="col-actions no-print">
           <button class="icon-btn-small success save-inline-entry" data-id="${entry.id}" title="Save Changes" style="color: var(--accent-light); background: none; border: none; cursor: pointer; padding: 4px;">
@@ -659,6 +675,27 @@ function renderEntries() {
       inlineNotesInput.addEventListener('input', () => {
         inlineNotesInput.style.height = 'auto';
         inlineNotesInput.style.height = inlineNotesInput.scrollHeight + 'px';
+      });
+
+      // Click listeners for inline formatting toolbar buttons
+      inlineEditingRow.querySelectorAll('.inline-format-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const format = btn.getAttribute('data-format');
+          applyFormatting(inlineNotesInput, format);
+        });
+      });
+
+      // Bind keydown hotkeys for inline notes textarea
+      inlineNotesInput.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          const key = e.key.toLowerCase();
+          if (['b', 'i', 'u', 'h'].includes(key)) {
+            e.preventDefault();
+            const formatMap = { b: 'bold', i: 'italic', u: 'underline', h: 'highlight' };
+            applyFormatting(inlineNotesInput, formatMap[key]);
+          }
+        }
       });
     }
 
@@ -1473,7 +1510,7 @@ function handleEntrySubmit(e) {
     elements.entryTopicInput.value = '';
     elements.entryPagesInput.value = '';
     elements.entryNotesInput.value = '';
-    elements.entryNotesInput.style.height = '38px';
+    elements.entryNotesInput.style.height = '58px';
     
     // Trigger pulses
     triggerStatPulse(elements.statTotalEntries.closest('.stat-card'));
@@ -1923,6 +1960,40 @@ function initEventBindings() {
     elements.entryNotesInput.style.height = 'auto';
     elements.entryNotesInput.style.height = (elements.entryNotesInput.scrollHeight) + 'px';
   });
+
+  // Handle main entry form formatting toolbar click events
+  document.querySelectorAll('.format-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const format = btn.getAttribute('data-format');
+      applyFormatting(elements.entryNotesInput, format);
+    });
+  });
+
+  // Textarea hotkey handler function
+  const handleTextareaHotkeys = (e, textarea) => {
+    if (e.ctrlKey || e.metaKey) {
+      const key = e.key.toLowerCase();
+      if (key === 'b') {
+        e.preventDefault();
+        applyFormatting(textarea, 'bold');
+      } else if (key === 'i') {
+        e.preventDefault();
+        applyFormatting(textarea, 'italic');
+      } else if (key === 'u') {
+        e.preventDefault();
+        applyFormatting(textarea, 'underline');
+      } else if (key === 'h') {
+        e.preventDefault();
+        applyFormatting(textarea, 'highlight');
+      }
+    }
+  };
+
+  // Bind main entry notes hotkeys
+  elements.entryNotesInput.addEventListener('keydown', (e) => {
+    handleTextareaHotkeys(e, elements.entryNotesInput);
+  });
   
   // Auto-suggestion listener for SANS Courses in modal dialog
   elements.dialogCourseName.addEventListener('input', (e) => {
@@ -2237,4 +2308,48 @@ function generateBookletPrintHTML(activeEntries) {
       endEditEntry();
     }
   });
+}
+
+function applyFormatting(textarea, formatType) {
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const text = textarea.value;
+  const selectedText = text.substring(start, end);
+  
+  let prefix = '';
+  let suffix = '';
+  
+  switch (formatType) {
+    case 'bold':
+      prefix = '**';
+      suffix = '**';
+      break;
+    case 'italic':
+      prefix = '*';
+      suffix = '*';
+      break;
+    case 'underline':
+      prefix = '__';
+      suffix = '__';
+      break;
+    case 'highlight':
+      prefix = '==';
+      suffix = '==';
+      break;
+  }
+  
+  const replacement = prefix + selectedText + suffix;
+  textarea.value = text.substring(0, start) + replacement + text.substring(end);
+  
+  // Restore selection / cursor
+  textarea.focus();
+  if (selectedText.length > 0) {
+    textarea.setSelectionRange(start, start + replacement.length);
+  } else {
+    // Position cursor inside the markers
+    textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+  }
+  
+  // Trigger input event to auto-expand if needed
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
