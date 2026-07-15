@@ -58,6 +58,7 @@ const elements = {
   courseDialogForm: document.getElementById('course-dialog-form'),
   dialogCourseId: document.getElementById('dialog-course-id'),
   dialogCourseName: document.getElementById('dialog-course-name'),
+  dialogCourseDate: document.getElementById('dialog-course-date'),
   courseAutocompleteList: document.getElementById('course-autocomplete-list'),
   
   bookDialog: document.getElementById('book-dialog'),
@@ -94,7 +95,9 @@ const elements = {
   testDateDialog: document.getElementById('test-date-dialog'),
   testDateDialogForm: document.getElementById('test-date-dialog-form'),
   dialogTestDate: document.getElementById('dialog-test-date'),
-  clearTestDateBtn: document.getElementById('clear-test-date-btn')
+  clearTestDateBtn: document.getElementById('clear-test-date-btn'),
+  dismissForeverBannerBtn: document.querySelector('.dismiss-forever-banner-btn'),
+  dismissForeverCautionLink: document.querySelector('.dismiss-forever-caution-link')
 };
 
 // Application State Store
@@ -818,10 +821,16 @@ function renderStats() {
     // Default back to Indexed Books
     const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
     elements.statBookCount.textContent = activeBooks.length;
-    statLabel.innerHTML = `Indexed Books <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Configure Date</span>`;
     
-    statCard.style.cursor = 'pointer';
-    statCard.title = "No exam date configured. Click to set countdown date!";
+    if (activeCourse && activeCourse.dismissExamAlert) {
+      statLabel.textContent = "Indexed Books";
+      statCard.style.cursor = "default";
+      statCard.title = "";
+    } else {
+      statLabel.innerHTML = `Indexed Books <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Configure Date</span>`;
+      statCard.style.cursor = 'pointer';
+      statCard.title = "No exam date configured. Click to set countdown date!";
+    }
   }
 }
 
@@ -1174,10 +1183,12 @@ function openCourseDialog(courseId = null) {
     elements.courseDialogTitle.textContent = "Edit Course";
     elements.dialogCourseId.value = course.id;
     elements.dialogCourseName.value = course.name;
+    elements.dialogCourseDate.value = course.testDate || "";
   } else {
     elements.courseDialogTitle.textContent = "Create New Course";
     elements.dialogCourseId.value = "";
     elements.dialogCourseName.value = "";
+    elements.dialogCourseDate.value = "";
   }
   elements.courseDialog.showModal();
   elements.dialogCourseName.focus();
@@ -1187,12 +1198,23 @@ function handleCourseDialogSubmit(e) {
   e.preventDefault();
   const id = elements.dialogCourseId.value.trim();
   const name = elements.dialogCourseName.value.trim();
+  const selectedDate = elements.dialogCourseDate.value;
   
   if (id) {
     // Edit Mode
     const course = state.courses.find(c => c.id === id);
     if (course) {
+      const oldDate = course.testDate;
       course.name = name;
+      if (selectedDate) {
+        course.testDate = selectedDate;
+      } else {
+        delete course.testDate;
+      }
+      // If date changed, reset dismiss alert state
+      if (oldDate !== selectedDate) {
+        delete course.dismissExamAlert;
+      }
     }
   } else {
     // Add Mode (Uses SANS Catalog ID if matched, or generic date ID)
@@ -1210,7 +1232,11 @@ function handleCourseDialogSubmit(e) {
       return;
     }
 
-    state.courses.push({ id: newId, name });
+    const newCourse = { id: newId, name };
+    if (selectedDate) {
+      newCourse.testDate = selectedDate;
+    }
+    state.courses.push(newCourse);
     
     // Auto-populate default books if catalog matched
     if (matchedCatalog && matchedCatalog.books) {
@@ -1229,6 +1255,7 @@ function handleCourseDialogSubmit(e) {
   
   saveState();
   renderAll();
+  checkExamDateAlerts();
   elements.courseDialog.close();
 }
 
@@ -1277,8 +1304,8 @@ function checkExamDateAlerts() {
   const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
   if (!activeCourse) return;
 
-  if (activeCourse.testDate) {
-    // Exam date is set: no banners needed
+  if (activeCourse.testDate || activeCourse.dismissExamAlert) {
+    // Exam date is set or user dismissed alerts: no banners needed
     return;
   }
 
@@ -1295,6 +1322,23 @@ function checkExamDateAlerts() {
   } else {
     // Already prompted in this session, show caution banner directly
     elements.examCautionBanner.classList.remove('hidden');
+  }
+}
+
+function dismissExamAlertsForever() {
+  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+  if (activeCourse) {
+    activeCourse.dismissExamAlert = true;
+    saveState();
+    
+    if (bannerTimeoutId) {
+      clearTimeout(bannerTimeoutId);
+      bannerTimeoutId = null;
+    }
+    elements.examNotificationBanner.classList.add('hidden');
+    elements.examCautionBanner.classList.add('hidden');
+    
+    renderStats();
   }
 }
 
@@ -2266,10 +2310,27 @@ function initEventBindings() {
     });
   }
 
+  // Bind Dismiss Forever actions
+  if (elements.dismissForeverBannerBtn) {
+    elements.dismissForeverBannerBtn.addEventListener('click', dismissExamAlertsForever);
+  }
+  if (elements.dismissForeverCautionLink) {
+    elements.dismissForeverCautionLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      dismissExamAlertsForever();
+    });
+  }
+
   // Click stats card to set/change exam date
   const statCardBookCount = elements.statBookCount.closest('.stat-card');
   if (statCardBookCount) {
-    statCardBookCount.addEventListener('click', openTestDateDialog);
+    statCardBookCount.addEventListener('click', () => {
+      const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+      if (activeCourse && activeCourse.dismissExamAlert && !activeCourse.testDate) {
+        return;
+      }
+      openTestDateDialog();
+    });
   }
 
   // Exam Date Dialog bindings

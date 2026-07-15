@@ -136,15 +136,17 @@
           <i data-lucide="calendar" class="banner-icon"></i>
           <span class="banner-text">No exam date configured for this course. Click to set your countdown!</span>
           <button type="button" class="btn btn-accent btn-sm set-exam-date-banner-btn">Set Date</button>
+          <button type="button" class="btn btn-secondary btn-sm dismiss-forever-banner-btn" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 4px 10px; font-size: 0.8rem; border-radius: var(--radius-sm); font-weight: bold; cursor: pointer; transition: background 0.15s;">Dismiss Forever</button>
         </div>
         <button type="button" class="close-banner-btn">&times;</button>
       </div>
 
-      <div id="exam-caution-banner" class="exam-caution-banner hidden no-print">
+      <div id="exam-caution-banner" class="exam-caution-banner hidden no-print" style="justify-content: space-between;">
         <div class="caution-content">
           <i data-lucide="alert-triangle" class="caution-icon"></i>
           <span>No exam date set. <a href="#" class="set-exam-date-link">Configure now</a> to enable study countdown.</span>
         </div>
+        <a href="#" class="dismiss-forever-caution-link" style="color: var(--text-muted); font-size: 0.8rem; text-decoration: underline; margin-left: 12px;">Dismiss Forever</a>
       </div>
       
       <!-- Collapsible Sidebar Toggle Button -->
@@ -314,6 +316,10 @@
           <label for="dialog-course-name">Course Code & Name</label>
           <input type="text" id="dialog-course-name" placeholder="Search SANS code or type name (e.g. SEC565, FOR508)" required>
           <div id="course-autocomplete-list" class="autocomplete-items hidden"></div>
+        </div>
+        <div class="form-group">
+          <label for="dialog-course-date">Projected Exam Date (Optional)</label>
+          <input type="date" id="dialog-course-date" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-family: inherit;">
         </div>
         <div class="dialog-actions">
           <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
