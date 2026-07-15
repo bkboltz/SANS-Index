@@ -560,7 +560,7 @@ function renderEntries() {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="toolbar-icon" style="width: 12px; height: 12px;"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 2-3-3-9.5 9.5 3 3L22 2Z"/></svg>
               </button>
             </div>
-            <textarea class="inline-edit-input inline-notes-input" placeholder="Notes (supports markdown)" style="background-color: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 8px; border-radius: 4px; font-size: 0.85rem; width: 100%; resize: vertical; min-height: 32px; font-family: inherit; line-height: 1.4; box-sizing: border-box; display: block; overflow-y: hidden;">${entry.notes || ''}</textarea>
+            <div contenteditable="true" class="inline-edit-input inline-notes-input notes-textarea-replacement" data-placeholder="Notes" style="background-color: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 8px; border-radius: 4px; font-size: 0.85rem; width: 100%; min-height: 32px; font-family: inherit; line-height: 1.4; box-sizing: border-box; display: block; outline: none; overflow-y: auto;">${markdownToHtml(entry.notes || '')}</div>
           </div>
         </td>
         <td class="col-actions no-print">
@@ -669,13 +669,10 @@ function renderEntries() {
     // Auto-size and auto-focus the inputs when inline editing starts
     const inlineNotesInput = inlineEditingRow.querySelector('.inline-notes-input');
     if (inlineNotesInput) {
-      inlineNotesInput.style.height = 'auto';
-      inlineNotesInput.style.height = inlineNotesInput.scrollHeight + 'px';
-      
-      inlineNotesInput.addEventListener('input', () => {
-        inlineNotesInput.style.height = 'auto';
-        inlineNotesInput.style.height = inlineNotesInput.scrollHeight + 'px';
-      });
+      // Bind contenteditable active state tracking for inline notes
+      inlineNotesInput.addEventListener('keyup', () => updateFormatButtonsActiveStates(inlineEditingRow));
+      inlineNotesInput.addEventListener('mouseup', () => updateFormatButtonsActiveStates(inlineEditingRow));
+      inlineNotesInput.addEventListener('click', () => updateFormatButtonsActiveStates(inlineEditingRow));
 
       // Click listeners for inline formatting toolbar buttons
       inlineEditingRow.querySelectorAll('.inline-format-btn').forEach(btn => {
@@ -683,6 +680,7 @@ function renderEntries() {
           e.preventDefault();
           const format = btn.getAttribute('data-format');
           applyFormatting(inlineNotesInput, format);
+          updateFormatButtonsActiveStates(inlineEditingRow);
         });
       });
 
@@ -694,6 +692,7 @@ function renderEntries() {
             e.preventDefault();
             const formatMap = { b: 'bold', i: 'italic', u: 'underline', h: 'highlight' };
             applyFormatting(inlineNotesInput, formatMap[key]);
+            updateFormatButtonsActiveStates(inlineEditingRow);
           }
         }
       });
@@ -1462,7 +1461,7 @@ function handleEntrySubmit(e) {
   const bookId = elements.entryBookSelect.value;
   const topic = elements.entryTopicInput.value.trim();
   const pages = elements.entryPagesInput.value.trim();
-  const notes = elements.entryNotesInput.value.trim();
+  const notes = htmlToMarkdown(elements.entryNotesInput.innerHTML).trim();
   
   if (!bookId) {
     alert("Please select a book first!");
@@ -1509,8 +1508,8 @@ function handleEntrySubmit(e) {
     
     elements.entryTopicInput.value = '';
     elements.entryPagesInput.value = '';
-    elements.entryNotesInput.value = '';
-    elements.entryNotesInput.style.height = '58px';
+    elements.entryNotesInput.innerHTML = '';
+    updateFormatButtonsActiveStates(elements.entryForm);
     
     // Trigger pulses
     triggerStatPulse(elements.statTotalEntries.closest('.stat-card'));
@@ -1955,11 +1954,10 @@ function initEventBindings() {
   elements.entryForm.addEventListener('submit', handleEntrySubmit);
   elements.cancelEditBtn.addEventListener('click', endEditEntry);
   
-  // Auto-expanding textarea for notes
-  elements.entryNotesInput.addEventListener('input', () => {
-    elements.entryNotesInput.style.height = 'auto';
-    elements.entryNotesInput.style.height = (elements.entryNotesInput.scrollHeight) + 'px';
-  });
+  // Bind contenteditable active state tracking for main notes
+  elements.entryNotesInput.addEventListener('keyup', () => updateFormatButtonsActiveStates(elements.entryForm));
+  elements.entryNotesInput.addEventListener('mouseup', () => updateFormatButtonsActiveStates(elements.entryForm));
+  elements.entryNotesInput.addEventListener('click', () => updateFormatButtonsActiveStates(elements.entryForm));
 
   // Handle main entry form formatting toolbar click events
   document.querySelectorAll('.format-btn').forEach(btn => {
@@ -1967,25 +1965,30 @@ function initEventBindings() {
       e.preventDefault();
       const format = btn.getAttribute('data-format');
       applyFormatting(elements.entryNotesInput, format);
+      updateFormatButtonsActiveStates(elements.entryForm);
     });
   });
 
-  // Textarea hotkey handler function
+  // Textarea/Div hotkey handler function
   const handleTextareaHotkeys = (e, textarea) => {
     if (e.ctrlKey || e.metaKey) {
       const key = e.key.toLowerCase();
       if (key === 'b') {
         e.preventDefault();
         applyFormatting(textarea, 'bold');
+        updateFormatButtonsActiveStates(textarea.closest('.form-group') || textarea.closest('tr') || document);
       } else if (key === 'i') {
         e.preventDefault();
         applyFormatting(textarea, 'italic');
+        updateFormatButtonsActiveStates(textarea.closest('.form-group') || textarea.closest('tr') || document);
       } else if (key === 'u') {
         e.preventDefault();
         applyFormatting(textarea, 'underline');
+        updateFormatButtonsActiveStates(textarea.closest('.form-group') || textarea.closest('tr') || document);
       } else if (key === 'h') {
         e.preventDefault();
         applyFormatting(textarea, 'highlight');
+        updateFormatButtonsActiveStates(textarea.closest('.form-group') || textarea.closest('tr') || document);
       }
     }
   };
@@ -2310,46 +2313,95 @@ function generateBookletPrintHTML(activeEntries) {
   });
 }
 
+function htmlToMarkdown(html) {
+  if (!html) return '';
+  let md = html;
+  
+  // Replace <br> and <div>/</div> with newlines
+  md = md.replace(/<br\s*\/?>/gi, '\n');
+  md = md.replace(/<div>(.*?)<\/div>/gi, '\n$1');
+  
+  // Replace bold tags
+  md = md.replace(/<(strong|b)>(.*?)<\/\1>/gi, '**$2**');
+  // Replace italic tags
+  md = md.replace(/<(em|i)>(.*?)<\/\1>/gi, '*$2*');
+  // Replace underline tags
+  md = md.replace(/<u>(.*?)<\/u>/gi, '__$1__');
+  
+  // Replace highlight tags
+  md = md.replace(/<span[^>]*class="[^"]*note-highlight[^"]*">(.*?)<\/span>/gi, '==$1==');
+  md = md.replace(/<span[^>]*style="[^"]*background-color:[^"]*rgba?\(245,\s*158,\s*11[^"]*"(.*?)<\/span>/gi, '==$1==');
+  md = md.replace(/<span[^>]*style="[^"]*background-color:[^"]*"(.*?)<\/span>/gi, '==$1==');
+  md = md.replace(/<mark>(.*?)<\/mark>/gi, '==$1==');
+  
+  // Clean up any remaining HTML tags (like <div> or <span>)
+  md = md.replace(/<[^>]+>/g, '');
+  
+  // Decode HTML entities (like &lt; &gt; &amp;)
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = md;
+  return tempDiv.innerText;
+}
+
+function markdownToHtml(markdown) {
+  if (!markdown) return '';
+  let html = markdown;
+  
+  // Escape HTML tags to prevent cross-site scripting
+  html = html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+    
+  // Replace newlines with <br>
+  html = html.replace(/\n/g, '<br>');
+  
+  // Replace bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Replace italic
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  // Replace underline
+  html = html.replace(/__(.*?)__/g, '<u>$1</u>');
+  // Replace highlight
+  html = html.replace(/==(.*?)==/g, '<span class="note-highlight">$1</span>');
+  
+  return html;
+}
+
+function updateFormatButtonsActiveStates(container) {
+  const boldBtn = container.querySelector('[data-format="bold"]');
+  const italicBtn = container.querySelector('[data-format="italic"]');
+  const underlineBtn = container.querySelector('[data-format="underline"]');
+  const highlightBtn = container.querySelector('[data-format="highlight"]');
+  
+  if (boldBtn) boldBtn.classList.toggle('active', document.queryCommandState('bold'));
+  if (italicBtn) italicBtn.classList.toggle('active', document.queryCommandState('italic'));
+  if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
+  
+  if (highlightBtn) {
+    const curColor = document.queryCommandValue('backColor');
+    // Check if background-color matches highlight amber rgba(245, 158, 11) or similar rgb values
+    const isHighlighted = curColor && curColor !== 'rgba(0, 0, 0, 0)' && curColor !== 'transparent' && curColor !== 'rgb(0, 0, 0)';
+    highlightBtn.classList.toggle('active', isHighlighted);
+  }
+}
+
 function applyFormatting(textarea, formatType) {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  const text = textarea.value;
-  const selectedText = text.substring(start, end);
-  
-  let prefix = '';
-  let suffix = '';
-  
-  switch (formatType) {
-    case 'bold':
-      prefix = '**';
-      suffix = '**';
-      break;
-    case 'italic':
-      prefix = '*';
-      suffix = '*';
-      break;
-    case 'underline':
-      prefix = '__';
-      suffix = '__';
-      break;
-    case 'highlight':
-      prefix = '==';
-      suffix = '==';
-      break;
-  }
-  
-  const replacement = prefix + selectedText + suffix;
-  textarea.value = text.substring(0, start) + replacement + text.substring(end);
-  
-  // Restore selection / cursor
   textarea.focus();
-  if (selectedText.length > 0) {
-    textarea.setSelectionRange(start, start + replacement.length);
-  } else {
-    // Position cursor inside the markers
-    textarea.setSelectionRange(start + prefix.length, start + prefix.length);
-  }
   
-  // Trigger input event to auto-expand if needed
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  if (formatType === 'bold') {
+    document.execCommand('bold', false, null);
+  } else if (formatType === 'italic') {
+    document.execCommand('italic', false, null);
+  } else if (formatType === 'underline') {
+    document.execCommand('underline', false, null);
+  } else if (formatType === 'highlight') {
+    const curColor = document.queryCommandValue('backColor');
+    const isHighlighted = curColor && curColor !== 'rgba(0, 0, 0, 0)' && curColor !== 'transparent' && curColor !== 'rgb(0, 0, 0)';
+    if (isHighlighted) {
+      document.execCommand('backColor', false, 'rgba(0,0,0,0)');
+    } else {
+      document.execCommand('backColor', false, 'rgba(245,158,11,0.3)');
+    }
+  }
 }
