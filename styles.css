@@ -242,6 +242,52 @@ body {
   gap: 8px;
 }
 
+.header-course-selector {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 12px;
+}
+
+.header-course-selector .select-container {
+  width: 100%;
+}
+
+.header-course-selector .course-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: -2px;
+}
+
+.icon-btn-text-small {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, opacity 0.15s;
+}
+
+.icon-btn-text-small:hover {
+  color: var(--accent-light);
+}
+
+.icon-btn-text-small.danger:hover {
+  color: var(--danger);
+}
+
+.icon-btn-text-small svg {
+  width: 14px;
+  height: 14px;
+}
+
 select, input[type="text"], input[type="file"] {
   width: 100%;
   padding: 10px 12px;
@@ -253,6 +299,18 @@ select, input[type="text"], input[type="file"] {
   font-size: 0.9rem;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 32px !important;
+  cursor: pointer;
 }
 
 select:focus, input[type="text"]:focus {

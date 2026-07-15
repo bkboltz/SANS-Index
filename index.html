@@ -27,47 +27,25 @@
           <i data-lucide="book-marked" class="logo-icon"></i>
           <span>SANS Indexer</span>
         </div>
-        <div class="app-subtitle">Active Study Partner</div>
-      </div>
-
-
-
-      <!-- Course Selection Segment -->
-      <div class="sidebar-section">
-        <div class="section-title">
-          <span>Active Course</span>
-          <button id="add-course-btn" class="icon-btn-small" title="Add Course">
-            <i data-lucide="plus"></i>
-          </button>
-        </div>
-        <div class="select-container">
-          <select id="course-select">
-            <!-- Populated by JavaScript -->
-          </select>
+        
+        <!-- Consolidated Active Course Selector -->
+        <div class="header-course-selector">
+          <div class="select-container">
+            <select id="course-select">
+              <!-- Populated by JavaScript -->
+            </select>
+          </div>
           <div class="course-actions">
-            <button id="edit-course-btn" class="icon-btn-text" title="Rename Course">
+            <button id="add-course-btn" class="icon-btn-text-small" title="Add Course">
+              <i data-lucide="plus"></i>
+            </button>
+            <button id="edit-course-btn" class="icon-btn-text-small" title="Rename Course">
               <i data-lucide="edit-3"></i>
             </button>
-            <button id="delete-course-btn" class="icon-btn-text danger" title="Delete Course">
+            <button id="delete-course-btn" class="icon-btn-text-small danger" title="Delete Course">
               <i data-lucide="trash-2"></i>
             </button>
           </div>
-        </div>
-      </div>
-
-      <!-- Book Manager Segment -->
-      <div id="books-sidebar-section" class="sidebar-section">
-        <div class="section-title collapsible-header" id="books-toggle-btn">
-          <div class="title-left">
-            <i data-lucide="chevron-down" class="collapse-icon"></i>
-            <span>Course Books</span>
-          </div>
-          <button id="add-book-btn" class="icon-btn-small" title="Add Book">
-            <i data-lucide="plus"></i>
-          </button>
-        </div>
-        <div id="books-list" class="books-list">
-          <!-- Populated by JavaScript, Draggable -->
         </div>
       </div>
 
@@ -90,6 +68,22 @@
           <ul id="todo-list-completed" class="todo-list completed-list">
             <!-- Populated by JavaScript -->
           </ul>
+        </div>
+      </div>
+
+      <!-- Book Manager Segment (Defaulted to Collapsed) -->
+      <div id="books-sidebar-section" class="sidebar-section collapsed">
+        <div class="section-title collapsible-header" id="books-toggle-btn">
+          <div class="title-left">
+            <i data-lucide="chevron-down" class="collapse-icon"></i>
+            <span>Course Books</span>
+          </div>
+          <button id="add-book-btn" class="icon-btn-small" title="Add Book">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+        <div id="books-list" class="books-list">
+          <!-- Populated by JavaScript, Draggable -->
         </div>
       </div>
 
