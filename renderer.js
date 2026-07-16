@@ -3511,7 +3511,7 @@ function initAutoIndexingBindings() {
           if (progress.isOverloaded) {
             elements.indexingProgressStatus.innerHTML = `
               <div style="font-size: 1.1rem; font-weight: 600; color: #eab308; line-height: 1.4; max-width: 550px; margin-left: auto; margin-right: auto;">
-                Gemini models are experiencing high volumes of traffic right now. Hang tight while we try again 🤙
+                ${progress.message || 'Gemini models are experiencing high volumes of traffic right now. Hang tight while we try again 🤙'}
               </div>
               <div style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); margin-top: 8px;">
                 Attempt ${progress.attempt}/${progress.maxAttempts}
@@ -3801,7 +3801,7 @@ async function handleAutoIndexSubmit(e) {
         if (progress.isOverloaded) {
           elements.indexingProgressStatus.innerHTML = `
             <div style="font-size: 1.1rem; font-weight: 600; color: #eab308; line-height: 1.4; max-width: 550px; margin-left: auto; margin-right: auto;">
-              Gemini models are experiencing high volumes of traffic right now. Hang tight while we try again 🤙
+              ${progress.message || 'Gemini models are experiencing high volumes of traffic right now. Hang tight while we try again 🤙'}
             </div>
             <div style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); margin-top: 8px;">
               Attempt ${progress.attempt}/${progress.maxAttempts}

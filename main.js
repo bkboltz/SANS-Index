@@ -722,8 +722,21 @@ Return a JSON array of objects with the exact same structure as the input:
                            errLower.includes("volume of traffic");
 
       if (isHighDemand && attempt < maxAttempts) {
-        logDebug(`[Gemini Curation] High demand detected. Waiting 15 seconds before retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 15000));
+        const waitTimeSeconds = 15 * Math.pow(2, attempt - 1);
+        logDebug(`[Gemini Curation] High demand detected. Waiting ${waitTimeSeconds} seconds before retrying (Attempt ${attempt + 1}/${maxAttempts})...`);
+        
+        for (let remaining = waitTimeSeconds; remaining > 0; remaining--) {
+          if (event) {
+            event.sender.send('auto-index-progress', { 
+              step: 'curating', 
+              attempt: attempt + 1, 
+              maxAttempts: maxAttempts,
+              isOverloaded: true,
+              message: `Gemini models are experiencing high volumes of traffic right now. Retrying in ${remaining}s... 🤙` 
+            });
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
         continue;
       }
 
