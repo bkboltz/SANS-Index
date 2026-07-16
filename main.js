@@ -630,8 +630,8 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
 });
 
 // Helper: Curate Index with Gemini AI
-async function curateIndexWithGemini(entries, geminiApiKey, event) {
-  logDebug(`[Gemini Curation] Initiating with ${entries.length} candidate terms... Key length: ${geminiApiKey ? geminiApiKey.length : 0}`);
+async function curateIndexWithGemini(entries, geminiApiKey, event, geminiModel) {
+  logDebug(`[Gemini Curation] Initiating with ${entries.length} candidate terms... Model: ${geminiModel || 'gemini-flash-latest'}, Key length: ${geminiApiKey ? geminiApiKey.length : 0}`);
   if (event) {
     event.sender.send('auto-index-progress', { step: 'curating', message: 'Running Gemini AI Curation...' });
   }
@@ -650,7 +650,8 @@ Return a JSON array of objects with the exact same structure as the input:
 
   try {
     logDebug(`[Gemini Curation] Posting to Gemini model API...`);
-    const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
+    const model = geminiModel || 'gemini-flash-latest';
+    const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -706,8 +707,8 @@ Return a JSON array of objects with the exact same structure as the input:
 
 // IPC Handler: Run Auto-Indexing
 ipcMain.handle('run-auto-index', async (event, args) => {
-  const { pdfPath, password, fname, lname, email, geminiApiKey, settings } = args;
-  logDebug(`[Auto-Index Handler] Received args - PDF: ${pdfPath ? 'yes' : 'no'}, Key present: ${!!geminiApiKey}, Key val length: ${geminiApiKey ? geminiApiKey.length : 0}, Watermark info: ${fname}/${lname}/${email}`);
+  const { pdfPath, password, fname, lname, email, geminiApiKey, geminiModel, settings } = args;
+  logDebug(`[Auto-Index Handler] Received args - PDF: ${pdfPath ? 'yes' : 'no'}, Model: ${geminiModel}, Key present: ${!!geminiApiKey}, Key val length: ${geminiApiKey ? geminiApiKey.length : 0}, Watermark info: ${fname}/${lname}/${email}`);
   
   if (geminiApiKey) {
     try {
@@ -896,7 +897,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     let finalEntries = entries;
     let curationError = null;
     if (geminiApiKey && entries.length > 0) {
-      const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event);
+      const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
       finalEntries = curationResult.entries;
       curationError = curationResult.error;
     }
@@ -930,11 +931,11 @@ ipcMain.handle('run-auto-index', async (event, args) => {
 });
 
 ipcMain.handle('retry-gemini-curation', async (event, args) => {
-  const { entries, geminiApiKey } = args;
-  logDebug(`[Auto-Index Handler] Received retry-gemini-curation request for ${entries ? entries.length : 0} terms.`);
+  const { entries, geminiApiKey, geminiModel } = args;
+  logDebug(`[Auto-Index Handler] Received retry-gemini-curation request for ${entries ? entries.length : 0} terms. Model: ${geminiModel}`);
   
   try {
-    const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event);
+    const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
     return { success: curationResult.error ? false : true, entries: curationResult.entries, error: curationResult.error };
   } catch (error) {
     logDebug(`[Auto-Index Handler] Retry curation failed: ${error.message}`);

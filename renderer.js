@@ -126,6 +126,9 @@ const elements = {
   autoIndexFileName: document.getElementById('auto-index-file-name'),
   autoIndexPassword: document.getElementById('auto-index-password'),
   autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
+  autoIndexModelSelect: document.getElementById('auto-index-model-select'),
+  apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
+  apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
   autoIndexUseAi: document.getElementById('auto-index-use-ai'),
   autoIndexDepToggle: document.getElementById('auto-index-dep-toggle'),
   autoIndexDepContent: document.getElementById('auto-index-dep-content'),
@@ -3241,6 +3244,49 @@ function initAutoIndexingBindings() {
 
   // Load and save Gemini API Key and PDF password from/to localStorage
   if (elements.autoIndexGeminiKey && elements.autoIndexUseAi) {
+    let isKeyLocked = false;
+
+    const lockSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+    const unlockSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
+
+    const updateLockUi = () => {
+      if (isKeyLocked) {
+        elements.autoIndexGeminiKey.readOnly = true;
+        elements.autoIndexGeminiKey.style.opacity = '0.7';
+        elements.autoIndexGeminiKey.style.cursor = 'not-allowed';
+        if (elements.apiKeyLockBtn) {
+          elements.apiKeyLockBtn.innerHTML = unlockSvg + '<span>Unlock</span>';
+        }
+        if (elements.apiKeyStatusIcon) {
+          elements.apiKeyStatusIcon.outerHTML = `<i id="api-key-status-icon" class="status-locked" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; color: var(--color-accent); pointer-events: none;">${lockSvg}</i>`;
+          elements.apiKeyStatusIcon = document.getElementById('api-key-status-icon');
+        }
+      } else {
+        elements.autoIndexGeminiKey.readOnly = false;
+        elements.autoIndexGeminiKey.style.opacity = '1';
+        elements.autoIndexGeminiKey.style.cursor = 'text';
+        if (elements.apiKeyLockBtn) {
+          elements.apiKeyLockBtn.innerHTML = lockSvg + '<span>Lock</span>';
+        }
+        if (elements.apiKeyStatusIcon) {
+          elements.apiKeyStatusIcon.outerHTML = `<i id="api-key-status-icon" class="status-unlocked" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; color: var(--text-muted); pointer-events: none;">${unlockSvg}</i>`;
+          elements.apiKeyStatusIcon = document.getElementById('api-key-status-icon');
+        }
+      }
+    };
+
+    if (elements.apiKeyLockBtn) {
+      elements.apiKeyLockBtn.addEventListener('click', () => {
+        const keyVal = elements.autoIndexGeminiKey.value.trim();
+        if (!isKeyLocked && !keyVal) {
+          alert("Please enter an API Key first before locking.");
+          return;
+        }
+        isKeyLocked = !isKeyLocked;
+        updateLockUi();
+      });
+    }
+
     const validateGeminiKey = () => {
       const keyVal = elements.autoIndexGeminiKey.value.trim();
       const hasKey = keyVal.length > 0;
@@ -3256,8 +3302,18 @@ function initAutoIndexingBindings() {
       }
     };
 
-    elements.autoIndexGeminiKey.value = localStorage.getItem('gemini_api_key') || '';
+    const initialKey = localStorage.getItem('gemini_api_key') || '';
+    elements.autoIndexGeminiKey.value = initialKey;
     validateGeminiKey();
+
+    // Auto-lock on startup if key is present
+    if (initialKey) {
+      isKeyLocked = true;
+      updateLockUi();
+    } else {
+      isKeyLocked = false;
+      updateLockUi();
+    }
 
     // Checkbox restore
     const savedUseAi = localStorage.getItem('use_gemini_ai') === 'true';
@@ -3273,6 +3329,16 @@ function initAutoIndexingBindings() {
     elements.autoIndexUseAi.addEventListener('change', () => {
       localStorage.setItem('use_gemini_ai', elements.autoIndexUseAi.checked);
     });
+
+    // Model selection persistence
+    if (elements.autoIndexModelSelect) {
+      const savedModel = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
+      elements.autoIndexModelSelect.value = savedModel;
+      
+      elements.autoIndexModelSelect.addEventListener('change', () => {
+        localStorage.setItem('gemini_model', elements.autoIndexModelSelect.value);
+      });
+    }
   }
 
   if (elements.autoIndexPassword) {
@@ -3390,6 +3456,7 @@ function initAutoIndexingBindings() {
   if (elements.aiCurationRetryBtn) {
     elements.aiCurationRetryBtn.addEventListener('click', async () => {
       const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
+      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
       if (!geminiApiKey) {
         alert("Please enter a valid Gemini API key first to retry AI curation.");
         return;
@@ -3415,7 +3482,7 @@ function initAutoIndexingBindings() {
       });
 
       try {
-        const result = await window.api.retryCuration({ entries: autoExtractedEntries, geminiApiKey });
+        const result = await window.api.retryCuration({ entries: autoExtractedEntries, geminiApiKey, geminiModel });
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
 
@@ -3658,6 +3725,7 @@ async function handleAutoIndexSubmit(e) {
   const lname = elements.autoIndexLname.value.trim();
   const email = elements.autoIndexEmail.value.trim();
   const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+  const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
   const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
   const settings = {
@@ -3692,7 +3760,7 @@ async function handleAutoIndexSubmit(e) {
       }
     });
 
-    window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, settings })
+    window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, geminiModel, settings })
       .then((result) => {
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
