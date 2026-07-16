@@ -611,7 +611,7 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
 
 // IPC Handler: Run Auto-Indexing
 ipcMain.handle('run-auto-index', async (event, args) => {
-  const { pdfPath, password, settings } = args;
+  const { pdfPath, password, fname, lname, email, settings } = args;
   const tempDir = path.join(__dirname, 'temp_indexing');
   
   try {
@@ -716,6 +716,23 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     if (settings.zipf) indexArgs.push('-z', settings.zipf.toString());
     
     indexArgs.push('-r', '[a-zA-Z0-9 :.&_-]+');
+    
+    // Add watermark exclusion words
+    const excludeWordsSet = new Set(['licensed', 'to']);
+    if (fname) {
+      fname.toLowerCase().split(/\s+/).forEach(w => { if (w.length > 1) excludeWordsSet.add(w); });
+    }
+    if (lname) {
+      lname.toLowerCase().split(/\s+/).forEach(w => { if (w.length > 1) excludeWordsSet.add(w); });
+    }
+    if (email) {
+      excludeWordsSet.add(email.toLowerCase());
+      email.toLowerCase().split(/[.@]/).forEach(w => { if (w.length > 2) excludeWordsSet.add(w); });
+    }
+    if (excludeWordsSet.size > 0) {
+      indexArgs.push('--exclude-words', Array.from(excludeWordsSet).join(','));
+    }
+    
     indexArgs.push(indexInputFile, indexOutputFile);
     
     await new Promise((resolve, reject) => {

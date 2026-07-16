@@ -958,21 +958,30 @@ class Tokenizer:
 
         self._process_page(b)
 
-    def tokenize(self, data:bytes):
+    def tokenize(self, data:bytes, exclude_words: list = []):
         """
         Tokenize input data according to the configured document mode.
 
         Args:
             data (bytes): Raw document data to tokenize.
+            exclude_words (list): List of case-insensitive words to strip from the text.
         """
         # TXT
         if self.mode == 0: 
-            for b in data:
+            text = data.decode("utf-8", errors="ignore")
+            for w in exclude_words:
+                pattern = re.compile(re.escape(w), re.IGNORECASE)
+                text = pattern.sub(" ", text)
+            for b in text.encode("utf-8", errors="ignore"):
                 self._process_byte(b)
 
         # PDF
         elif self.mode == 1:
-            for b in pdfminer_extract_text(BytesIO(data)).encode():
+            text = pdfminer_extract_text(BytesIO(data))
+            for w in exclude_words:
+                pattern = re.compile(re.escape(w), re.IGNORECASE)
+                text = pattern.sub(" ", text)
+            for b in text.encode("utf-8", errors="ignore"):
                 self._process_byte(b)
 
         self._process_byte(0x00) # flush buffer
@@ -1102,6 +1111,7 @@ def main():
     parser.add_argument("-o", "--offset", type=int, default=0, help="Page number offset. Pages before offset are skipped (default: 0)")
     parser.add_argument("-d", "--disable", metavar=available_filters, type=str, default=None, help="Disable specified filters")
     parser.add_argument("-e", "--enable", metavar=available_filters, type=str, default=None, help="Enable only specified filters (Overrides -d)")
+    parser.add_argument("--exclude-words", type=str, default=None, help="Comma-separated list of words to exclude from raw text")
 
     # prefilters
     pre = parser.add_argument_group("pre-filter options")
@@ -1137,10 +1147,15 @@ def main():
     word_filter.build_from_argparse_args(args)
     print_status(verbose, f"{word_filter}" + '\n')
 
+    # Parse exclude words
+    exclude_words = []
+    if args.exclude_words:
+        exclude_words = [w.strip() for w in args.exclude_words.split(",") if w.strip()]
+
     # tokenize
     print_status(verbose, f"    [+] Tokenizing")
     tokenizer = Tokenizer(page_offset=offset, filter=word_filter, mode=filetype)
-    tokenizer.tokenize(data)
+    tokenizer.tokenize(data, exclude_words=exclude_words)
     print_status(verbose, f"        Words      : {len(tokenizer.words)}")
     print_status(verbose, f"        Phrases    : {len(tokenizer.phrases)}" + '\n')
 

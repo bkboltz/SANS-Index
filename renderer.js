@@ -124,6 +124,9 @@ const elements = {
   autoIndexFileBtn: document.getElementById('auto-index-file-btn'),
   autoIndexFileName: document.getElementById('auto-index-file-name'),
   autoIndexPassword: document.getElementById('auto-index-password'),
+  autoIndexFname: document.getElementById('auto-index-fname'),
+  autoIndexLname: document.getElementById('auto-index-lname'),
+  autoIndexEmail: document.getElementById('auto-index-email'),
   autoIndexSettingsToggle: document.getElementById('auto-index-settings-toggle'),
   autoIndexSettingsContent: document.getElementById('auto-index-settings-content'),
   autoIndexOffset: document.getElementById('auto-index-offset'),
@@ -3378,6 +3381,9 @@ async function handleAutoIndexSubmit(e) {
 
   const pdfPath = selectedPdfPath;
   const password = elements.autoIndexPassword.value.trim();
+  const fname = elements.autoIndexFname.value.trim();
+  const lname = elements.autoIndexLname.value.trim();
+  const email = elements.autoIndexEmail.value.trim();
   
   const settings = {
     offset: parseInt(elements.autoIndexOffset.value) || 0,
@@ -3398,7 +3404,7 @@ async function handleAutoIndexSubmit(e) {
   });
 
   try {
-    const result = await window.api.runAutoIndex({ pdfPath, password, settings });
+    const result = await window.api.runAutoIndex({ pdfPath, password, fname, lname, email, settings });
     elements.indexingProgressSection.classList.add('hidden');
     
     if (result.success) {
@@ -3522,6 +3528,9 @@ async function handleImportCheckedEntries() {
     elements.autoIndexFileName.textContent = 'No file selected';
     elements.autoIndexFileName.title = '';
     elements.autoIndexPassword.value = '';
+    elements.autoIndexFname.value = '';
+    elements.autoIndexLname.value = '';
+    elements.autoIndexEmail.value = '';
     
     const tabButtons = document.querySelectorAll('.workspace-tabs .tab-btn');
     tabButtons.forEach(b => {
