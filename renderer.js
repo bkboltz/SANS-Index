@@ -3283,6 +3283,7 @@ function initAutoIndexingBindings() {
           alert("Please enter an API Key first before locking.");
           return;
         }
+        localStorage.setItem('gemini_api_key', keyVal);
         isKeyLocked = !isKeyLocked;
         updateLockUi();
       });
@@ -3361,6 +3362,27 @@ function initAutoIndexingBindings() {
     elements.autoIndexPassword.value = localStorage.getItem('sans_pdf_password') || '';
     elements.autoIndexPassword.addEventListener('input', () => {
       localStorage.setItem('sans_pdf_password', elements.autoIndexPassword.value.trim());
+    });
+  }
+
+  if (elements.autoIndexFname) {
+    elements.autoIndexFname.value = localStorage.getItem('sans_fname') || '';
+    elements.autoIndexFname.addEventListener('input', () => {
+      localStorage.setItem('sans_fname', elements.autoIndexFname.value.trim());
+    });
+  }
+
+  if (elements.autoIndexLname) {
+    elements.autoIndexLname.value = localStorage.getItem('sans_lname') || '';
+    elements.autoIndexLname.addEventListener('input', () => {
+      localStorage.setItem('sans_lname', elements.autoIndexLname.value.trim());
+    });
+  }
+
+  if (elements.autoIndexEmail) {
+    elements.autoIndexEmail.value = localStorage.getItem('sans_email') || '';
+    elements.autoIndexEmail.addEventListener('input', () => {
+      localStorage.setItem('sans_email', elements.autoIndexEmail.value.trim());
     });
   }
 
@@ -3980,9 +4002,15 @@ async function handleImportCheckedEntries() {
     if (elements.autoIndexGeminiKey) {
       elements.autoIndexGeminiKey.value = localStorage.getItem('gemini_api_key') || '';
     }
-    elements.autoIndexFname.value = '';
-    elements.autoIndexLname.value = '';
-    elements.autoIndexEmail.value = '';
+    if (elements.autoIndexFname) {
+      elements.autoIndexFname.value = localStorage.getItem('sans_fname') || '';
+    }
+    if (elements.autoIndexLname) {
+      elements.autoIndexLname.value = localStorage.getItem('sans_lname') || '';
+    }
+    if (elements.autoIndexEmail) {
+      elements.autoIndexEmail.value = localStorage.getItem('sans_email') || '';
+    }
     
     const tabButtons = document.querySelectorAll('.workspace-tabs .tab-btn');
     tabButtons.forEach(b => {
