@@ -126,6 +126,8 @@ const elements = {
   autoIndexFileName: document.getElementById('auto-index-file-name'),
   autoIndexPassword: document.getElementById('auto-index-password'),
   autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
+  autoIndexUseAi: document.getElementById('auto-index-use-ai'),
+  geminiKeyValidationMsg: document.getElementById('gemini-key-validation-msg'),
   autoIndexDepToggle: document.getElementById('auto-index-dep-toggle'),
   autoIndexDepContent: document.getElementById('auto-index-dep-content'),
   depOverallBadge: document.getElementById('dep-overall-badge'),
@@ -3136,10 +3138,48 @@ function initAutoIndexingBindings() {
   }
 
   // Load and save Gemini API Key and PDF password from/to localStorage
-  if (elements.autoIndexGeminiKey) {
+  if (elements.autoIndexGeminiKey && elements.autoIndexUseAi && elements.geminiKeyValidationMsg) {
+    const validateGeminiKey = () => {
+      const keyVal = elements.autoIndexGeminiKey.value.trim();
+      const isEmpty = keyVal.length === 0;
+      // Regex: Starts with AIzaSy, followed by 33 valid base64url characters = 39 characters total
+      const isValid = /^AIzaSy[A-Za-z0-9_-]{33}$/.test(keyVal);
+
+      if (isValid) {
+        elements.autoIndexUseAi.disabled = false;
+        elements.geminiKeyValidationMsg.classList.add('hidden');
+        elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
+      } else {
+        elements.autoIndexUseAi.disabled = true;
+        elements.autoIndexUseAi.checked = false;
+        localStorage.setItem('use_gemini_ai', 'false');
+
+        if (isEmpty) {
+          elements.geminiKeyValidationMsg.classList.add('hidden');
+          elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
+        } else {
+          elements.geminiKeyValidationMsg.classList.remove('hidden');
+          elements.autoIndexGeminiKey.style.borderColor = '#ef4444';
+        }
+      }
+    };
+
     elements.autoIndexGeminiKey.value = localStorage.getItem('gemini_api_key') || '';
+    validateGeminiKey();
+
+    // Checkbox restore
+    const savedUseAi = localStorage.getItem('use_gemini_ai') === 'true';
+    if (savedUseAi && !elements.autoIndexUseAi.disabled) {
+      elements.autoIndexUseAi.checked = true;
+    }
+
     elements.autoIndexGeminiKey.addEventListener('input', () => {
       localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
+      validateGeminiKey();
+    });
+
+    elements.autoIndexUseAi.addEventListener('change', () => {
+      localStorage.setItem('use_gemini_ai', elements.autoIndexUseAi.checked);
     });
   }
 
@@ -3463,7 +3503,8 @@ async function handleAutoIndexSubmit(e) {
   const fname = elements.autoIndexFname.value.trim();
   const lname = elements.autoIndexLname.value.trim();
   const email = elements.autoIndexEmail.value.trim();
-  const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
+  const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+  const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
   const settings = {
     offset: parseInt(elements.autoIndexOffset.value) || 0,

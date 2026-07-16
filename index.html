@@ -502,6 +502,15 @@
                   <input type="password" id="auto-index-gemini-key" placeholder="Paste Gemini API Key to enable AI curation">
                 </div>
 
+                <!-- Enable AI Checkbox -->
+                <div class="form-group" style="margin-top: 4px;">
+                  <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.8rem; color: var(--text-secondary);">
+                    <input type="checkbox" id="auto-index-use-ai" disabled>
+                    <span>Use Gemini AI Curation (Deduplicate &amp; clean)</span>
+                  </label>
+                  <span id="gemini-key-validation-msg" style="display: block; font-size: 0.7rem; color: #ef4444; margin-top: 4px;" class="hidden">Key must start with 'AIzaSy' (39 characters)</span>
+                </div>
+
                 <!-- Warnings & Privacy Notes -->
                 <div style="margin-top: 8px; font-size: 0.72rem; line-height: 1.45; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px;">
                   <span style="display: inline-flex; align-items: flex-start; gap: 6px;">
