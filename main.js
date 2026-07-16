@@ -632,9 +632,6 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
 // Helper: Curate Index with Gemini AI
 async function curateIndexWithGemini(entries, geminiApiKey, event, geminiModel) {
   logDebug(`[Gemini Curation] Initiating with ${entries.length} candidate terms... Model: ${geminiModel || 'gemini-flash-latest'}, Key length: ${geminiApiKey ? geminiApiKey.length : 0}`);
-  if (event) {
-    event.sender.send('auto-index-progress', { step: 'curating', message: 'Running Gemini AI Curation...' });
-  }
 
   const prompt = `You are a SANS Cybersecurity course index curator. Your job is to filter a list of candidate index terms extracted from a SANS textbook.
 Review the JSON array of terms below. Filter out noise terms (generic English words, verbs, adjectives, prepositions, numbers, and adverbs on their own). Keep only distinct technical terms, security concepts, tools, protocols, registry paths, specific command line utilities, file names, ports, and important techniques.
@@ -648,60 +645,98 @@ Return a JSON array of objects with the exact same structure as the input:
   { "topic": "...", "pages": "...", "notes": "", "source": "auto" }
 ]`;
 
-  try {
-    logDebug(`[Gemini Curation] Posting to Gemini model API...`);
-    const model = geminiModel || 'gemini-flash-latest';
-    const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { 
-          responseMimeType: "application/json"
-        }
-      })
-    });
+  const maxAttempts = 5;
+  let attempt = 0;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      logDebug(`[Gemini Curation] API returned error: ${response.status} - ${errorText}`);
-      let parsedError = errorText;
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error && errorJson.error.message) {
-          parsedError = errorJson.error.message;
-        }
-      } catch (e) {}
-      throw new Error(`Gemini API Error: ${parsedError}`);
-    }
+  while (attempt < maxAttempts) {
+    attempt++;
+    logDebug(`[Gemini Curation] Attempt ${attempt}/${maxAttempts}...`);
 
-    const resData = await response.json();
-    if (!resData.candidates || resData.candidates.length === 0) {
-      logDebug(`[Gemini Curation] API returned empty candidates array`);
-      throw new Error('Gemini API returned empty response candidates.');
-    }
-
-    const responseText = resData.candidates[0].content.parts[0].text;
-    logDebug(`[Gemini Curation] Received content response text length: ${responseText ? responseText.length : 0}`);
-    const curatedEntries = JSON.parse(responseText);
-
-    if (Array.isArray(curatedEntries)) {
-      logDebug(`[Gemini Curation] Curation successful! Returned ${curatedEntries.length} curated terms.`);
-      return { entries: curatedEntries, error: null };
-    } else if (curatedEntries && Array.isArray(curatedEntries.filtered_terms)) {
-      logDebug(`[Gemini Curation] Curation successful (filtered_terms)! Returned ${curatedEntries.filtered_terms.length} curated terms.`);
-      return { entries: curatedEntries.filtered_terms, error: null };
-    } else {
-      logDebug(`[Gemini Curation] Warning: Unexpected Gemini JSON structure: ${JSON.stringify(curatedEntries).substring(0, 200)}`);
-      return { entries: entries, error: "Unexpected JSON structure returned from AI." };
-    }
-
-  } catch (error) {
-    logDebug(`[Gemini Curation] Failed to curate with Gemini: ${error.message}\n${error.stack}`);
     if (event) {
-      event.sender.send('auto-index-progress', { step: 'warning', message: `AI Curation failed: ${error.message}. Returning raw list...` });
+      event.sender.send('auto-index-progress', { 
+        step: 'curating', 
+        attempt: attempt, 
+        maxAttempts: maxAttempts,
+        isOverloaded: attempt > 1
+      });
     }
-    return { entries: entries, error: error.message };
+
+    try {
+      logDebug(`[Gemini Curation] Posting to Gemini model API...`);
+      const model = geminiModel || 'gemini-flash-latest';
+      const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { 
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logDebug(`[Gemini Curation] API returned error: ${response.status} - ${errorText}`);
+        let parsedError = errorText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error && errorJson.error.message) {
+            parsedError = errorJson.error.message;
+          }
+        } catch (e) {}
+        throw new Error(`Gemini API Error: ${parsedError}`);
+      }
+
+      const resData = await response.json();
+      if (!resData.candidates || resData.candidates.length === 0) {
+        logDebug(`[Gemini Curation] API returned empty candidates array`);
+        throw new Error('Gemini API returned empty response candidates.');
+      }
+
+      const responseText = resData.candidates[0].content.parts[0].text;
+      logDebug(`[Gemini Curation] Received content response text length: ${responseText ? responseText.length : 0}`);
+      const curatedEntries = JSON.parse(responseText);
+
+      if (Array.isArray(curatedEntries)) {
+        logDebug(`[Gemini Curation] Curation successful! Returned ${curatedEntries.length} curated terms.`);
+        return { entries: curatedEntries, error: null };
+      } else if (curatedEntries && Array.isArray(curatedEntries.filtered_terms)) {
+        logDebug(`[Gemini Curation] Curation successful (filtered_terms)! Returned ${curatedEntries.filtered_terms.length} curated terms.`);
+        return { entries: curatedEntries.filtered_terms, error: null };
+      } else {
+        logDebug(`[Gemini Curation] Warning: Unexpected Gemini JSON structure: ${JSON.stringify(curatedEntries).substring(0, 200)}`);
+        return { entries: entries, error: "Unexpected JSON structure returned from AI." };
+      }
+
+    } catch (error) {
+      logDebug(`[Gemini Curation] Attempt ${attempt} failed: ${error.message}`);
+      
+      const errLower = error.message.toLowerCase();
+      const isHighDemand = errLower.includes("high demand") || 
+                           errLower.includes("quota exceeded") || 
+                           errLower.includes("resource has been exhausted") || 
+                           errLower.includes("429") || 
+                           errLower.includes("503") || 
+                           errLower.includes("rate limit") || 
+                           errLower.includes("volume of traffic");
+
+      if (isHighDemand && attempt < maxAttempts) {
+        logDebug(`[Gemini Curation] High demand detected. Waiting 6 seconds before retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        continue;
+      }
+
+      let finalErrorMessage = error.message;
+      if (attempt === maxAttempts && isHighDemand) {
+        finalErrorMessage = "We couldn't query Gemini at this time, try again later when there is less traffic.";
+      }
+
+      if (event) {
+        event.sender.send('auto-index-progress', { step: 'warning', message: `AI Curation failed: ${finalErrorMessage}. Returning raw list...` });
+      }
+      return { entries: entries, error: finalErrorMessage };
+    }
   }
 }
 

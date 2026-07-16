@@ -3486,12 +3486,23 @@ function initAutoIndexingBindings() {
 
       const removeProgressListener = window.api.onAutoIndexProgress((progress) => {
         if (progress.step === 'curating') {
-          elements.indexingProgressStatus.innerHTML = `
-            Running Gemini AI Curation...
-            <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
-              Note: This process can take a few minutes (5-10 minutes is expected for large books).
-            </div>
-          `;
+          if (progress.isOverloaded) {
+            elements.indexingProgressStatus.innerHTML = `
+              <div style="font-size: 1.1rem; font-weight: 600; color: #eab308; line-height: 1.4; max-width: 550px; margin-left: auto; margin-right: auto;">
+                Gemini models are experiencing high volumes of traffic right now. Hang tight while we try again 🤙
+              </div>
+              <div style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); margin-top: 8px;">
+                Attempt ${progress.attempt}/${progress.maxAttempts}
+              </div>
+            `;
+          } else {
+            elements.indexingProgressStatus.innerHTML = `
+              Running Gemini AI Curation...
+              <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+                Note: This process can take a few minutes (5-10 minutes is expected for large books).
+              </div>
+            `;
+          }
         } else {
           elements.indexingProgressStatus.textContent = progress.message;
         }
@@ -3765,12 +3776,23 @@ async function handleAutoIndexSubmit(e) {
     window.api.onAutoIndexProgress((progress) => {
       // Dynamic loading warnings for AI curation step
       if (progress.step === 'curating') {
-        elements.indexingProgressStatus.innerHTML = `
-          Running Gemini AI Curation...
-          <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
-            Note: This process can take a few minutes (5-10 minutes is expected for large books).
-          </div>
-        `;
+        if (progress.isOverloaded) {
+          elements.indexingProgressStatus.innerHTML = `
+            <div style="font-size: 1.1rem; font-weight: 600; color: #eab308; line-height: 1.4; max-width: 550px; margin-left: auto; margin-right: auto;">
+              Gemini models are experiencing high volumes of traffic right now. Hang tight while we try again 🤙
+            </div>
+            <div style="font-size: 0.88rem; font-weight: 500; color: var(--text-secondary); margin-top: 8px;">
+              Attempt ${progress.attempt}/${progress.maxAttempts}
+            </div>
+          `;
+        } else {
+          elements.indexingProgressStatus.innerHTML = `
+            Running Gemini AI Curation...
+            <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+              Note: This process can take a few minutes (5-10 minutes is expected for large books).
+            </div>
+          `;
+        }
       } else {
         elements.indexingProgressStatus.textContent = progress.message;
       }
