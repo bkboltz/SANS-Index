@@ -3135,11 +3135,18 @@ function initAutoIndexingBindings() {
     });
   }
 
-  // Load Gemini API Key from localStorage
+  // Load and save Gemini API Key and PDF password from/to localStorage
   if (elements.autoIndexGeminiKey) {
     elements.autoIndexGeminiKey.value = localStorage.getItem('gemini_api_key') || '';
     elements.autoIndexGeminiKey.addEventListener('input', () => {
       localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
+    });
+  }
+
+  if (elements.autoIndexPassword) {
+    elements.autoIndexPassword.value = localStorage.getItem('sans_pdf_password') || '';
+    elements.autoIndexPassword.addEventListener('input', () => {
+      localStorage.setItem('sans_pdf_password', elements.autoIndexPassword.value.trim());
     });
   }
 
@@ -3617,7 +3624,10 @@ async function handleImportCheckedEntries() {
       elements.autoIndexFileArea.style.borderColor = 'var(--border-color)';
       elements.autoIndexFileArea.style.backgroundColor = 'rgba(15, 23, 42, 0.3)';
     }
-    elements.autoIndexPassword.value = '';
+    elements.autoIndexPassword.value = localStorage.getItem('sans_pdf_password') || '';
+    if (elements.autoIndexGeminiKey) {
+      elements.autoIndexGeminiKey.value = localStorage.getItem('gemini_api_key') || '';
+    }
     elements.autoIndexFname.value = '';
     elements.autoIndexLname.value = '';
     elements.autoIndexEmail.value = '';
