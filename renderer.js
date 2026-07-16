@@ -127,7 +127,6 @@ const elements = {
   autoIndexPassword: document.getElementById('auto-index-password'),
   autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
   autoIndexUseAi: document.getElementById('auto-index-use-ai'),
-  geminiKeyValidationMsg: document.getElementById('gemini-key-validation-msg'),
   autoIndexDepToggle: document.getElementById('auto-index-dep-toggle'),
   autoIndexDepContent: document.getElementById('auto-index-dep-content'),
   depOverallBadge: document.getElementById('dep-overall-badge'),
@@ -3138,29 +3137,19 @@ function initAutoIndexingBindings() {
   }
 
   // Load and save Gemini API Key and PDF password from/to localStorage
-  if (elements.autoIndexGeminiKey && elements.autoIndexUseAi && elements.geminiKeyValidationMsg) {
+  if (elements.autoIndexGeminiKey && elements.autoIndexUseAi) {
     const validateGeminiKey = () => {
       const keyVal = elements.autoIndexGeminiKey.value.trim();
-      const isEmpty = keyVal.length === 0;
-      // Regex: Starts with AIzaSy, followed by 33 valid base64url characters = 39 characters total
-      const isValid = /^AIzaSy[A-Za-z0-9_-]{33}$/.test(keyVal);
+      const hasKey = keyVal.length > 0;
 
-      if (isValid) {
+      if (hasKey) {
         elements.autoIndexUseAi.disabled = false;
-        elements.geminiKeyValidationMsg.classList.add('hidden');
         elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
       } else {
         elements.autoIndexUseAi.disabled = true;
         elements.autoIndexUseAi.checked = false;
         localStorage.setItem('use_gemini_ai', 'false');
-
-        if (isEmpty) {
-          elements.geminiKeyValidationMsg.classList.add('hidden');
-          elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
-        } else {
-          elements.geminiKeyValidationMsg.classList.remove('hidden');
-          elements.autoIndexGeminiKey.style.borderColor = '#ef4444';
-        }
+        elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
       }
     };
 
