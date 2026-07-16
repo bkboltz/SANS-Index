@@ -655,8 +655,8 @@ Return a JSON array of objects with the exact same structure as the input:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { 
-          responseMimeType: "application/json"
+        generation_config: { 
+          response_mime_type: "application/json"
         }
       })
     });
