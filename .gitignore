@@ -7,3 +7,8 @@ npm-debug.log*
 .gemini/
 .agents/
 window_state.json
+engine/.venv/
+engine/__pycache__/
+__pycache__/
+*.pyc
+temp_indexing/

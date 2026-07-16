@@ -527,13 +527,13 @@ class WordFilter:
 
     def _filter_modifiers(self, item: tuple[str, set]) -> bool:
         """
-        Keep only noun or verb tokens; allow all multi-word phrases.
+        Keep only noun tokens; allow all multi-word phrases.
 
         Args:
             item (tuple[str, set]): (word, pages)
 
         Returns:
-            bool: True if word is a noun/verb or a phrase, False otherwise.
+            bool: True if word is a noun or a phrase, False otherwise.
         """
         word = item[0]
 
@@ -543,11 +543,11 @@ class WordFilter:
 
         pos = nltk.pos_tag([word])[0][1]
 
-        return pos.startswith("NN") or pos.startswith("VB")
+        return pos.startswith("NN")
 
     def _filter_dictionary(self, item: tuple[str, set]) -> bool:
         """
-        Filter out valid dictionary words.
+        Filter out valid dictionary words, including plurals, progressive, and past tense forms.
 
         Args:
             item (tuple[str, set]): (word, pages)
@@ -557,7 +557,35 @@ class WordFilter:
             dictionary word and should be filtered out.
         """
         word = item[0]
-        return not word in self.WORDS
+        
+        # Check direct match
+        if word in self.WORDS:
+            return False
+            
+        # Check plural ending in 's'
+        if word.endswith('s'):
+            if word[:-1] in self.WORDS:
+                return False
+            if word.endswith('es') and word[:-2] in self.WORDS:
+                return False
+            if word.endswith('ies') and (word[:-3] + 'y') in self.WORDS:
+                return False
+                
+        # Check past tense 'ed'
+        if word.endswith('ed'):
+            if word[:-1] in self.WORDS: # e.g. shared -> share
+                return False
+            if word[:-2] in self.WORDS: # e.g. walked -> walk
+                return False
+                
+        # Check progressive 'ing'
+        if word.endswith('ing'):
+            if word[:-3] in self.WORDS: # e.g. scanning -> scan
+                return False
+            if (word[:-3] + 'e') in self.WORDS: # e.g. configuring -> configure
+                return False
+                
+        return True
 
     def _regex(self, item: tuple[str, set], regex:str) -> bool:
         """
@@ -602,6 +630,17 @@ class Tokenizer:
     PHRASE_MIDDLE = set() # may only be found in the middle of phrase, else discarded
     with open("wordlists/junk.txt", "r", encoding="utf-8") as f:
         PHRASE_MIDDLE = set(line.strip() for line in f)
+
+    FORBIDDEN_STARTERS = {
+        "the", "this", "that", "these", "those", "we", "they", "it", "he", "she", "you", "i", 
+        "our", "their", "your", "its", "a", "an", "some", "all", "any", "every", "each", "no",
+        "if", "when", "as", "because", "although", "while", "since", "for", "to", "by", "with", 
+        "in", "on", "at", "from", "however", "therefore", "thus", "then", "so", "also", 
+        "additionally", "furthermore", "moreover", "here", "there", "now", "first", "second", 
+        "finally", "is", "are", "was", "were", "can", "could", "should", "would", "may", 
+        "might", "must", "do", "does", "did", "have", "has", "had", "use", "using", "note", 
+        "ensure", "make", "let", "lets", "see", "please", "refer", "figure", "table", "chapter"
+    }
 
     def __init__(self, page_offset:int=0, filter:WordFilter=None, mode=0):
         """
@@ -670,7 +709,7 @@ class Tokenizer:
 
     def _add_phrase(self, phrase:str, page:int):
         """
-        Add a phrase occurrence to the phrase index.
+        Add a phrase occurrence to the phrase index, filtering out noise.
 
         If a filter is configured, the phrase is first checked using the pre-filter
         before being added to the index.
@@ -679,12 +718,33 @@ class Tokenizer:
             phrase (str): The phrase to index.
             page (int): The page number where the phrase occurs.
         """
-        p = phrase.lower()
+        p = phrase.strip()
+        words = p.split()
+        if not words:
+            return
+            
+        # Strip forbidden starters from the beginning
+        while words and words[0].lower().strip(":,.-") in self.FORBIDDEN_STARTERS:
+            words.pop(0)
+            
+        # If it's no longer a phrase, discard
+        if len(words) < 2:
+            return
+            
+        p_clean = " ".join(words)
+        p_lower = p_clean.lower()
+        
+        # filter out phrases that start or end with connectors or middle words
+        if words[0].lower() in self.PHRASE_CONNECTORS or words[-1].lower() in self.PHRASE_CONNECTORS:
+            return
+        if words[0].lower() in self.PHRASE_MIDDLE or words[-1].lower() in self.PHRASE_MIDDLE:
+            return
+
         if self.filter:
-            if self.filter.prefilter(phrase):
-                self.phrases[p].add(page)
+            if self.filter.prefilter(p_clean):
+                self.phrases[p_lower].add(page)
         else:
-            self.phrases[p].add(page)
+            self.phrases[p_lower].add(page)
 
     def _process_word_char(self, b: str) -> bool:
         """
