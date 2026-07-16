@@ -11,6 +11,17 @@ const BACKUPS_DIR = path.join(__dirname, 'backups');
 
 const WINDOW_STATE_FILE = path.join(__dirname, 'window_state.json');
 
+const DEBUG_LOG_FILE = path.join(__dirname, 'debug.log');
+function logDebug(msg) {
+  try {
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(DEBUG_LOG_FILE, `[${timestamp}] ${msg}\n`, 'utf8');
+  } catch (err) {
+    console.error('Failed to write to debug log file:', err);
+  }
+  console.log(msg);
+}
+
 function loadWindowState() {
   try {
     if (fs.existsSync(WINDOW_STATE_FILE)) {
@@ -620,6 +631,7 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
 
 // Helper: Curate Index with Gemini AI
 async function curateIndexWithGemini(entries, geminiApiKey, event) {
+  logDebug(`[Gemini Curation] Initiating with ${entries.length} candidate terms... Key length: ${geminiApiKey ? geminiApiKey.length : 0}`);
   if (event) {
     event.sender.send('auto-index-progress', { step: 'curating', message: 'Running Gemini AI Curation...' });
   }
@@ -637,6 +649,7 @@ Return a JSON array of objects with the exact same structure as the input:
 ]`;
 
   try {
+    logDebug(`[Gemini Curation] Posting to Gemini model API...`);
     const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -650,29 +663,33 @@ Return a JSON array of objects with the exact same structure as the input:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Gemini API returned error: ${response.status} - ${errorText}`);
+      logDebug(`[Gemini Curation] API returned error: ${response.status} - ${errorText}`);
       throw new Error(`Gemini API Error: ${response.statusText}`);
     }
 
     const resData = await response.json();
     if (!resData.candidates || resData.candidates.length === 0) {
+      logDebug(`[Gemini Curation] API returned empty candidates array`);
       throw new Error('Gemini API returned empty response candidates.');
     }
 
     const responseText = resData.candidates[0].content.parts[0].text;
+    logDebug(`[Gemini Curation] Received content response text length: ${responseText ? responseText.length : 0}`);
     const curatedEntries = JSON.parse(responseText);
 
     if (Array.isArray(curatedEntries)) {
+      logDebug(`[Gemini Curation] Curation successful! Returned ${curatedEntries.length} curated terms.`);
       return curatedEntries;
     } else if (curatedEntries && Array.isArray(curatedEntries.filtered_terms)) {
+      logDebug(`[Gemini Curation] Curation successful (filtered_terms)! Returned ${curatedEntries.filtered_terms.length} curated terms.`);
       return curatedEntries.filtered_terms;
     } else {
-      console.warn("Unexpected Gemini JSON response structure:", curatedEntries);
+      logDebug(`[Gemini Curation] Warning: Unexpected Gemini JSON structure: ${JSON.stringify(curatedEntries).substring(0, 200)}`);
       return entries;
     }
 
   } catch (error) {
-    console.error("Failed to curate with Gemini:", error);
+    logDebug(`[Gemini Curation] Failed to curate with Gemini: ${error.message}\n${error.stack}`);
     if (event) {
       event.sender.send('auto-index-progress', { step: 'warning', message: `AI Curation failed: ${error.message}. Returning raw list...` });
     }
@@ -683,6 +700,7 @@ Return a JSON array of objects with the exact same structure as the input:
 // IPC Handler: Run Auto-Indexing
 ipcMain.handle('run-auto-index', async (event, args) => {
   const { pdfPath, password, fname, lname, email, geminiApiKey, settings } = args;
+  logDebug(`[Auto-Index Handler] Received args - PDF: ${pdfPath ? 'yes' : 'no'}, Key present: ${!!geminiApiKey}, Key val length: ${geminiApiKey ? geminiApiKey.length : 0}, Watermark info: ${fname}/${lname}/${email}`);
   const tempDir = path.join(__dirname, 'temp_indexing');
   
   try {
