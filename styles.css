@@ -786,7 +786,8 @@ select:focus, input[type="text"]:focus, input[type="password"]:focus, input[type
   height: 16px;
 }
 
-#table-search-input {
+#table-search-input,
+#preview-search-input {
   padding-left: 36px;
   background-color: var(--bg-sidebar);
 }

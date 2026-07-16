@@ -132,6 +132,7 @@ const elements = {
   depOverallBadge: document.getElementById('dep-overall-badge'),
   aiCurationErrorAlert: document.getElementById('ai-curation-error-alert'),
   aiCurationErrorText: document.getElementById('ai-curation-error-text'),
+  aiCurationRetryBtn: document.getElementById('ai-curation-retry-btn'),
   aiCurationConfirmModal: document.getElementById('ai-curation-confirm-modal'),
   aiCurationCancelBtn: document.getElementById('ai-curation-cancel-btn'),
   aiCurationContinueBtn: document.getElementById('ai-curation-continue-btn'),
@@ -3384,6 +3385,68 @@ function initAutoIndexingBindings() {
 
   if (elements.previewImportCheckedBtn) {
     elements.previewImportCheckedBtn.addEventListener('click', handleImportCheckedEntries);
+  }
+
+  if (elements.aiCurationRetryBtn) {
+    elements.aiCurationRetryBtn.addEventListener('click', async () => {
+      const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
+      if (!geminiApiKey) {
+        alert("Please enter a valid Gemini API key first to retry AI curation.");
+        return;
+      }
+      
+      elements.verificationPreviewSection.classList.add('hidden');
+      elements.indexingProgressSection.classList.remove('hidden');
+      elements.indexingProgressStatus.textContent = 'Retrying Gemini AI Curation...';
+      
+      startFunFactsRotation();
+
+      const removeProgressListener = window.api.onAutoIndexProgress((progress) => {
+        if (progress.step === 'curating') {
+          elements.indexingProgressStatus.innerHTML = `
+            Running Gemini AI Curation...
+            <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+              Note: This process can take a few minutes (5-10 minutes is expected for large books).
+            </div>
+          `;
+        } else {
+          elements.indexingProgressStatus.textContent = progress.message;
+        }
+      });
+
+      try {
+        const result = await window.api.retryCuration({ entries: autoExtractedEntries, geminiApiKey });
+        elements.indexingProgressSection.classList.add('hidden');
+        stopFunFactsRotation();
+
+        if (result.success) {
+          autoExtractedEntries = result.entries;
+          if (elements.aiCurationErrorAlert) {
+            elements.aiCurationErrorAlert.classList.add('hidden');
+          }
+          alert("AI Curation retry succeeded! The list has been successfully cleaned.");
+        } else {
+          if (elements.aiCurationErrorText) {
+            elements.aiCurationErrorText.textContent = result.error;
+          }
+          if (elements.aiCurationErrorAlert) {
+            elements.aiCurationErrorAlert.classList.remove('hidden');
+          }
+          alert("AI Curation failed again: " + result.error);
+        }
+      } catch (err) {
+        alert("An unexpected error occurred during retry: " + err.message);
+        elements.indexingProgressSection.classList.add('hidden');
+        stopFunFactsRotation();
+      } finally {
+        if (removeProgressListener && typeof removeProgressListener === 'function') {
+          removeProgressListener();
+        }
+        window.api.removeListener('auto-index-progress');
+        elements.verificationPreviewSection.classList.remove('hidden');
+        renderVerificationTable();
+      }
+    });
   }
 }
 

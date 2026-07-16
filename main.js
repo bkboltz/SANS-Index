@@ -928,3 +928,16 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('retry-gemini-curation', async (event, args) => {
+  const { entries, geminiApiKey } = args;
+  logDebug(`[Auto-Index Handler] Received retry-gemini-curation request for ${entries ? entries.length : 0} terms.`);
+  
+  try {
+    const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event);
+    return { success: curationResult.error ? false : true, entries: curationResult.entries, error: curationResult.error };
+  } catch (error) {
+    logDebug(`[Auto-Index Handler] Retry curation failed: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+});

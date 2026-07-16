@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('api', {
   installDependency: (dep) => ipcRenderer.invoke('install-dependency', dep),
   selectPdfFile: () => ipcRenderer.invoke('select-pdf-file'),
   runAutoIndex: (args) => ipcRenderer.invoke('run-auto-index', args),
+  retryCuration: (args) => ipcRenderer.invoke('retry-gemini-curation', args),
   onOcrInstallStatus: (callback) => {
     ipcRenderer.on('ocr-install-status', (event, status) => callback(status));
   },
