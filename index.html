@@ -676,8 +676,18 @@
                   <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>
                   <span>Try Curation Again</span>
                 </button>
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">using</span>
+                  <select id="ai-curation-retry-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.78rem; cursor: pointer; outline: none;">
+                    <option value="gemini-flash-latest">Gemini 1.5 Flash (Default)</option>
+                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Experimental)</option>
+                    <option value="gemini-pro-latest">Gemini 1.5 Pro (Best Quality)</option>
+                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight)</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash (Preview)</option>
+                  </select>
+                </div>
                 <span style="font-size: 0.72rem; color: var(--text-muted);">
-                  <strong>Rate Limit Hint:</strong> Google's free tier has a limit of 15 requests per minute. If you hit this limit, wait 1 minute before retrying.
+                  <strong>Rate Limit Hint:</strong> Google's free tier has a limit of 15 requests per minute.
                 </span>
               </div>
             </div>

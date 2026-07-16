@@ -136,6 +136,7 @@ const elements = {
   aiCurationErrorAlert: document.getElementById('ai-curation-error-alert'),
   aiCurationErrorText: document.getElementById('ai-curation-error-text'),
   aiCurationRetryBtn: document.getElementById('ai-curation-retry-btn'),
+  aiCurationRetryModelSelect: document.getElementById('ai-curation-retry-model-select'),
   aiCurationConfirmModal: document.getElementById('ai-curation-confirm-modal'),
   aiCurationCancelBtn: document.getElementById('ai-curation-cancel-btn'),
   aiCurationContinueBtn: document.getElementById('ai-curation-continue-btn'),
@@ -3330,13 +3331,28 @@ function initAutoIndexingBindings() {
       localStorage.setItem('use_gemini_ai', elements.autoIndexUseAi.checked);
     });
 
-    // Model selection persistence
+    // Model selection persistence and sync
     if (elements.autoIndexModelSelect) {
       const savedModel = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
       elements.autoIndexModelSelect.value = savedModel;
+      if (elements.aiCurationRetryModelSelect) {
+        elements.aiCurationRetryModelSelect.value = savedModel;
+      }
       
       elements.autoIndexModelSelect.addEventListener('change', () => {
         localStorage.setItem('gemini_model', elements.autoIndexModelSelect.value);
+        if (elements.aiCurationRetryModelSelect) {
+          elements.aiCurationRetryModelSelect.value = elements.autoIndexModelSelect.value;
+        }
+      });
+    }
+
+    if (elements.aiCurationRetryModelSelect) {
+      elements.aiCurationRetryModelSelect.addEventListener('change', () => {
+        localStorage.setItem('gemini_model', elements.aiCurationRetryModelSelect.value);
+        if (elements.autoIndexModelSelect) {
+          elements.autoIndexModelSelect.value = elements.aiCurationRetryModelSelect.value;
+        }
       });
     }
   }
