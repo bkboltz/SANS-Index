@@ -132,6 +132,10 @@ const elements = {
   depOverallBadge: document.getElementById('dep-overall-badge'),
   aiCurationErrorAlert: document.getElementById('ai-curation-error-alert'),
   aiCurationErrorText: document.getElementById('ai-curation-error-text'),
+  aiCurationConfirmModal: document.getElementById('ai-curation-confirm-modal'),
+  aiCurationCancelBtn: document.getElementById('ai-curation-cancel-btn'),
+  aiCurationContinueBtn: document.getElementById('ai-curation-continue-btn'),
+  funFactText: document.getElementById('fun-fact-text'),
   autoIndexFname: document.getElementById('auto-index-fname'),
   autoIndexLname: document.getElementById('auto-index-lname'),
   autoIndexEmail: document.getElementById('auto-index-email'),
@@ -144,6 +148,7 @@ const elements = {
   autoIndexMinFreq: document.getElementById('auto-index-min-freq'),
   autoIndexMaxFreq: document.getElementById('auto-index-max-freq'),
   autoIndexUseOcr: document.getElementById('auto-index-use-ocr'),
+  settingsShowAiBadges: document.getElementById('settings-show-ai-badges'),
   startIndexingBtn: document.getElementById('start-indexing-btn'),
 
   // Progress
@@ -814,12 +819,25 @@ function renderEntries() {
       
       const starClass = entry.starred ? 'star-active' : 'star-inactive';
       
-      if (entry.source === 'auto') {
+      if (entry.source === 'auto' || entry.source === 'auto-ai') {
         tr.classList.add('auto-row');
       }
-      const autoBadgeHtml = entry.source === 'auto'
-        ? `<span class="auto-badge no-print">Auto</span><span class="auto-badge-print">[Auto]</span>`
-        : '';
+      
+      const showAiBadges = localStorage.getItem('show_ai_badges') !== 'false';
+      let autoBadgeHtml = '';
+      if (showAiBadges) {
+        if (entry.source === 'auto-ai') {
+          autoBadgeHtml = `
+            <span class="auto-badge no-print" style="background: rgba(20, 184, 166, 0.12); border: 1px solid rgba(20, 184, 166, 0.3); color: #2dd4bf; display: inline-flex; align-items: center; gap: 4px; padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; margin-left: 6px; font-weight: 500;" title="Curated by Gemini AI">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 10px; height: 10px; color: #2dd4bf;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              <span>AI</span>
+            </span>
+            <span class="auto-badge-print">[AI]</span>
+          `;
+        } else if (entry.source === 'auto') {
+          autoBadgeHtml = `<span class="auto-badge no-print">Auto</span><span class="auto-badge-print">[Auto]</span>`;
+        }
+      }
       
       tr.innerHTML = `
         <td class="col-book">
@@ -2612,6 +2630,14 @@ function initEventBindings() {
     renderEntries();
   });
 
+  if (elements.settingsShowAiBadges) {
+    elements.settingsShowAiBadges.checked = localStorage.getItem('show_ai_badges') !== 'false';
+    elements.settingsShowAiBadges.addEventListener('change', () => {
+      localStorage.setItem('show_ai_badges', elements.settingsShowAiBadges.checked);
+      renderEntries();
+    });
+  }
+
   // Sort Table Headers
   elements.tableHeaders.forEach(th => {
     th.addEventListener('click', () => {
@@ -3120,6 +3146,82 @@ function applyFormatting(textarea, formatType) {
 let autoExtractedEntries = [];
 let selectedPdfPath = '';
 
+const CYBER_FACTS = [
+  "The term 'bug' was coined in 1947 when Grace Hopper found a real moth trapped in a relay of the Harvard Mark II computer.",
+  "The first computer virus, 'Creeper', was created in 1971 as an experiment and simply displayed: 'I'm the creeper, catch me if you can!'",
+  "Over 90% of all cybersecurity breaches are caused by human error or social engineering (phishing).",
+  "SANS stands for SysAdmin, Audit, Network, and Security. It was founded in 1989.",
+  "In 2023, the global average cost of a data breach reached $4.45 million.",
+  "A strong 12-character password containing letters, numbers, and symbols can take an attacker up to 62 trillion years to crack.",
+  "The word 'spam' for junk email comes from a Monty Python sketch where characters repeat 'spam' repeatedly in a restaurant.",
+  "The first commercial antivirus software was released in 1987 by John McAfee.",
+  "AI models don't actually understand text; they use complex probability and mathematics to predict the next word in a sequence.",
+  "The concept of Artificial Intelligence dates back to ancient Greece with myths of robots and mechanical men.",
+  "The Turing Test, created by Alan Turing in 1950, measures a machine's ability to exhibit intelligent behavior equivalent to a human.",
+  "About 30,000 websites are hacked every single day worldwide.",
+  "Captcha stands for: 'Completely Automated Public Turing test to tell Computers and Humans Apart'.",
+  "The 'Melissa' virus in 1999 was so successful it forced Microsoft and other companies to shut down their incoming email systems.",
+  "The highest bounty ever paid for a single software bug was $2 million for a vulnerability in a cryptocurrency network.",
+  "The majority of internet traffic is not generated by humans, but by automated bots and scrapers.",
+  "In cybersecurity, 'Red Teaming' refers to offensive security testing, while 'Blue Teaming' refers to defense.",
+  "Symmetric encryption uses the same key to encrypt and decrypt data, whereas Asymmetric encryption uses public and private keys.",
+  "The 'Stuxnet' worm discovered in 2010 was designed specifically to target and physically damage uranium enrichment centrifuges.",
+  "The largest DDoS attack recorded exceeded 3.4 Terabits per second.",
+  "The term 'phishing' was coined in the mid-1990s by hackers targeting AOL users' passwords.",
+  "Cybersecurity expert SANS courses are widely considered the gold standard of technical training in the industry.",
+  "Google's Gemini model uses a mixture-of-experts (MoE) architecture to route queries to specialized sub-networks.",
+  "An average SANS textbook page can contain up to 500 potential index candidate words.",
+  "OCR (Optical Character Recognition) technology has been in development since the 1920s to help read text for the blind.",
+  "The first compiler was created by Grace Hopper in 1952 for the A-0 system.",
+  "More than 50% of people use the same password for multiple accounts, despite knowing the security risks.",
+  "The most common password in the world is still '123456', followed closely by 'password'.",
+  "A 'honeypot' is a decoy computer system designed to attract and analyze cyber attackers.",
+  "Zero-day vulnerabilities are security flaws that are exploited before the software creator becomes aware of them.",
+  "The word 'cryptography' comes from the Greek words 'kryptos' (hidden) and 'graphein' (writing).",
+  "In 1983, the movie 'WarGames' popularized the concept of computer hacking and influenced US federal computer security policies.",
+  "The world's first programmer was Ada Lovelace, who wrote an algorithm for Charles Babbage's Analytical Engine in 1843.",
+  "In 1997, IBM's Deep Blue became the first computer program to defeat a world chess champion (Garry Kasparov) under tournament conditions.",
+  "Ransomware attacks happen globally every 11 seconds.",
+  "The concept of neural networks was first proposed in 1943 by Warren McCulloch and Walter Pitts.",
+  "SANS GIAC certifications are highly valued by governments and defense agencies worldwide.",
+  "A 'Man-in-the-Middle' (MitM) attack occurs when an attacker secretly relays and alters communications between two parties.",
+  "Salt is added to passwords before hashing to protect against pre-computed table attacks (like Rainbow Tables).",
+  "Machine learning models can occasionally hallucinate facts due to patterns in their training data that don't match reality.",
+  "The 'Morris Worm' of 1988 was the first widespread internet worm, infecting about 10% of all computers connected at the time.",
+  "A 'Logic Bomb' is code secretly inserted into a software system that will set off a malicious function when specified conditions are met.",
+  "Multi-Factor Authentication (MFA) can prevent up to 99% of bulk automated cyberattacks.",
+  "WPA3 is the latest security standard for Wi-Fi, offering better protection against dictionary attacks.",
+  "Google AI Studio provides developer keys to access Gemini API models with generous free tier request quotas.",
+  "The Enigma machine was an electro-mechanical rotor cipher machine used by Germany during World War II.",
+  "AI systems are increasingly used by defenders to detect cyber threats in real-time by analyzing network anomalies.",
+  "Social engineering relies on psychological triggers like urgency, authority, fear, and curiosity.",
+  "The SANS Auto-Indexer tool uses local Python libraries to parse PDF textbooks in memory without sending them to the cloud.",
+  "The SANS Auto-Indexer's AI Curation can clean a raw index of 1,000+ words down to under 400 highly distinct SANS concepts."
+];
+
+let funFactsIntervalId = null;
+
+function startFunFactsRotation() {
+  if (funFactsIntervalId) clearInterval(funFactsIntervalId);
+  
+  const showRandomFact = () => {
+    if (elements.funFactText) {
+      const randIdx = Math.floor(Math.random() * CYBER_FACTS.length);
+      elements.funFactText.textContent = CYBER_FACTS[randIdx];
+    }
+  };
+  
+  showRandomFact();
+  funFactsIntervalId = setInterval(showRandomFact, 30000);
+}
+
+function stopFunFactsRotation() {
+  if (funFactsIntervalId) {
+    clearInterval(funFactsIntervalId);
+    funFactsIntervalId = null;
+  }
+}
+
 function initAutoIndexingBindings() {
   // Native File Picker Trigger
   // Native File Picker Trigger (Dashed Drop/Click Area)
@@ -3505,47 +3607,96 @@ async function handleAutoIndexSubmit(e) {
     useOcr: elements.autoIndexUseOcr.checked
   };
 
-  elements.autoIndexForm.closest('section').classList.add('hidden');
-  elements.indexingProgressSection.classList.remove('hidden');
-  elements.indexingProgressStatus.textContent = 'Initializing Auto-Indexer...';
-  
-  window.api.onAutoIndexProgress((progress) => {
-    elements.indexingProgressStatus.textContent = progress.message;
-  });
-
-  try {
-    const result = await window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, settings });
-    elements.indexingProgressSection.classList.add('hidden');
+  const startProcess = () => {
+    elements.autoIndexForm.closest('section').classList.add('hidden');
+    elements.indexingProgressSection.classList.remove('hidden');
+    elements.indexingProgressStatus.textContent = 'Initializing Auto-Indexer...';
     
-    if (result.success) {
-      autoExtractedEntries = result.entries;
-      if (autoExtractedEntries.length === 0) {
-        alert("Auto-indexing completed, but no words or phrases matched your filter settings. Try adjusting the parameters and try again.");
-        elements.autoIndexForm.closest('section').classList.remove('hidden');
+    // Start fun facts rotation
+    startFunFactsRotation();
+
+    window.api.onAutoIndexProgress((progress) => {
+      // Dynamic loading warnings for AI curation step
+      if (progress.step === 'curating') {
+        elements.indexingProgressStatus.innerHTML = `
+          Running Gemini AI Curation...
+          <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+            Note: This process can take a few minutes (5-10 minutes is expected for large books). Please do not close the application.
+          </div>
+        `;
       } else {
-        // Display AI curation error if it occurred
-        if (elements.aiCurationErrorAlert && elements.aiCurationErrorText) {
-          if (result.curationError) {
-            elements.aiCurationErrorText.textContent = result.curationError;
-            elements.aiCurationErrorAlert.classList.remove('hidden');
-          } else {
-            elements.aiCurationErrorAlert.classList.add('hidden');
-          }
-        }
-        
-        elements.verificationPreviewSection.classList.remove('hidden');
-        renderVerificationTable();
+        elements.indexingProgressStatus.textContent = progress.message;
       }
-    } else {
-      alert("Error building index: " + result.error);
-      elements.autoIndexForm.closest('section').classList.remove('hidden');
-    }
-  } catch (err) {
-    alert("An unexpected error occurred during indexing: " + err.message);
-    elements.indexingProgressSection.classList.add('hidden');
-    elements.autoIndexForm.closest('section').classList.remove('hidden');
-  } finally {
-    window.api.removeListener('auto-index-progress');
+    });
+
+    window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, settings })
+      .then((result) => {
+        elements.indexingProgressSection.classList.add('hidden');
+        stopFunFactsRotation();
+        
+        if (result.success) {
+          autoExtractedEntries = result.entries;
+          if (autoExtractedEntries.length === 0) {
+            alert("Auto-indexing completed, but no words or phrases matched your filter settings. Try adjusting the parameters and try again.");
+            elements.autoIndexForm.closest('section').classList.remove('hidden');
+          } else {
+            // Display AI curation error if it occurred
+            if (elements.aiCurationErrorAlert && elements.aiCurationErrorText) {
+              if (result.curationError) {
+                elements.aiCurationErrorText.textContent = result.curationError;
+                elements.aiCurationErrorAlert.classList.remove('hidden');
+              } else {
+                elements.aiCurationErrorAlert.classList.add('hidden');
+              }
+            }
+            
+            elements.verificationPreviewSection.classList.remove('hidden');
+            renderVerificationTable();
+          }
+        } else {
+          alert("Error building index: " + result.error);
+          elements.autoIndexForm.closest('section').classList.remove('hidden');
+        }
+      })
+      .catch((err) => {
+        alert("An unexpected error occurred during indexing: " + err.message);
+        elements.indexingProgressSection.classList.add('hidden');
+        elements.autoIndexForm.closest('section').classList.remove('hidden');
+        stopFunFactsRotation();
+      })
+      .finally(() => {
+        window.api.removeListener('auto-index-progress');
+      });
+  };
+
+  // If AI Curation is enabled, show the warning modal first
+  if (useAi && elements.aiCurationConfirmModal) {
+    // Show confirmation modal
+    elements.aiCurationConfirmModal.showModal();
+
+    // Event listener for Go Back (Cancel)
+    const handleCancel = () => {
+      elements.aiCurationConfirmModal.close();
+      cleanupListeners();
+    };
+
+    // Event listener for Continue
+    const handleContinue = () => {
+      elements.aiCurationConfirmModal.close();
+      cleanupListeners();
+      startProcess();
+    };
+
+    const cleanupListeners = () => {
+      elements.aiCurationCancelBtn.removeEventListener('click', handleCancel);
+      elements.aiCurationContinueBtn.removeEventListener('click', handleContinue);
+    };
+
+    elements.aiCurationCancelBtn.addEventListener('click', handleCancel);
+    elements.aiCurationContinueBtn.addEventListener('click', handleContinue);
+  } else {
+    // Run immediately without modal
+    startProcess();
   }
 }
 
@@ -3621,6 +3772,8 @@ async function handleImportCheckedEntries() {
       const pagesInput = row.querySelector('.preview-pages-input');
       const notesInput = row.querySelector('.preview-notes-input');
       
+      const isAiCurated = elements.autoIndexUseAi && elements.autoIndexUseAi.checked && (!elements.aiCurationErrorAlert || elements.aiCurationErrorAlert.classList.contains('hidden'));
+
       const newEntry = {
         id: 'entry-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9) + '-' + importCount,
         courseId: state.currentCourseId,
@@ -3628,7 +3781,7 @@ async function handleImportCheckedEntries() {
         topic: topicInput.value.trim(),
         pages: pagesInput.value.trim(),
         notes: notesInput.value.trim(),
-        source: 'auto',
+        source: isAiCurated ? 'auto-ai' : 'auto',
         createdAt: new Date().toISOString()
       };
       

@@ -179,11 +179,11 @@
       <div class="workspace-tabs no-print no-print-in-quiz">
         <button class="tab-btn active" data-view-tab="manual-index">
           <i data-lucide="edit-3"></i>
-          <span>Manual Indexing</span>
+          <span>(My Index)</span>
         </button>
         <button class="tab-btn" data-view-tab="auto-index" id="auto-index-nav-btn">
           <i data-lucide="cpu"></i>
-          <span>Auto-Index PDF</span>
+          <span>(Auto-Index PDF Tool)</span>
         </button>
       </div>
 
@@ -289,6 +289,10 @@
               <option value="all">All Books</option>
               <!-- Populated dynamically -->
             </select>
+            <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;">
+              <input type="checkbox" id="settings-show-ai-badges" checked>
+              <span>Show Source Badges</span>
+            </label>
           </div>
         </section>
 
@@ -596,7 +600,16 @@
             <div class="spinner"></div>
           </div>
           <h3 id="indexing-progress-status" style="margin-top: 20px;">Decrypting PDF...</h3>
-          <p id="indexing-progress-subtext" style="color: var(--text-muted);">Please do not close the application.</p>
+          <p id="indexing-progress-subtext" style="color: var(--text-muted); margin-bottom: 0;">Please do not close the application.</p>
+          
+          <!-- Fun Facts Display during loading -->
+          <div id="fun-facts-display" style="margin-top: 30px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 20px; max-width: 500px; margin-left: auto; margin-right: auto; text-align: center;">
+            <p style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-accent); font-weight: 600; margin-bottom: 6px;">
+              <i data-lucide="sparkles" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 4px;"></i>
+              Did You Know?
+            </p>
+            <p id="fun-fact-text" style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45; min-height: 38px; font-style: italic;">SANS textbooks have dense technical content that the Auto-Indexer parses and maps to your custom course books.</p>
+          </div>
         </section>
 
         <!-- Import Verification Table View -->
@@ -789,6 +802,28 @@
       <div id="print-preview-page-container" class="print-preview-page-container">
         <!-- Rendered preview content goes here -->
       </div>
+    </div>
+  </dialog>
+
+  <!-- Custom Curation Warning Modal -->
+  <dialog id="ai-curation-confirm-modal" style="max-width: 480px; padding: 24px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-xl); overflow: hidden;">
+    <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px;">
+      <div style="background: rgba(234, 179, 8, 0.1); padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #eab308; flex-shrink: 0; margin-top: 2px;">
+        <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+      </div>
+      <div>
+        <h3 style="margin: 0 0 8px 0; font-size: 1.15rem; font-weight: 600; color: var(--text-primary);">Gemini AI Curation Notice</h3>
+        <p style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);">
+          While testing has shown great results, AI models are known to hallucinate, omit, or be incorrect at times.
+        </p>
+        <p style="margin: 8px 0 0 0; font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);">
+          You will have the opportunity to review, filter, and modify the curated terms in the next step before importing them.
+        </p>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <button id="ai-curation-cancel-btn" class="btn btn-secondary">Go Back</button>
+      <button id="ai-curation-continue-btn" class="btn btn-accent">Continue</button>
     </div>
   </dialog>
 
