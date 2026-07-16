@@ -129,6 +129,8 @@ const elements = {
   autoIndexDepToggle: document.getElementById('auto-index-dep-toggle'),
   autoIndexDepContent: document.getElementById('auto-index-dep-content'),
   depOverallBadge: document.getElementById('dep-overall-badge'),
+  aiCurationErrorAlert: document.getElementById('ai-curation-error-alert'),
+  aiCurationErrorText: document.getElementById('ai-curation-error-text'),
   autoIndexFname: document.getElementById('auto-index-fname'),
   autoIndexLname: document.getElementById('auto-index-lname'),
   autoIndexEmail: document.getElementById('auto-index-email'),
@@ -3236,6 +3238,9 @@ function initAutoIndexingBindings() {
     elements.previewCancelBtn.addEventListener('click', () => {
       elements.verificationPreviewSection.classList.add('hidden');
       elements.autoIndexForm.closest('section').classList.remove('hidden');
+      if (elements.aiCurationErrorAlert) {
+        elements.aiCurationErrorAlert.classList.add('hidden');
+      }
     });
   }
 
@@ -3481,6 +3486,16 @@ async function handleAutoIndexSubmit(e) {
         alert("Auto-indexing completed, but no words or phrases matched your filter settings. Try adjusting the parameters and try again.");
         elements.autoIndexForm.closest('section').classList.remove('hidden');
       } else {
+        // Display AI curation error if it occurred
+        if (elements.aiCurationErrorAlert && elements.aiCurationErrorText) {
+          if (result.curationError) {
+            elements.aiCurationErrorText.textContent = result.curationError;
+            elements.aiCurationErrorAlert.classList.remove('hidden');
+          } else {
+            elements.aiCurationErrorAlert.classList.add('hidden');
+          }
+        }
+        
         elements.verificationPreviewSection.classList.remove('hidden');
         renderVerificationTable();
       }
@@ -3592,6 +3607,9 @@ async function handleImportCheckedEntries() {
     
     elements.verificationPreviewSection.classList.add('hidden');
     elements.autoIndexForm.closest('section').classList.remove('hidden');
+    if (elements.aiCurationErrorAlert) {
+      elements.aiCurationErrorAlert.classList.add('hidden');
+    }
     selectedPdfPath = '';
     elements.autoIndexFileName.textContent = 'No file selected';
     elements.autoIndexFileName.title = '';

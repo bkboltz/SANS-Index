@@ -605,6 +605,15 @@
             </div>
           </div>
 
+          <!-- AI Curation Error alert box -->
+          <div id="ai-curation-error-alert" class="hidden" style="display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; margin: 16px 0 0 0; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; border-radius: 4px; font-size: 0.8rem; color: var(--text-primary); line-height: 1.45;">
+            <i data-lucide="alert-circle" style="width: 16px; height: 16px; color: #ef4444; flex-shrink: 0; margin-top: 1px;"></i>
+            <div>
+              <strong style="color: #f87171;">Gemini AI Curation Failed:</strong> Running index with standard rule-based list instead.
+              <span id="ai-curation-error-text" style="color: var(--text-secondary); font-family: monospace; font-size: 0.76rem; display: block; margin-top: 6px; padding: 6px 10px; background: rgba(0, 0, 0, 0.2); border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.05); overflow-x: auto; white-space: pre-wrap; word-break: break-all;"></span>
+            </div>
+          </div>
+
           <div class="table-controls-container" style="border: none; padding: 15px 0 10px 0; background: transparent;">
             <div class="search-wrapper">
               <i data-lucide="search" class="search-icon"></i>

@@ -655,8 +655,8 @@ Return a JSON array of objects with the exact same structure as the input:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generation_config: { 
-          response_mime_type: "application/json"
+        generationConfig: { 
+          responseMimeType: "application/json"
         }
       })
     });
@@ -664,7 +664,14 @@ Return a JSON array of objects with the exact same structure as the input:
     if (!response.ok) {
       const errorText = await response.text();
       logDebug(`[Gemini Curation] API returned error: ${response.status} - ${errorText}`);
-      throw new Error(`Gemini API Error: ${response.statusText}`);
+      let parsedError = errorText;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error && errorJson.error.message) {
+          parsedError = errorJson.error.message;
+        }
+      } catch (e) {}
+      throw new Error(`Gemini API Error: ${parsedError}`);
     }
 
     const resData = await response.json();
@@ -679,13 +686,13 @@ Return a JSON array of objects with the exact same structure as the input:
 
     if (Array.isArray(curatedEntries)) {
       logDebug(`[Gemini Curation] Curation successful! Returned ${curatedEntries.length} curated terms.`);
-      return curatedEntries;
+      return { entries: curatedEntries, error: null };
     } else if (curatedEntries && Array.isArray(curatedEntries.filtered_terms)) {
       logDebug(`[Gemini Curation] Curation successful (filtered_terms)! Returned ${curatedEntries.filtered_terms.length} curated terms.`);
-      return curatedEntries.filtered_terms;
+      return { entries: curatedEntries.filtered_terms, error: null };
     } else {
       logDebug(`[Gemini Curation] Warning: Unexpected Gemini JSON structure: ${JSON.stringify(curatedEntries).substring(0, 200)}`);
-      return entries;
+      return { entries: entries, error: "Unexpected JSON structure returned from AI." };
     }
 
   } catch (error) {
@@ -693,7 +700,7 @@ Return a JSON array of objects with the exact same structure as the input:
     if (event) {
       event.sender.send('auto-index-progress', { step: 'warning', message: `AI Curation failed: ${error.message}. Returning raw list...` });
     }
-    return entries;
+    return { entries: entries, error: error.message };
   }
 }
 
@@ -869,8 +876,11 @@ ipcMain.handle('run-auto-index', async (event, args) => {
       }
     }
     let finalEntries = entries;
+    let curationError = null;
     if (geminiApiKey && entries.length > 0) {
-      finalEntries = await curateIndexWithGemini(entries, geminiApiKey, event);
+      const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event);
+      finalEntries = curationResult.entries;
+      curationError = curationResult.error;
     }
     
     // Cleanup
@@ -884,7 +894,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
       }
     } catch (e) {}
     
-    return { success: true, entries: finalEntries };
+    return { success: true, entries: finalEntries, curationError };
     
   } catch (error) {
     console.error('Auto-indexing pipeline error:', error);
