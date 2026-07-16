@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, MenuItem, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, MenuItem, shell, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { exec, spawn, execSync } = require('child_process');
@@ -618,9 +618,71 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
   });
 });
 
+// Helper: Curate Index with Gemini AI
+async function curateIndexWithGemini(entries, geminiApiKey, event) {
+  if (event) {
+    event.sender.send('auto-index-progress', { step: 'curating', message: 'Running Gemini AI Curation...' });
+  }
+
+  const prompt = `You are a SANS Cybersecurity course index curator. Your job is to filter a list of candidate index terms extracted from a SANS textbook.
+Review the JSON array of terms below. Filter out noise terms (generic English words, verbs, adjectives, prepositions, numbers, and adverbs on their own). Keep only distinct technical terms, security concepts, tools, protocols, registry paths, specific command line utilities, file names, ports, and important techniques.
+Also, if there are minor spelling/capitalization variations of the same term (e.g. "active directory", "Active Directory"), merge them by keeping the capitalized proper noun form and combining their pages into a single comma-separated list of pages (remove duplicates and sort pages in ascending numeric order).
+
+Input list:
+${JSON.stringify(entries)}
+
+Return a JSON array of objects with the exact same structure as the input:
+[
+  { "topic": "...", "pages": "...", "notes": "", "source": "auto" }
+]`;
+
+  try {
+    const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { 
+          responseMimeType: "application/json"
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Gemini API returned error: ${response.status} - ${errorText}`);
+      throw new Error(`Gemini API Error: ${response.statusText}`);
+    }
+
+    const resData = await response.json();
+    if (!resData.candidates || resData.candidates.length === 0) {
+      throw new Error('Gemini API returned empty response candidates.');
+    }
+
+    const responseText = resData.candidates[0].content.parts[0].text;
+    const curatedEntries = JSON.parse(responseText);
+
+    if (Array.isArray(curatedEntries)) {
+      return curatedEntries;
+    } else if (curatedEntries && Array.isArray(curatedEntries.filtered_terms)) {
+      return curatedEntries.filtered_terms;
+    } else {
+      console.warn("Unexpected Gemini JSON response structure:", curatedEntries);
+      return entries;
+    }
+
+  } catch (error) {
+    console.error("Failed to curate with Gemini:", error);
+    if (event) {
+      event.sender.send('auto-index-progress', { step: 'warning', message: `AI Curation failed: ${error.message}. Returning raw list...` });
+    }
+    return entries;
+  }
+}
+
 // IPC Handler: Run Auto-Indexing
 ipcMain.handle('run-auto-index', async (event, args) => {
-  const { pdfPath, password, fname, lname, email, settings } = args;
+  const { pdfPath, password, fname, lname, email, geminiApiKey, settings } = args;
   const tempDir = path.join(__dirname, 'temp_indexing');
   
   try {
@@ -788,6 +850,10 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         });
       }
     }
+    let finalEntries = entries;
+    if (geminiApiKey && entries.length > 0) {
+      finalEntries = await curateIndexWithGemini(entries, geminiApiKey, event);
+    }
     
     // Cleanup
     try {
@@ -800,7 +866,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
       }
     } catch (e) {}
     
-    return { success: true, entries };
+    return { success: true, entries: finalEntries };
     
   } catch (error) {
     console.error('Auto-indexing pipeline error:', error);
