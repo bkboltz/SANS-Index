@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, MenuItem } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, MenuItem, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { exec, spawn, execSync } = require('child_process');
@@ -84,6 +84,15 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+
+  // Open external links in default browser instead of Electron child window
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
 
   // Context Menu for Spellchecking and Edit Actions
   mainWindow.webContents.on('context-menu', (event, params) => {
