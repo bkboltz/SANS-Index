@@ -722,8 +722,8 @@ Return a JSON array of objects with the exact same structure as the input:
                            errLower.includes("volume of traffic");
 
       if (isHighDemand && attempt < maxAttempts) {
-        logDebug(`[Gemini Curation] High demand detected. Waiting 6 seconds before retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 6000));
+        logDebug(`[Gemini Curation] High demand detected. Waiting 15 seconds before retrying...`);
+        await new Promise(resolve => setTimeout(resolve, 15000));
         continue;
       }
 
