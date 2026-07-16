@@ -3621,7 +3621,7 @@ async function handleAutoIndexSubmit(e) {
         elements.indexingProgressStatus.innerHTML = `
           Running Gemini AI Curation...
           <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
-            Note: This process can take a few minutes (5-10 minutes is expected for large books). Please do not close the application.
+            Note: This process can take a few minutes (5-10 minutes is expected for large books).
           </div>
         `;
       } else {
