@@ -650,7 +650,7 @@ Return a JSON array of objects with the exact same structure as the input:
 
   try {
     logDebug(`[Gemini Curation] Posting to Gemini model API...`);
-    const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
+    const response = await net.fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
