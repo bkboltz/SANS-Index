@@ -708,6 +708,24 @@ Return a JSON array of objects with the exact same structure as the input:
 ipcMain.handle('run-auto-index', async (event, args) => {
   const { pdfPath, password, fname, lname, email, geminiApiKey, settings } = args;
   logDebug(`[Auto-Index Handler] Received args - PDF: ${pdfPath ? 'yes' : 'no'}, Key present: ${!!geminiApiKey}, Key val length: ${geminiApiKey ? geminiApiKey.length : 0}, Watermark info: ${fname}/${lname}/${email}`);
+  
+  if (geminiApiKey) {
+    try {
+      logDebug(`[Diagnostic] Querying v1beta models...`);
+      const listV1Beta = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`);
+      if (listV1Beta.ok) {
+        const data = await listV1Beta.json();
+        const modelNames = data.models ? data.models.map(m => m.name) : [];
+        logDebug(`[Diagnostic] v1beta models: ${modelNames.join(', ')}`);
+      } else {
+        const errTxt = await listV1Beta.text();
+        logDebug(`[Diagnostic] v1beta list failed: ${listV1Beta.status} - ${errTxt}`);
+      }
+    } catch (diagErr) {
+      logDebug(`[Diagnostic] v1beta query error: ${diagErr.message}`);
+    }
+  }
+
   const tempDir = path.join(__dirname, 'temp_indexing');
   
   try {
