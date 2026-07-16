@@ -121,9 +121,14 @@ const elements = {
   // Auto Index Form
   autoIndexForm: document.getElementById('auto-index-form'),
   autoIndexBookSelect: document.getElementById('auto-index-book-select'),
+  autoIndexFileArea: document.getElementById('auto-index-file-area'),
   autoIndexFileBtn: document.getElementById('auto-index-file-btn'),
   autoIndexFileName: document.getElementById('auto-index-file-name'),
   autoIndexPassword: document.getElementById('auto-index-password'),
+  autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
+  autoIndexDepToggle: document.getElementById('auto-index-dep-toggle'),
+  autoIndexDepContent: document.getElementById('auto-index-dep-content'),
+  depOverallBadge: document.getElementById('dep-overall-badge'),
   autoIndexFname: document.getElementById('auto-index-fname'),
   autoIndexLname: document.getElementById('auto-index-lname'),
   autoIndexEmail: document.getElementById('auto-index-email'),
@@ -3114,13 +3119,39 @@ let selectedPdfPath = '';
 
 function initAutoIndexingBindings() {
   // Native File Picker Trigger
-  if (elements.autoIndexFileBtn) {
-    elements.autoIndexFileBtn.addEventListener('click', async () => {
+  // Native File Picker Trigger (Dashed Drop/Click Area)
+  if (elements.autoIndexFileArea) {
+    elements.autoIndexFileArea.addEventListener('click', async () => {
       const filePath = await window.api.selectPdfFile();
       if (filePath) {
         selectedPdfPath = filePath;
         elements.autoIndexFileName.textContent = filePath.split(/[\\/]/).pop();
         elements.autoIndexFileName.title = filePath;
+        elements.autoIndexFileArea.style.borderColor = 'var(--color-accent)';
+        elements.autoIndexFileArea.style.backgroundColor = 'rgba(20, 184, 166, 0.05)';
+      }
+    });
+  }
+
+  // Load Gemini API Key from localStorage
+  if (elements.autoIndexGeminiKey) {
+    elements.autoIndexGeminiKey.value = localStorage.getItem('gemini_api_key') || '';
+    elements.autoIndexGeminiKey.addEventListener('input', () => {
+      localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
+    });
+  }
+
+  // Collapsible Dependency Checker
+  if (elements.autoIndexDepToggle && elements.autoIndexDepContent) {
+    // Keep it expanded by default
+    elements.autoIndexDepToggle.classList.add('active');
+    
+    elements.autoIndexDepToggle.addEventListener('click', () => {
+      elements.autoIndexDepToggle.classList.toggle('active');
+      elements.autoIndexDepContent.classList.toggle('hidden');
+      const icon = elements.autoIndexDepToggle.querySelector('.collapse-icon');
+      if (icon) {
+        icon.style.transform = elements.autoIndexDepToggle.classList.contains('active') ? 'rotate(0deg)' : 'rotate(-180deg)';
       }
     });
   }
@@ -3272,6 +3303,42 @@ async function runDependencyCheck() {
       warnings.push("<li><strong>pdftotext not found:</strong> The app will fall back to direct PDF text extraction. Click Install, or run <code>winget install oschwartz10612.Poppler</code></li>");
     }
 
+    // Update overall badge
+    if (elements.depOverallBadge) {
+      if (deps.python && deps.qpdf) {
+        if (deps.ocr) {
+          elements.depOverallBadge.textContent = 'Ready';
+          elements.depOverallBadge.className = 'badge badge-success';
+        } else {
+          elements.depOverallBadge.textContent = 'OCR Missing (Optional)';
+          elements.depOverallBadge.className = 'badge badge-warning';
+        }
+        
+        // Auto-collapse dependency checker if everything is ready to save space
+        if (elements.autoIndexDepToggle && elements.autoIndexDepContent && elements.autoIndexDepToggle.classList.contains('active')) {
+          elements.autoIndexDepToggle.classList.remove('active');
+          elements.autoIndexDepContent.classList.add('hidden');
+          const icon = elements.autoIndexDepToggle.querySelector('.collapse-icon');
+          if (icon) {
+            icon.style.transform = 'rotate(-180deg)';
+          }
+        }
+      } else {
+        elements.depOverallBadge.textContent = 'Attention Required';
+        elements.depOverallBadge.className = 'badge badge-danger';
+        
+        // Auto-expand dependency checker if things are missing
+        if (elements.autoIndexDepToggle && elements.autoIndexDepContent && !elements.autoIndexDepToggle.classList.contains('active')) {
+          elements.autoIndexDepToggle.classList.add('active');
+          elements.autoIndexDepContent.classList.remove('hidden');
+          const icon = elements.autoIndexDepToggle.querySelector('.collapse-icon');
+          if (icon) {
+            icon.style.transform = 'rotate(0deg)';
+          }
+        }
+      }
+    }
+
     if (warnings.length > 0) {
       elements.depWarnings.innerHTML = `<strong>Attention Required:</strong><ul>${warnings.join('')}</ul>`;
       elements.depWarnings.classList.remove('hidden');
@@ -3384,6 +3451,7 @@ async function handleAutoIndexSubmit(e) {
   const fname = elements.autoIndexFname.value.trim();
   const lname = elements.autoIndexLname.value.trim();
   const email = elements.autoIndexEmail.value.trim();
+  const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
   const settings = {
     offset: parseInt(elements.autoIndexOffset.value) || 0,
@@ -3404,7 +3472,7 @@ async function handleAutoIndexSubmit(e) {
   });
 
   try {
-    const result = await window.api.runAutoIndex({ pdfPath, password, fname, lname, email, settings });
+    const result = await window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, settings });
     elements.indexingProgressSection.classList.add('hidden');
     
     if (result.success) {
@@ -3527,6 +3595,10 @@ async function handleImportCheckedEntries() {
     selectedPdfPath = '';
     elements.autoIndexFileName.textContent = 'No file selected';
     elements.autoIndexFileName.title = '';
+    if (elements.autoIndexFileArea) {
+      elements.autoIndexFileArea.style.borderColor = 'var(--border-color)';
+      elements.autoIndexFileArea.style.backgroundColor = 'rgba(15, 23, 42, 0.3)';
+    }
     elements.autoIndexPassword.value = '';
     elements.autoIndexFname.value = '';
     elements.autoIndexLname.value = '';

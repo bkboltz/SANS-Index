@@ -326,189 +326,204 @@
       <!-- Auto-Indexing Workspace View -->
       <div id="auto-index-view" class="workspace-view hidden no-print">
         <!-- Dependency Status Banner / OCR Info -->
-        <section class="auto-index-header">
+        <section class="auto-index-header" style="margin-bottom: 20px;">
           <h2>Auto-Index SANS Book PDF</h2>
-          <p class="summary-text">Upload a course PDF to automatically build a comprehensive index. (Requires Python, qpdf, and pdftotext installed on your system PATH).</p>
+          <p class="summary-text">Compile a comprehensive index from your course book PDF using custom keywords and phrases extraction rules.</p>
         </section>
 
-        <!-- Dependency Checker Panel -->
-        <section class="dependency-panel panel-container">
-          <h3 class="panel-subtitle"><i data-lucide="shield-check"></i> System Dependencies Check</h3>
-          <div class="dependency-grid">
+        <!-- Collapsible Dependency Checker Panel -->
+        <section class="dependency-panel panel-container" style="margin-bottom: 24px; padding: 16px 20px;">
+          <div id="auto-index-dep-toggle" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
+            <h3 class="panel-subtitle" style="margin: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 600;">
+              <i data-lucide="shield-check" style="color: var(--color-accent); width: 18px; height: 18px;"></i>
+              <span>System Dependencies Check</span>
+            </h3>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span id="dep-overall-badge" class="badge badge-warning" style="font-size: 0.72rem; padding: 2px 8px; border-radius: var(--radius-full);">Checking...</span>
+              <i data-lucide="chevron-down" class="collapse-icon" style="transition: transform 0.2s; width: 16px; height: 16px;"></i>
+            </div>
+          </div>
+          
+          <div id="auto-index-dep-content" class="dependency-grid" style="margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
             <!-- Python -->
-            <div class="dependency-item" id="dep-python">
-              <div class="dep-item-header">
-                <i data-lucide="circle-help" class="status-icon"></i>
-                <span class="dep-name">Python 3.10+</span>
-                <span class="status-label">Checking...</span>
+            <div class="dependency-item" id="dep-python" style="padding: 12px; border-radius: var(--radius-md); background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color);">
+              <div class="dep-item-header" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+                <i data-lucide="circle-help" class="status-icon" style="width: 16px; height: 16px;"></i>
+                <span class="dep-name" style="font-weight: 500;">Python 3.10+</span>
+                <span class="status-label" style="font-size: 0.75rem; margin-left: auto; color: var(--text-secondary);">Checking...</span>
               </div>
-              <div class="dep-action-container">
-                <button class="dep-install-btn btn btn-xs hidden" data-dep="python">
-                  <i data-lucide="download-cloud"></i>
-                  <span>Install</span>
+              <div class="dep-action-container" style="margin-top: 8px; display: flex; justify-content: flex-end;">
+                <button class="dep-install-btn btn btn-xs btn-secondary hidden" data-dep="python" style="padding: 3px 8px; font-size: 0.75rem;">
+                  <i data-lucide="download-cloud" style="width: 12px; height: 12px; margin-right: 4px;"></i>Install
                 </button>
               </div>
-              <div class="dep-progress-container hidden">
-                <div class="progress-bar-track">
-                  <div class="progress-bar-fill" style="width: 0%;"></div>
+              <div class="dep-progress-container hidden" style="margin-top: 8px;">
+                <div class="progress-bar-track" style="height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden; position: relative;">
+                  <div class="progress-bar-fill" style="width: 0%; height: 100%; background: var(--color-accent); transition: width 0.1s;"></div>
                 </div>
-                <div class="dep-progress-label">0%</div>
+                <div class="dep-progress-label" style="font-size: 0.7rem; text-align: right; margin-top: 2px; color: var(--text-muted);">0%</div>
               </div>
             </div>
 
             <!-- qpdf -->
-            <div class="dependency-item" id="dep-qpdf">
-              <div class="dep-item-header">
-                <i data-lucide="circle-help" class="status-icon"></i>
-                <span class="dep-name">qpdf (Decryption)</span>
-                <span class="status-label">Checking...</span>
+            <div class="dependency-item" id="dep-qpdf" style="padding: 12px; border-radius: var(--radius-md); background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color);">
+              <div class="dep-item-header" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+                <i data-lucide="circle-help" class="status-icon" style="width: 16px; height: 16px;"></i>
+                <span class="dep-name" style="font-weight: 500;">QPDF (Decrypt)</span>
+                <span class="status-label" style="font-size: 0.75rem; margin-left: auto; color: var(--text-secondary);">Checking...</span>
               </div>
-              <div class="dep-action-container">
-                <button class="dep-install-btn btn btn-xs hidden" data-dep="qpdf">
-                  <i data-lucide="download-cloud"></i>
-                  <span>Install</span>
+              <div class="dep-action-container" style="margin-top: 8px; display: flex; justify-content: flex-end;">
+                <button class="dep-install-btn btn btn-xs btn-secondary hidden" data-dep="qpdf" style="padding: 3px 8px; font-size: 0.75rem;">
+                  <i data-lucide="download-cloud" style="width: 12px; height: 12px; margin-right: 4px;"></i>Install
                 </button>
               </div>
-              <div class="dep-progress-container hidden">
-                <div class="progress-bar-track">
-                  <div class="progress-bar-fill" style="width: 0%;"></div>
+              <div class="dep-progress-container hidden" style="margin-top: 8px;">
+                <div class="progress-bar-track" style="height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden; position: relative;">
+                  <div class="progress-bar-fill" style="width: 0%; height: 100%; background: var(--color-accent); transition: width 0.1s;"></div>
                 </div>
-                <div class="dep-progress-label">0%</div>
+                <div class="dep-progress-label" style="font-size: 0.7rem; text-align: right; margin-top: 2px; color: var(--text-muted);">0%</div>
               </div>
             </div>
 
             <!-- pdftotext -->
-            <div class="dependency-item" id="dep-pdftotext">
-              <div class="dep-item-header">
-                <i data-lucide="circle-help" class="status-icon"></i>
-                <span class="dep-name">pdftotext (Poppler)</span>
-                <span class="status-label">Checking...</span>
+            <div class="dependency-item" id="dep-pdftotext" style="padding: 12px; border-radius: var(--radius-md); background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color);">
+              <div class="dep-item-header" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+                <i data-lucide="circle-help" class="status-icon" style="width: 16px; height: 16px;"></i>
+                <span class="dep-name" style="font-weight: 500;">pdftotext (Poppler)</span>
+                <span class="status-label" style="font-size: 0.75rem; margin-left: auto; color: var(--text-secondary);">Checking...</span>
               </div>
-              <div class="dep-action-container">
-                <button class="dep-install-btn btn btn-xs hidden" data-dep="pdftotext">
-                  <i data-lucide="download-cloud"></i>
-                  <span>Install</span>
+              <div class="dep-action-container" style="margin-top: 8px; display: flex; justify-content: flex-end;">
+                <button class="dep-install-btn btn btn-xs btn-secondary hidden" data-dep="pdftotext" style="padding: 3px 8px; font-size: 0.75rem;">
+                  <i data-lucide="download-cloud" style="width: 12px; height: 12px; margin-right: 4px;"></i>Install
                 </button>
               </div>
-              <div class="dep-progress-container hidden">
-                <div class="progress-bar-track">
-                  <div class="progress-bar-fill" style="width: 0%;"></div>
+              <div class="dep-progress-container hidden" style="margin-top: 8px;">
+                <div class="progress-bar-track" style="height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden; position: relative;">
+                  <div class="progress-bar-fill" style="width: 0%; height: 100%; background: var(--color-accent); transition: width 0.1s;"></div>
                 </div>
-                <div class="dep-progress-label">0%</div>
+                <div class="dep-progress-label" style="font-size: 0.7rem; text-align: right; margin-top: 2px; color: var(--text-muted);">0%</div>
               </div>
             </div>
 
             <!-- OCR -->
-            <div class="dependency-item" id="dep-ocr">
-              <div class="dep-item-header">
-                <i data-lucide="circle-help" class="status-icon"></i>
-                <span class="dep-name">OCR (torch & doctr)</span>
-                <span class="status-label">Checking...</span>
+            <div class="dependency-item" id="dep-ocr" style="padding: 12px; border-radius: var(--radius-md); background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color);">
+              <div class="dep-item-header" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+                <i data-lucide="circle-help" class="status-icon" style="width: 16px; height: 16px;"></i>
+                <span class="dep-name" style="font-weight: 500;">OCR Text Engine</span>
+                <span class="status-label" style="font-size: 0.75rem; margin-left: auto; color: var(--text-secondary);">Checking...</span>
               </div>
-              <div class="dep-action-container">
-                <button class="dep-install-btn btn btn-xs hidden" data-dep="ocr">
-                  <i data-lucide="download-cloud"></i>
-                  <span>Install</span>
+              <div class="dep-action-container" style="margin-top: 8px; display: flex; justify-content: flex-end;">
+                <button id="install-ocr-btn" class="btn btn-xs btn-primary hidden" style="padding: 3px 8px; font-size: 0.75rem;">
+                  <i data-lucide="download-cloud" style="width: 12px; height: 12px; margin-right: 4px;"></i>Install
                 </button>
               </div>
-              <div class="dep-progress-container hidden">
-                <div class="progress-bar-track">
-                  <div class="progress-bar-fill" style="width: 0%;"></div>
+              <div class="dep-progress-container hidden" style="margin-top: 8px;">
+                <div class="progress-bar-track" style="height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden; position: relative;">
+                  <div class="progress-bar-fill" style="width: 0%; height: 100%; background: var(--color-accent); transition: width 0.1s;"></div>
                 </div>
-                <div class="dep-progress-label">0%</div>
+                <div class="dep-progress-label" style="font-size: 0.7rem; text-align: right; margin-top: 2px; color: var(--text-muted);">0%</div>
               </div>
             </div>
           </div>
-          <div id="dep-warnings" class="dep-warnings-container hidden">
+          <div id="dep-warnings" class="dep-warnings-container hidden" style="margin-top: 12px; padding: 8px 12px; font-size: 0.78rem;">
             <!-- Warnings or installation tips go here -->
           </div>
           <!-- Installation log console -->
-          <div id="dep-install-console" class="ocr-download-container hidden" style="margin-top: 16px; padding: 16px;">
-            <p class="ocr-download-text" style="margin-bottom: 8px;"><strong>Installation Progress Console:</strong> <span id="dep-install-active-txt">Idle</span></p>
-            <pre id="dep-install-log-terminal" class="terminal-log" style="margin-top: 8px; max-height: 120px;"></pre>
+          <div id="dep-install-console" class="ocr-download-container hidden" style="margin-top: 16px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #0b0f19;">
+            <p class="ocr-download-text" style="margin-bottom: 8px; font-size: 0.8rem;"><strong>Installation Progress Console:</strong> <span id="dep-install-active-txt">Idle</span></p>
+            <pre id="dep-install-log-terminal" class="terminal-log" style="margin-top: 8px; max-height: 120px; font-family: monospace; font-size: 0.75rem; color: #a3e635;"></pre>
           </div>
         </section>
 
-        <!-- Auto Index Action Form -->
-        <section class="auto-index-form-container panel-container">
+        <!-- Overhauled Form Section -->
+        <section class="auto-index-form-container panel-container" style="padding: 24px;">
           <form id="auto-index-form">
-            <div class="form-grid">
-              <!-- Book Select -->
-              <div class="form-group flex-1">
-                <label for="auto-index-book-select">Target Book</label>
-                <select id="auto-index-book-select">
-                  <!-- Populated dynamically -->
-                </select>
-              </div>
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px;">
+              
+              <!-- Left Column: Source Book & Basic Settings -->
+              <div style="display: flex; flex-direction: column; gap: 16px;">
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">1. Source Configuration</h4>
+                
+                <!-- Book Select -->
+                <div class="form-group">
+                  <label for="auto-index-book-select">Target Book</label>
+                  <select id="auto-index-book-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
 
-              <!-- PDF File -->
-              <div class="form-group flex-2">
-                <label>Course Book PDF File</label>
-                <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
-                  <button type="button" id="auto-index-file-btn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; font-size: 0.85rem;">
-                    <i data-lucide="file-text" style="width: 16px; height: 16px;"></i>
-                    <span>Select SANS PDF Book</span>
-                  </button>
-                  <span id="auto-index-file-name" style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">No file selected</span>
+                <!-- PDF File Drop Area -->
+                <div class="form-group">
+                  <label>Course Book PDF File</label>
+                  <div id="auto-index-file-area" style="border: 2px dashed var(--border-color); border-radius: var(--radius-md); padding: 24px 16px; text-align: center; cursor: pointer; background: rgba(15, 23, 42, 0.3); transition: border-color 0.15s, background-color 0.15s; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                    <i data-lucide="file-text" style="width: 28px; height: 28px; color: var(--color-accent);"></i>
+                    <button type="button" id="auto-index-file-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; pointer-events: none;">Select PDF File</button>
+                    <span id="auto-index-file-name" style="font-size: 0.8rem; color: var(--text-secondary); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px;">No PDF selected</span>
+                  </div>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                  <label for="auto-index-password">PDF Password (if encrypted)</label>
+                  <input type="password" id="auto-index-password" placeholder="SANS Decryption Password">
                 </div>
               </div>
 
-              <!-- Password -->
-              <div class="form-group flex-1">
-                <label for="auto-index-password">PDF Password (if encrypted)</label>
-                <input type="password" id="auto-index-password" placeholder="SANS Decryption Password">
-              </div>
-            </div>
+              <!-- Right Column: Watermark & AI Curation -->
+              <div style="display: flex; flex-direction: column; gap: 16px; background: rgba(30, 41, 59, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
+                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">2. Watermark &amp; AI Curation (Optional)</h4>
+                
+                <!-- Watermark Fields -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group">
+                    <label for="auto-index-fname">First Name</label>
+                    <input type="text" id="auto-index-fname" placeholder="John">
+                  </div>
+                  <div class="form-group">
+                    <label for="auto-index-lname">Last Name</label>
+                    <input type="text" id="auto-index-lname" placeholder="Doe">
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label for="auto-index-email">Email Address</label>
+                  <input type="email" id="auto-index-email" placeholder="john.doe@sans.org">
+                </div>
 
-            <!-- Watermark Exclusion Header -->
-            <div style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 16px;">
-              <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">Watermark Exclusion (Optional)</h4>
-              <p style="margin: 6px 0 16px 0; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;">
-                SANS textbooks include repeating watermarks (e.g. <em>"Licensed to: First Last Email"</em>). Enter your details below to strip them from the index.
-              </p>
-            </div>
+                <!-- Gemini API Key -->
+                <div class="form-group" style="margin-top: 4px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                    <label for="auto-index-gemini-key">Gemini API Key</label>
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.72rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-weight: 500;">
+                      <i data-lucide="external-link" style="width: 11px; height: 11px;"></i>
+                      Get Free Key
+                    </a>
+                  </div>
+                  <input type="password" id="auto-index-gemini-key" placeholder="Paste Gemini API Key to enable AI curation">
+                </div>
 
-            <!-- Watermark Inputs Row -->
-            <div class="form-grid">
-              <!-- First Name -->
-              <div class="form-group flex-1">
-                <label for="auto-index-fname">First Name</label>
-                <input type="text" id="auto-index-fname" placeholder="e.g. John">
+                <!-- Warnings & Privacy Notes -->
+                <div style="margin-top: 8px; font-size: 0.72rem; line-height: 1.45; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px;">
+                  <span style="display: inline-flex; align-items: flex-start; gap: 6px;">
+                    <i data-lucide="info" style="width: 14px; height: 14px; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>This information is never saved, stored, or transmitted. It is processed entirely locally in memory.</span>
+                  </span>
+                  <span style="display: inline-flex; align-items: flex-start; gap: 6px; color: #eab308;">
+                    <i data-lucide="alert-triangle" style="width: 14px; height: 14px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
+                    <span><strong>Warning:</strong> If your name is a common word, all occurrences of that word will be excluded from the generated index.</span>
+                  </span>
+                </div>
               </div>
-              
-              <!-- Last Name -->
-              <div class="form-group flex-1">
-                <label for="auto-index-lname">Last Name</label>
-                <input type="text" id="auto-index-lname" placeholder="e.g. Doe">
-              </div>
-              
-              <!-- Email -->
-              <div class="form-group flex-2">
-                <label for="auto-index-email">Email Address</label>
-                <input type="email" id="auto-index-email" placeholder="e.g. john.doe@sans.org">
-              </div>
-            </div>
-
-            <!-- Watermark Warnings & Notes Footer -->
-            <div style="margin-top: 12px; margin-bottom: 24px; font-size: 0.76rem; color: var(--text-secondary); line-height: 1.55; display: flex; flex-direction: column; gap: 4px;">
-              <span style="color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px;">
-                <i data-lucide="info" style="width: 14px; height: 14px; color: var(--text-secondary); flex-shrink: 0;"></i>
-                <span><strong>Privacy &amp; Data Note:</strong> This information is never saved, stored, or transmitted. It is processed entirely locally in memory.</span>
-              </span>
-              <span style="color: #eab308; display: inline-flex; align-items: center; gap: 6px;">
-                <i data-lucide="alert-triangle" style="width: 14px; height: 14px; color: #eab308; flex-shrink: 0;"></i>
-                <span><strong>Important Warning:</strong> If your name is a common word, all occurrences of that word will be excluded from the generated index.</span>
-              </span>
             </div>
 
             <!-- Settings Accordion -->
-            <div class="advanced-settings-header collapsible-header" id="auto-index-settings-toggle">
+            <div class="advanced-settings-header collapsible-header" id="auto-index-settings-toggle" style="margin-top: 24px;">
               <i data-lucide="settings" class="settings-icon"></i>
               <span>Advanced Indexing Parameters (Optional)</span>
               <i data-lucide="chevron-right" class="collapse-icon"></i>
             </div>
             
-            <div id="auto-index-settings-content" class="advanced-settings-content hidden">
+            <div id="auto-index-settings-content" class="advanced-settings-content hidden" style="padding: 16px; border: 1px solid var(--border-color); border-top: none; border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); background: rgba(30, 41, 59, 0.15);">
               <div class="form-grid">
                 <!-- Page Offset -->
                 <div class="form-group flex-1">
@@ -558,9 +573,9 @@
             </div>
 
             <!-- Submit Button -->
-            <div class="form-actions-row" style="margin-top: 20px;">
-              <button type="submit" id="start-indexing-btn" class="btn btn-accent btn-large">
-                <i data-lucide="play"></i>
+            <div class="form-actions-row" style="margin-top: 24px; display: flex; justify-content: flex-end;">
+              <button type="submit" id="start-indexing-btn" class="btn btn-accent btn-large" style="padding: 12px 28px; font-size: 0.95rem; border-radius: var(--radius-md);">
+                <i data-lucide="play" style="width: 16px; height: 16px; margin-right: 6px;"></i>
                 <span>Build Index from PDF</span>
               </button>
             </div>
