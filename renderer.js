@@ -3468,6 +3468,8 @@ function initAutoIndexingBindings() {
       elements.autoIndexCurationEngine.addEventListener('change', () => {
         setCurationEngine(elements.autoIndexCurationEngine.value);
       });
+    }
+
     const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
     setCurationEngine(savedEngine);
 
