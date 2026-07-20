@@ -99,6 +99,8 @@ def is_valid_candidate(term):
         return False
     return True
 
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 # Initialize Local Neural SLM Model
 MODEL_REF = "Qwen/Qwen2.5-0.5B-Instruct"
 local_model = None
@@ -113,7 +115,7 @@ def load_neural_slm():
         local_tokenizer = AutoTokenizer.from_pretrained(MODEL_REF, trust_remote_code=True)
         local_model = AutoModelForCausalLM.from_pretrained(
             MODEL_REF,
-            torch_dtype=torch.float32,
+            dtype=torch.float32,
             device_map="auto" if torch.cuda.is_available() else None,
             trust_remote_code=True
         )
@@ -147,18 +149,32 @@ def neural_filter_batch(batch_terms):
             outputs = local_model.generate(
                 **inputs,
                 max_new_tokens=512,
-                temperature=0.1,
                 do_sample=False,
                 pad_token_id=local_tokenizer.eos_token_id
             )
 
         gen_text = local_tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
         full_text = "[" + gen_text.strip()
+        
+        kept_set = set()
         match = re.search(r'\[.*?\]', full_text, re.DOTALL)
         if match:
-            kept_set = set(json.loads(match.group(0)))
-            kept_set_lower = {k.lower() for k in kept_set}
-            return [item for item in batch_terms if item["topic"].lower() in kept_set_lower]
+            try:
+                kept_set = set(json.loads(match.group(0)))
+            except Exception:
+                pass
+
+        if not kept_set:
+            # Fallback regex string extraction for quoted terms in model output
+            quoted = re.findall(r'"([^"]+)"', full_text)
+            if quoted:
+                kept_set = set(quoted)
+
+        if kept_set:
+            kept_set_lower = {k.lower().strip() for k in kept_set}
+            filtered = [item for item in batch_terms if item["topic"].lower().strip() in kept_set_lower]
+            if filtered:
+                return filtered
     except Exception as e:
         print(f"[-] Neural batch evaluation error: {e}")
 
