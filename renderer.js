@@ -128,6 +128,10 @@ const elements = {
   autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
   autoIndexCurationEngine: document.getElementById('auto-index-curation-engine'),
   curationEngineBadge: document.getElementById('curation-engine-badge'),
+  curationCardGemini: document.getElementById('curation-card-gemini'),
+  curationCardLocal: document.getElementById('curation-card-local'),
+  geminiSettingsContainer: document.getElementById('gemini-settings-container'),
+  localSlmInfoContainer: document.getElementById('local-slm-info-container'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
@@ -3412,11 +3416,36 @@ function initAutoIndexingBindings() {
       }
     };
 
-    if (elements.autoIndexCurationEngine) {
-      const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
-      elements.autoIndexCurationEngine.value = savedEngine;
+    const setCurationEngine = (engineVal) => {
+      if (elements.autoIndexCurationEngine) {
+        elements.autoIndexCurationEngine.value = engineVal;
+      }
+      localStorage.setItem('curation_engine', engineVal);
+
+      if (elements.curationCardGemini) {
+        elements.curationCardGemini.classList.toggle('active', engineVal === 'gemini');
+      }
+      if (elements.curationCardLocal) {
+        elements.curationCardLocal.classList.toggle('active', engineVal === 'local-slm');
+      }
+
+      if (elements.geminiSettingsContainer) {
+        if (engineVal === 'gemini') {
+          elements.geminiSettingsContainer.classList.remove('hidden');
+        } else {
+          elements.geminiSettingsContainer.classList.add('hidden');
+        }
+      }
+      if (elements.localSlmInfoContainer) {
+        if (engineVal === 'local-slm') {
+          elements.localSlmInfoContainer.classList.remove('hidden');
+        } else {
+          elements.localSlmInfoContainer.classList.add('hidden');
+        }
+      }
+
       if (elements.curationEngineBadge) {
-        if (savedEngine === 'local-slm') {
+        if (engineVal === 'local-slm') {
           elements.curationEngineBadge.textContent = '⚡ Local & Offline';
           elements.curationEngineBadge.className = 'badge badge-info';
         } else {
@@ -3425,21 +3454,22 @@ function initAutoIndexingBindings() {
         }
       }
 
-      elements.autoIndexCurationEngine.addEventListener('change', () => {
-        const engineVal = elements.autoIndexCurationEngine.value;
-        localStorage.setItem('curation_engine', engineVal);
-        if (elements.curationEngineBadge) {
-          if (engineVal === 'local-slm') {
-            elements.curationEngineBadge.textContent = '⚡ Local & Offline';
-            elements.curationEngineBadge.className = 'badge badge-info';
-          } else {
-            elements.curationEngineBadge.textContent = 'Cloud Gemini';
-            elements.curationEngineBadge.className = 'badge badge-success';
-          }
-        }
-        validateGeminiKey();
-      });
+      validateGeminiKey();
+    };
+
+    if (elements.curationCardGemini) {
+      elements.curationCardGemini.addEventListener('click', () => setCurationEngine('gemini'));
     }
+    if (elements.curationCardLocal) {
+      elements.curationCardLocal.addEventListener('click', () => setCurationEngine('local-slm'));
+    }
+
+    if (elements.autoIndexCurationEngine) {
+      elements.autoIndexCurationEngine.addEventListener('change', () => {
+        setCurationEngine(elements.autoIndexCurationEngine.value);
+      });
+    const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
+    setCurationEngine(savedEngine);
 
     const initialKey = localStorage.getItem('gemini_api_key') || '';
     elements.autoIndexGeminiKey.value = initialKey;
@@ -4374,10 +4404,11 @@ function validateWizardStep(step) {
     }
   } else if (step === 3) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-    if (useAi) {
+    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+    if (useAi && !isLocalSlm) {
       const key = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
       if (!key) {
-        alert("Please enter a Gemini API Key to use AI Curation.");
+        alert("Please enter a Gemini API Key to use Gemini Cloud AI Curation.");
         return false;
       }
     }
@@ -4465,11 +4496,18 @@ function updateWizardSummary() {
 
   if (summaryGeminiModel) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-    if (useAi && elements.autoIndexModelSelect) {
-      const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
-      summaryGeminiModel.textContent = selectedModelOpt ? selectedModelOpt.textContent.split(' ')[0] : '-';
+    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+    if (useAi) {
+      if (isLocalSlm) {
+        summaryGeminiModel.textContent = 'Qwen 0.5B (Offline)';
+      } else if (elements.autoIndexModelSelect) {
+        const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
+        summaryGeminiModel.textContent = selectedModelOpt ? selectedModelOpt.textContent.split(' ')[0] : '-';
+      } else {
+        summaryGeminiModel.textContent = 'Gemini Flash';
+      }
     } else {
-      summaryGeminiModel.textContent = '-';
+      summaryGeminiModel.textContent = 'Disabled';
     }
   }
 
