@@ -136,6 +136,10 @@ const elements = {
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
+  getFreeKeyBtn: document.getElementById('get-free-key-btn'),
+  apiKeyGuideModal: document.getElementById('api-key-guide-modal'),
+  apiKeyGuideCloseBtn: document.getElementById('api-key-guide-close-btn'),
+  apiKeyGuideCloseX: document.getElementById('api-key-guide-close-x'),
   autoIndexUseAi: document.getElementById('auto-index-use-ai'),
   autoIndexDepToggle: document.getElementById('auto-index-dep-toggle'),
   autoIndexDepContent: document.getElementById('auto-index-dep-content'),
@@ -3398,6 +3402,22 @@ function initAutoIndexingBindings() {
         localStorage.setItem('gemini_api_key', keyVal);
         isKeyLocked = !isKeyLocked;
         updateLockUi();
+      });
+    }
+
+    if (elements.getFreeKeyBtn && elements.apiKeyGuideModal) {
+      elements.getFreeKeyBtn.addEventListener('click', () => {
+        elements.apiKeyGuideModal.showModal();
+      });
+    }
+    if (elements.apiKeyGuideCloseBtn && elements.apiKeyGuideModal) {
+      elements.apiKeyGuideCloseBtn.addEventListener('click', () => {
+        elements.apiKeyGuideModal.close();
+      });
+    }
+    if (elements.apiKeyGuideCloseX && elements.apiKeyGuideModal) {
+      elements.apiKeyGuideCloseX.addEventListener('click', () => {
+        elements.apiKeyGuideModal.close();
       });
     }
 

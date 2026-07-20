@@ -725,10 +725,10 @@
                     <div class="form-group" id="auto-index-gemini-key-group" style="position: relative; margin-bottom: 16px;">
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                         <label for="auto-index-gemini-key" style="margin: 0;">Gemini API Key</label>
-                        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.72rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-weight: 500;">
-                          <i data-lucide="external-link" style="width: 11px; height: 11px;"></i>
-                          Get Free Key
-                        </a>
+                        <button type="button" id="get-free-key-btn" style="background: none; border: none; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-weight: 500; cursor: pointer; padding: 0;">
+                          <i data-lucide="help-circle" style="width: 12px; height: 12px;"></i>
+                          <span>How to Get Free Key</span>
+                        </button>
                       </div>
                       <div style="display: flex; gap: 8px; align-items: center;">
                         <div style="position: relative; flex: 1;">
@@ -1244,6 +1244,74 @@
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="ai-curation-cancel-btn" class="btn btn-secondary">Go Back</button>
         <button id="ai-curation-continue-btn" class="btn btn-accent">Continue</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Gemini API Key Guide Modal -->
+  <dialog id="api-key-guide-modal" class="custom-dialog" style="max-width: 520px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary); border-bottom: none; padding-bottom: 0;">
+          <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+            <i data-lucide="key" style="width: 16px; height: 16px;"></i>
+          </div>
+          <span>How to Get a Free Gemini API Key</span>
+        </h3>
+        <button type="button" id="api-key-guide-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+        <!-- Step 1 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">1</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Open Google AI Studio:</strong><br>
+            Open <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #38bdf8; text-decoration: underline;">Google AI Studio</a> and sign in with your Google account.
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">2</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Create your API Key:</strong><br>
+            Click the blue <strong style="color: var(--text-primary);">"Create API key"</strong> button. Select or create a project (name it anything you like, e.g. <em>"SANS Indexer"</em>).
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">3</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Copy the key:</strong><br>
+            Click the <strong style="color: var(--text-primary);">"Copy"</strong> button next to your new API key string.
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">4</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Paste & Lock in App:</strong><br>
+            Paste the copied key into the <strong style="color: var(--text-primary);">Gemini API Key</strong> box in this app, then click <strong style="color: var(--text-primary);">Lock</strong>.
+          </div>
+        </div>
+
+        <!-- Tip Box -->
+        <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #fef08a; line-height: 1.45;">
+          <strong>💡 Pro Tip:</strong> Google provides generous free tier quotas! If you ever run into high traffic rate limits during peak usage, you can enable paid billing in AI Studio for higher limits across all Gemini models.
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px;">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem;">
+          <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+          <span>Open Google AI Studio</span>
+        </a>
+        <button type="button" id="api-key-guide-close-btn" class="btn btn-accent">Got it!</button>
       </div>
     </div>
   </dialog>
