@@ -4161,10 +4161,11 @@ async function handleAutoIndexSubmit(e) {
   const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
   const curationEngine = elements.autoIndexCurationEngine ? elements.autoIndexCurationEngine.value : 'gemini';
+  const selectedLocalModel = localStorage.getItem('local_slm_model') || '1.5b';
   
   const settings = {
     curationEngine: useAi ? curationEngine : 'none',
-    localSlmModel: selectedLocalModel || '1.5b',
+    localSlmModel: selectedLocalModel,
     offset: parseInt(elements.autoIndexOffset.value) || 0,
     minLength: parseInt(elements.autoIndexMinLen.value) || 2,
     maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
