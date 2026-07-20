@@ -638,8 +638,20 @@
                   </label>
                 </div>
 
+                <!-- Curation Engine Selection (Cloud Gemini vs Local 0.5B SLM) -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                  <label for="auto-index-curation-engine" style="display: flex; align-items: center; justify-content: space-between;">
+                    <span>Curation Engine</span>
+                    <span id="curation-engine-badge" class="badge badge-success" style="font-size: 0.7rem; padding: 2px 8px;">Cloud Gemini</span>
+                  </label>
+                  <select id="auto-index-curation-engine" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
+                    <option value="gemini" selected>Gemini Cloud API (Default)</option>
+                    <option value="local-slm">Local 0.5B SLM Engine (Experimental - 100% Offline)</option>
+                  </select>
+                </div>
+
                 <!-- Gemini API Key -->
-                <div class="form-group" style="position: relative; margin-bottom: 16px;">
+                <div class="form-group" id="auto-index-gemini-key-group" style="position: relative; margin-bottom: 16px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <label for="auto-index-gemini-key" style="margin: 0;">Gemini API Key</label>
                     <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.72rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-weight: 500;">

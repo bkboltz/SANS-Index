@@ -920,6 +920,53 @@ Return a JSON array of objects with the exact same structure as the input:
   }
 }
 
+// Helper: Curate Index with Local 0.5B SLM Engine
+async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event) {
+  logDebug(`[Local SLM Curation] Initiating with ${entries.length} candidate terms...`);
+
+  if (event) {
+    event.sender.send('auto-index-progress', { 
+      step: 'curating-slm', 
+      message: 'Running Local 0.5B SLM Curation Engine...' 
+    });
+  }
+
+  const inputJsonFile = path.join(tempDir, 'slm_input_entries.json');
+  const outputJsonFile = path.join(tempDir, 'slm_output_entries.json');
+
+  fs.writeFileSync(inputJsonFile, JSON.stringify(entries, null, 2), 'utf8');
+
+  const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
+
+  return new Promise((resolve) => {
+    const proc = spawn(pythonExe, [curateScript, inputJsonFile, outputJsonFile], { cwd: path.join(__dirname, 'engine') });
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => {
+      logDebug(`[Local SLM Curation Output] ${data.toString()}`);
+    });
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0 && fs.existsSync(outputJsonFile)) {
+        try {
+          const curatedEntries = JSON.parse(fs.readFileSync(outputJsonFile, 'utf8'));
+          logDebug(`[Local SLM Curation] Curation successful! Returned ${curatedEntries.length} terms.`);
+          resolve({ entries: curatedEntries, error: null });
+          return;
+        } catch (err) {
+          logDebug(`[Local SLM Curation] Failed to parse output JSON: ${err.message}`);
+        }
+      }
+      logDebug(`[Local SLM Curation] Failed with exit code ${code}: ${stderr}`);
+      resolve({ entries: entries, error: `Local SLM curation failed: ${stderr || 'Unknown error'}` });
+    });
+  });
+}
+
 // Helper: Generate Practice Quiz with Gemini AI
 async function generateQuizWithGemini(textFile, numQuestions, difficulty, geminiApiKey, event, geminiModel) {
   logDebug(`[Gemini Quiz Gen] Initiating. Questions: ${numQuestions}, Difficulty: ${difficulty}, Model: ${geminiModel || 'gemini-flash-latest'}`);
@@ -1255,10 +1302,16 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     }
     let finalEntries = entries;
     let curationError = null;
-    if (geminiApiKey && entries.length > 0) {
-      const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
-      finalEntries = curationResult.entries;
-      curationError = curationResult.error;
+    if (entries.length > 0) {
+      if (settings.curationEngine === 'local-slm') {
+        const curationResult = await curateIndexWithLocalSLM(entries, pythonExe, tempDir, event);
+        finalEntries = curationResult.entries;
+        curationError = curationResult.error;
+      } else if (geminiApiKey) {
+        const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
+        finalEntries = curationResult.entries;
+        curationError = curationResult.error;
+      }
     }
 
     // Quiz Generation (Sequential & Independent)

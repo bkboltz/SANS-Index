@@ -9,3 +9,5 @@ pypdf
 wordfreq
 nltk
 tqdm
+transformers
+huggingface_hub

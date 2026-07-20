@@ -126,6 +126,8 @@ const elements = {
   autoIndexFileName: document.getElementById('auto-index-file-name'),
   autoIndexPassword: document.getElementById('auto-index-password'),
   autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
+  autoIndexCurationEngine: document.getElementById('auto-index-curation-engine'),
+  curationEngineBadge: document.getElementById('curation-engine-badge'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
@@ -3395,10 +3397,11 @@ function initAutoIndexingBindings() {
     }
 
     const validateGeminiKey = () => {
+      const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
       const keyVal = elements.autoIndexGeminiKey.value.trim();
       const hasKey = keyVal.length > 0;
 
-      if (hasKey) {
+      if (isLocalSlm || hasKey) {
         elements.autoIndexUseAi.disabled = false;
         elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
       } else {
@@ -3408,6 +3411,35 @@ function initAutoIndexingBindings() {
         elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
       }
     };
+
+    if (elements.autoIndexCurationEngine) {
+      const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
+      elements.autoIndexCurationEngine.value = savedEngine;
+      if (elements.curationEngineBadge) {
+        if (savedEngine === 'local-slm') {
+          elements.curationEngineBadge.textContent = '⚡ Local & Offline';
+          elements.curationEngineBadge.className = 'badge badge-info';
+        } else {
+          elements.curationEngineBadge.textContent = 'Cloud Gemini';
+          elements.curationEngineBadge.className = 'badge badge-success';
+        }
+      }
+
+      elements.autoIndexCurationEngine.addEventListener('change', () => {
+        const engineVal = elements.autoIndexCurationEngine.value;
+        localStorage.setItem('curation_engine', engineVal);
+        if (elements.curationEngineBadge) {
+          if (engineVal === 'local-slm') {
+            elements.curationEngineBadge.textContent = '⚡ Local & Offline';
+            elements.curationEngineBadge.className = 'badge badge-info';
+          } else {
+            elements.curationEngineBadge.textContent = 'Cloud Gemini';
+            elements.curationEngineBadge.className = 'badge badge-success';
+          }
+        }
+        validateGeminiKey();
+      });
+    }
 
     const initialKey = localStorage.getItem('gemini_api_key') || '';
     elements.autoIndexGeminiKey.value = initialKey;
@@ -3942,7 +3974,10 @@ async function handleAutoIndexSubmit(e) {
   const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
   const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
+  const curationEngine = elements.autoIndexCurationEngine ? elements.autoIndexCurationEngine.value : 'gemini';
+  
   const settings = {
+    curationEngine: useAi ? curationEngine : 'none',
     offset: parseInt(elements.autoIndexOffset.value) || 0,
     minLength: parseInt(elements.autoIndexMinLen.value) || 2,
     maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
@@ -3965,7 +4000,16 @@ async function handleAutoIndexSubmit(e) {
 
     window.api.onAutoIndexProgress((progress) => {
       // Dynamic loading warnings for AI curation/quiz step
-      if (progress.step === 'curating') {
+      if (progress.step === 'curating-slm') {
+        elements.indexingProgressStatus.innerHTML = `
+          <div style="font-size: 1.1rem; font-weight: 600; color: #38bdf8; line-height: 1.4;">
+            ⚡ Running Local 0.5B SLM Curation Engine...
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 6px;">
+            Filtering noise words & merging duplicates 100% offline
+          </div>
+        `;
+      } else if (progress.step === 'curating') {
         if (progress.isOverloaded) {
           elements.indexingProgressStatus.innerHTML = `
             <div style="font-size: 1.1rem; font-weight: 600; color: #eab308; line-height: 1.4; max-width: 550px; margin-left: auto; margin-right: auto;">
