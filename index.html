@@ -822,12 +822,40 @@
                     </div>
                   </div>
 
-                  <!-- Conditional Container: Local SLM Info -->
-                  <div id="local-slm-info-container" class="hidden" style="margin-top: 16px; padding: 14px 18px; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: var(--radius-md); background: rgba(56, 189, 248, 0.05); display: flex; align-items: center; gap: 12px;">
-                    <i data-lucide="shield-check" style="width: 24px; height: 24px; color: #38bdf8; flex-shrink: 0;"></i>
-                    <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
-                      <strong style="color: #38bdf8;">100% Offline Ready:</strong> Curation will run locally using your PC's CPU/RAM. No API key or internet connection required.
+                  <!-- Conditional Container: Local SLM Info & Custom Prompt -->
+                  <div id="local-slm-info-container" class="hidden" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="padding: 14px 18px; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: var(--radius-md); background: rgba(56, 189, 248, 0.05); display: flex; align-items: center; gap: 12px;">
+                      <i data-lucide="shield-check" style="width: 24px; height: 24px; color: #38bdf8; flex-shrink: 0;"></i>
+                      <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
+                        <strong style="color: #38bdf8;">100% Offline Ready:</strong> Curation will run locally using your PC's CPU/RAM. No API key or internet connection required.
+                      </div>
                     </div>
+
+                    <!-- Collapsible Advanced Prompt Editor -->
+                    <details style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px; font-size: 0.82rem;">
+                      <summary style="cursor: pointer; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between; user-select: none;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                          <i data-lucide="sliders" style="width: 14px; height: 14px; color: #38bdf8;"></i>
+                          Advanced Options: Customize Local System Prompt
+                        </span>
+                        <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">(Click to expand)</span>
+                      </summary>
+
+                      <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                          Customize system instructions sent to your local model. You can fine-tune inclusion/exclusion rules or add specific terms relevant to your course.
+                        </div>
+
+                        <textarea id="local-slm-custom-prompt" rows="8" style="width: 100%; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: monospace; font-size: 0.75rem; padding: 10px; line-height: 1.45; resize: vertical; outline: none;"></textarea>
+
+                        <div style="display: flex; justify-content: flex-end;">
+                          <button type="button" id="reset-local-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
+                            <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
+                            <span>Reset to Default Prompt</span>
+                          </button>
+                        </div>
+                      </div>
+                    </details>
                   </div>
                 </div>
               </div>

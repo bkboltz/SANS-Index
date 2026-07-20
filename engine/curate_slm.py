@@ -1,6 +1,6 @@
 """
 Local SLM Neural Index Curation Engine
-Supports dynamic local model selection (0.5B, 1.5B, 3B), cache status checking, and on-demand model downloading.
+Supports dynamic local model selection (0.5B, 1.5B, 3B), custom system prompts, cache status checking, and on-demand model downloading.
 """
 
 import sys
@@ -18,6 +18,26 @@ MODEL_MAP = {
     "1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
     "3b": "Qwen/Qwen2.5-3B-Instruct"
 }
+
+DEFAULT_SYSTEM_PROMPT = (
+    "You are a strict SANS Cybersecurity Course Index Curator.\n"
+    "Your sole task is to filter candidate index terms extracted from course materials and KEEP ONLY genuine technical cybersecurity concepts.\n\n"
+    "### INCLUSION CRITERIA (KEEP):\n"
+    "- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump)\n"
+    "- Protocols, network standards, and acronyms (e.g., Kerberos, BGP, IPsec, TLS 1.3, DNSSEC, SNMPv3, ARP, SMBv3)\n"
+    "- Operating system commands, parameters, and flags (e.g., chmod 755, netstat -an, reg add, vssadmin, ps -ef, ls -la)\n"
+    "- System artifacts, registry keys, and file paths (e.g., HKLM\\Software, MFT, NTFS, SAM database, Event ID 4624, Prefetch)\n"
+    "- Attack vectors, vulnerability classes, and malware terms (e.g., Pass-the-Hash, SQL Injection, XSS, Golden Ticket, Buffer Overflow)\n"
+    "- Security frameworks, standards, and laws (e.g., NIST SP 800-53, ISO 27001, MITRE ATT&CK, CIS Controls, HIPAA)\n\n"
+    "### EXCLUSION CRITERIA (REJECT / DROP):\n"
+    "- Generic textbook headings, section titles, and page markers (e.g., Overview, Introduction, Summary, Discussion, Chapter 1, Figure 2.3, Table of Contents)\n"
+    "- Non-technical English words or generic meta-phrases (e.g., Following Steps, Basic Concept, Main Features, System Configuration, Important Note, Additional Information, Key Takeaway, Best Practices, Module Summary)\n"
+    "- Standalone generic English words unless part of a technical phrase (e.g., reject 'system', 'process', 'method', 'data', 'user' alone; keep 'Access Control List' or 'System Call')\n\n"
+    "### FEW-SHOT EXAMPLES:\n"
+    'Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Following Steps", "Mimikatz", "Basic Concept", "Event ID 4624", "Summary Table"]\n'
+    'Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]\n\n'
+    "Output ONLY a raw JSON array of strings containing the kept terms. Do NOT include any markdown code fences, preambles, or conversational commentary."
+)
 
 def ensure_slm_dependencies():
     packages = {
@@ -145,7 +165,10 @@ def load_neural_slm(model_name):
     try:
         from transformers import AutoModelForCausalLM, AutoTokenizer
         import torch
-        print(f"[+] Loading Local Neural SLM ({model_name})...")
+        device_str = "CUDA (GPU)" if torch.cuda.is_available() else "CPU"
+        print(f"[VERIFICATION] Initiating Local Model Load: '{model_name}'")
+        print(f"[VERIFICATION] System Execution Compute Device: {device_str}")
+        
         local_tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         local_model = AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -153,13 +176,13 @@ def load_neural_slm(model_name):
             device_map="auto" if torch.cuda.is_available() else None,
             trust_remote_code=True
         )
-        print(f"[+] Local Neural SLM ({model_name}) successfully loaded!")
+        print(f"[VERIFICATION] SUCCESS: Active Neural Model '{model_name}' loaded in RAM/VRAM!")
         return True
     except Exception as e:
-        print(f"[-] Could not load neural SLM model ({e}). Using local NLP fast curator.")
+        print(f"[-] Could not load neural SLM model '{model_name}' ({e}). Falling back to local NLP fast curator.")
         return False
 
-def neural_filter_batch(batch_terms):
+def neural_filter_batch(batch_terms, system_prompt):
     if not local_model or not local_tokenizer:
         return batch_terms
 
@@ -167,11 +190,8 @@ def neural_filter_batch(batch_terms):
         import torch
         topics_list = [item["topic"] for item in batch_terms]
         prompt = (
-            "<|im_start|>system\nYou are a SANS Cybersecurity course index curator. "
-            "Review candidate terms. Select ONLY items that are specific technical security concepts, software tools, network protocols, commands, or registry paths. "
-            "REJECT generic non-technical words and textbook section titles (e.g. 'example', 'overview', 'chapter', 'figure', 'following steps', 'system configuration', 'basic concept', 'main feature', 'additional information'). "
-            "Return a valid JSON array of kept strings.<|im_end|>\n"
-            f"<|im_start|>user\nCandidate terms:\n{json.dumps(topics_list)}\n<|im_end|>\n"
+            f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
+            f"<|im_start|>user\nCandidate terms list:\n{json.dumps(topics_list)}\n<|im_end|>\n"
             "<|im_start|>assistant\n"
         )
 
@@ -179,7 +199,7 @@ def neural_filter_batch(batch_terms):
         with torch.no_grad():
             outputs = local_model.generate(
                 **inputs,
-                max_new_tokens=384,
+                max_new_tokens=450,
                 do_sample=False,
                 pad_token_id=local_tokenizer.eos_token_id
             )
@@ -195,8 +215,10 @@ def neural_filter_batch(batch_terms):
 
     return batch_terms
 
-def curate_terms_local_slm(input_entries, model_name):
-    print(f"[+] Local SLM Curation Engine ({model_name}) starting for {len(input_entries)} candidate terms...")
+def curate_terms_local_slm(input_entries, model_name, system_prompt):
+    print(f"[VERIFICATION] Local SLM Curation Engine started.")
+    print(f"[VERIFICATION] Active Model Target: {model_name}")
+    print(f"[VERIFICATION] System Prompt Length: {len(system_prompt)} characters")
 
     candidates = [item for item in input_entries if is_valid_candidate(item.get("topic", ""))]
 
@@ -205,12 +227,13 @@ def curate_terms_local_slm(input_entries, model_name):
     curated_candidates = []
     if has_neural_model and len(candidates) > 0:
         batch_size = 15
-        print(f"[+] Processing {len(candidates)} candidates through Neural SLM in batches of {batch_size}...")
+        total_batches = (len(candidates) + batch_size - 1) // batch_size
+        print(f"[+] Processing {len(candidates)} candidates through Neural SLM ({model_name}) in {total_batches} batches...")
         for i in range(0, len(candidates), batch_size):
             batch = candidates[i:i + batch_size]
-            filtered_batch = neural_filter_batch(batch)
+            filtered_batch = neural_filter_batch(batch, system_prompt)
             curated_candidates.extend(filtered_batch)
-            print(f"    Batch {i // batch_size + 1}/{(len(candidates) + batch_size - 1) // batch_size}: {len(batch)} -> {len(filtered_batch)} terms")
+            print(f"    Batch {i // batch_size + 1}/{total_batches}: {len(batch)} -> {len(filtered_batch)} terms kept")
     else:
         for item in candidates:
             topic = item.get("topic", "").strip()
@@ -245,10 +268,10 @@ def curate_terms_local_slm(input_entries, model_name):
             "topic": display_topic,
             "pages": combined_pages,
             "notes": "",
-            "source": "auto-slm"
+            "source": f"auto-slm-{model_name}"
         })
 
-    print(f"[+] Local SLM Curation completed: {len(curated_list)} curated terms retained from {len(input_entries)} candidates.")
+    print(f"[VERIFICATION] Curation completed using model '{model_name}': {len(curated_list)} curated terms retained from {len(input_entries)} candidate terms.")
     return curated_list
 
 def main():
@@ -256,6 +279,7 @@ def main():
     parser.add_argument("input_json", nargs="?", help="Path to input candidate terms JSON file")
     parser.add_argument("output_json", nargs="?", help="Path where curated JSON file will be written")
     parser.add_argument("--model", default="0.5b", help="Model key or repo name (0.5b, 1.5b, 3b)")
+    parser.add_argument("--custom-prompt", default=None, help="Custom system prompt for local SLM curation")
     parser.add_argument("--check-downloaded", action="store_true", help="Check if model is downloaded locally")
     parser.add_argument("--download-only", action="store_true", help="Pre-download and cache model weights")
     args = parser.parse_args()
@@ -268,13 +292,13 @@ def main():
         sys.exit(0)
 
     if args.download_only:
-        print(f"[+] Downloading model weights for {model_name}...")
+        print(f"[VERIFICATION] Downloading model weights for '{model_name}'...")
         success = load_neural_slm(model_name)
         if success:
-            print(f"[+] Model {model_name} successfully downloaded and cached!")
+            print(f"[VERIFICATION] SUCCESS: Model '{model_name}' downloaded and cached!")
             sys.exit(0)
         else:
-            print(f"[-] Failed to download model {model_name}")
+            print(f"[-] Failed to download model '{model_name}'")
             sys.exit(1)
 
     if not args.input_json or not args.output_json:
@@ -288,7 +312,9 @@ def main():
     with open(args.input_json, "r", encoding="utf-8") as f:
         input_entries = json.load(f)
 
-    curated = curate_terms_local_slm(input_entries, model_name)
+    system_prompt = args.custom_prompt if (args.custom_prompt and args.custom_prompt.strip()) else DEFAULT_SYSTEM_PROMPT
+
+    curated = curate_terms_local_slm(input_entries, model_name, system_prompt)
 
     with open(args.output_json, "w", encoding="utf-8") as f:
         json.dump(curated, f, indent=2, ensure_ascii=False)

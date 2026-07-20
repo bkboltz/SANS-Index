@@ -921,7 +921,7 @@ Return a JSON array of objects with the exact same structure as the input:
 }
 
 // Helper: Curate Index with Local SLM Engine
-async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event, localSlmModel = '0.5b') {
+async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event, localSlmModel = '0.5b', localSlmPrompt = null) {
   logDebug(`[Local SLM Curation] Initiating (${localSlmModel}) with ${entries.length} candidate terms...`);
 
   if (event) {
@@ -937,13 +937,24 @@ async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event, local
   fs.writeFileSync(inputJsonFile, JSON.stringify(entries, null, 2), 'utf8');
 
   const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
+  const args = [curateScript, inputJsonFile, outputJsonFile, '--model', localSlmModel];
+  if (localSlmPrompt && localSlmPrompt.trim()) {
+    args.push('--custom-prompt', localSlmPrompt.trim());
+  }
 
   return new Promise((resolve) => {
-    const proc = spawn(pythonExe, [curateScript, inputJsonFile, outputJsonFile, '--model', localSlmModel], { cwd: path.join(__dirname, 'engine') });
+    const proc = spawn(pythonExe, args, { cwd: path.join(__dirname, 'engine') });
     let stderr = '';
 
     proc.stdout.on('data', (data) => {
-      logDebug(`[Local SLM Curation Output] ${data.toString()}`);
+      const msg = data.toString();
+      logDebug(`[Local SLM Curation Output] ${msg}`);
+      if (event && msg.includes('[VERIFICATION]')) {
+        event.sender.send('auto-index-progress', { 
+          step: 'curating-slm', 
+          message: msg.trim() 
+        });
+      }
     });
 
     proc.stderr.on('data', (data) => {
@@ -1222,7 +1233,6 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     }
     
     const indexInputFile = usePdfDirectly ? sourceFile : textFile;
-    
     // Indexing
     event.sender.send('auto-index-progress', { step: 'indexing', message: 'Generating index terms...' });
     
@@ -1253,8 +1263,6 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     if (excludeWordsSet.size > 0) {
       indexArgs.push('--exclude-words', Array.from(excludeWordsSet).join(','));
     }
-    
-    indexArgs.push(indexInputFile, indexOutputFile);
     
     await new Promise((resolve, reject) => {
       const indexProc = spawn(pythonExe, indexArgs, { cwd: path.join(__dirname, 'engine') });
@@ -1300,11 +1308,12 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         });
       }
     }
+
     let finalEntries = entries;
     let curationError = null;
     if (entries.length > 0) {
       if (settings.curationEngine === 'local-slm') {
-        const curationResult = await curateIndexWithLocalSLM(entries, pythonExe, tempDir, event);
+        const curationResult = await curateIndexWithLocalSLM(entries, pythonExe, tempDir, event, settings.localSlmModel || '0.5b', settings.localSlmPrompt || null);
         finalEntries = curationResult.entries;
         curationError = curationResult.error;
       } else if (geminiApiKey) {
@@ -1320,7 +1329,6 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     let quizGenerated = false;
 
     if (settings.generateQuiz && geminiApiKey) {
-      // Ensure text file is available
       if (!fs.existsSync(textFile) && fs.existsSync(sourceFile)) {
         event.sender.send('auto-index-progress', { step: 'converting', message: 'Extracting text for quiz generation...' });
         const pythonTextExtractCode = `import sys; from pdfminer.high_level import extract_text; open(sys.argv[2], "w", encoding="utf-8").write(extract_text(sys.argv[1]))`;
@@ -1346,7 +1354,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         quizGenerated = true;
       }
     }
-    
+
     // Cleanup
     try {
       if (fs.existsSync(tempDir)) {

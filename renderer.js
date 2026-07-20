@@ -144,6 +144,8 @@ const elements = {
   dlModalStartBtn: document.getElementById('dl-modal-start-btn'),
   dlModalCancelBtn: document.getElementById('dl-modal-cancel-btn'),
   dlModalCloseX: document.getElementById('dl-modal-close-x'),
+  localSlmCustomPrompt: document.getElementById('local-slm-custom-prompt'),
+  resetLocalPromptBtn: document.getElementById('reset-local-prompt-btn'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
@@ -3459,6 +3461,43 @@ function initAutoIndexingBindings() {
       '3b': { name: 'Qwen 3B Instruct (Near-Cloud)', size: '~2.0 GB', ram: '~2.8 GB RAM', quality: 'Near-Cloud Quality', badgeId: 'badge-model-3b' }
     };
 
+    const DEFAULT_LOCAL_SLM_PROMPT = `You are a strict SANS Cybersecurity Course Index Curator.
+Your sole task is to filter candidate index terms extracted from course materials and KEEP ONLY genuine technical cybersecurity concepts.
+
+### INCLUSION CRITERIA (KEEP):
+- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump)
+- Protocols, network standards, and acronyms (e.g., Kerberos, BGP, IPsec, TLS 1.3, DNSSEC, SNMPv3, ARP, SMBv3)
+- Operating system commands, parameters, and flags (e.g., chmod 755, netstat -an, reg add, vssadmin, ps -ef, ls -la)
+- System artifacts, registry keys, and file paths (e.g., HKLM\\Software, MFT, NTFS, SAM database, Event ID 4624, Prefetch)
+- Attack vectors, vulnerability classes, and malware terms (e.g., Pass-the-Hash, SQL Injection, XSS, Golden Ticket, Buffer Overflow)
+- Security frameworks, standards, and laws (e.g., NIST SP 800-53, ISO 27001, MITRE ATT&CK, CIS Controls, HIPAA)
+
+### EXCLUSION CRITERIA (REJECT / DROP):
+- Generic textbook headings, section titles, and page markers (e.g., Overview, Introduction, Summary, Discussion, Chapter 1, Figure 2.3, Table of Contents)
+- Non-technical English words or generic meta-phrases (e.g., Following Steps, Basic Concept, Main Features, System Configuration, Important Note, Additional Information, Key Takeaway, Best Practices, Module Summary)
+- Standalone generic English words unless part of a technical phrase (e.g., reject 'system', 'process', 'method', 'data', 'user' alone; keep 'Access Control List' or 'System Call')
+
+### FEW-SHOT EXAMPLES:
+Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Following Steps", "Mimikatz", "Basic Concept", "Event ID 4624", "Summary Table"]
+Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]
+
+Output ONLY a raw JSON array of strings containing the kept terms. Do NOT include any markdown code fences, preambles, or conversational commentary.`;
+
+    if (elements.localSlmCustomPrompt) {
+      const savedPrompt = localStorage.getItem('local_slm_prompt');
+      elements.localSlmCustomPrompt.value = savedPrompt !== null ? savedPrompt : DEFAULT_LOCAL_SLM_PROMPT;
+      elements.localSlmCustomPrompt.addEventListener('input', () => {
+        localStorage.setItem('local_slm_prompt', elements.localSlmCustomPrompt.value);
+      });
+    }
+
+    if (elements.resetLocalPromptBtn && elements.localSlmCustomPrompt) {
+      elements.resetLocalPromptBtn.addEventListener('click', () => {
+        elements.localSlmCustomPrompt.value = DEFAULT_LOCAL_SLM_PROMPT;
+        localStorage.removeItem('local_slm_prompt');
+      });
+    }
+
     let selectedLocalModel = localStorage.getItem('local_slm_model') || '1.5b';
 
     const checkModelStatusAndBadge = async (modelKey) => {
@@ -4166,6 +4205,7 @@ async function handleAutoIndexSubmit(e) {
   const settings = {
     curationEngine: useAi ? curationEngine : 'none',
     localSlmModel: selectedLocalModel,
+    localSlmPrompt: elements.localSlmCustomPrompt ? elements.localSlmCustomPrompt.value.trim() : '',
     offset: parseInt(elements.autoIndexOffset.value) || 0,
     minLength: parseInt(elements.autoIndexMinLen.value) || 2,
     maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
