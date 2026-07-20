@@ -920,14 +920,14 @@ Return a JSON array of objects with the exact same structure as the input:
   }
 }
 
-// Helper: Curate Index with Local 0.5B SLM Engine
-async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event) {
-  logDebug(`[Local SLM Curation] Initiating with ${entries.length} candidate terms...`);
+// Helper: Curate Index with Local SLM Engine
+async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event, localSlmModel = '0.5b') {
+  logDebug(`[Local SLM Curation] Initiating (${localSlmModel}) with ${entries.length} candidate terms...`);
 
   if (event) {
     event.sender.send('auto-index-progress', { 
       step: 'curating-slm', 
-      message: 'Running Local 0.5B SLM Curation Engine...' 
+      message: `Running Local Neural SLM (${localSlmModel.toUpperCase()}) Curation Engine...` 
     });
   }
 
@@ -939,7 +939,7 @@ async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event) {
   const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
 
   return new Promise((resolve) => {
-    const proc = spawn(pythonExe, [curateScript, inputJsonFile, outputJsonFile], { cwd: path.join(__dirname, 'engine') });
+    const proc = spawn(pythonExe, [curateScript, inputJsonFile, outputJsonFile, '--model', localSlmModel], { cwd: path.join(__dirname, 'engine') });
     let stderr = '';
 
     proc.stdout.on('data', (data) => {
@@ -1385,5 +1385,59 @@ ipcMain.handle('retry-gemini-curation', async (event, args) => {
   } catch (error) {
     logDebug(`[Auto-Index Handler] Retry curation failed: ${error.message}`);
     return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('check-local-model-status', async (event, modelKey) => {
+  try {
+    const pythonExe = await getSystemPythonCommand();
+    const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
+    return new Promise((resolve) => {
+      const proc = spawn(pythonExe, [curateScript, '--model', modelKey || '0.5b', '--check-downloaded'], { cwd: path.join(__dirname, 'engine') });
+      let stdout = '';
+      proc.stdout.on('data', (data) => { stdout += data.toString(); });
+      proc.on('close', (code) => {
+        if (code === 0 && stdout) {
+          try {
+            const parsed = JSON.parse(stdout.trim());
+            resolve({ downloaded: !!parsed.downloaded, model: parsed.model });
+            return;
+          } catch (e) {}
+        }
+        resolve({ downloaded: false, model: modelKey });
+      });
+    });
+  } catch (err) {
+    return { downloaded: false, error: err.message };
+  }
+});
+
+ipcMain.handle('download-local-model', async (event, modelKey) => {
+  try {
+    const pythonExe = await getSystemPythonCommand();
+    const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
+    return new Promise((resolve) => {
+      const proc = spawn(pythonExe, [curateScript, '--model', modelKey || '0.5b', '--download-only'], { cwd: path.join(__dirname, 'engine') });
+      let outputLogs = '';
+      proc.stdout.on('data', (data) => {
+        const str = data.toString();
+        outputLogs += str;
+        event.sender.send('model-download-progress', { modelKey, text: str });
+      });
+      proc.stderr.on('data', (data) => {
+        const str = data.toString();
+        outputLogs += str;
+        event.sender.send('model-download-progress', { modelKey, text: str });
+      });
+      proc.on('close', (code) => {
+        if (code === 0) {
+          resolve({ success: true, modelKey });
+        } else {
+          resolve({ success: false, error: outputLogs });
+        }
+      });
+    });
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });

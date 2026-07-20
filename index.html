@@ -168,9 +168,9 @@
           <p class="summary-text">Index your course topics for rapid lookups during your open-book exam.</p>
         </div>
         <div class="header-actions">
-          <button id="practice-quiz-btn" class="btn btn-secondary pulse-glow-btn" style="margin-right: 8px;">
+          <button id="practice-quiz-btn" class="btn btn-secondary" title="Practice Quiz (Feature coming soon)" style="margin-right: 8px; opacity: 0.55; cursor: not-allowed;">
             <i data-lucide="brain"></i>
-            <span>Practice Quiz</span>
+            <span>Practice Quiz (Coming Soon)</span>
           </button>
           <div id="quiz-new-questions-toast" class="bounce-tag hidden">
             New questions added!
@@ -667,53 +667,117 @@
                           <span class="badge badge-success" style="font-size: 0.68rem;">Cloud</span>
                         </div>
                         <div class="curation-card-description">
-                          Best curation quality using Google Gemini cloud models. Simple manual API key setup required. Uses 0% local PC resources (best for lightweight laptops). Prone to occasional free-tier traffic rate limits, but produces the cleanest, highest-quality index entries.
+                          Highest quality curation using Google Gemini cloud models. Simple manual API key setup required. Uses 0% local PC resources (best for lightweight laptops). Prone to free-tier traffic rate limits.
                         </div>
                       </div>
                       <div class="curation-card-features">
                         <div class="curation-card-feature-item">
                           <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span>Highest quality curation & context understanding</span>
+                          <span><strong>Download Size:</strong> 0 MB (Cloud)</span>
                         </div>
                         <div class="curation-card-feature-item">
                           <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span>Zero PC CPU/RAM usage (Cloud compute)</span>
+                          <span><strong>Hardware Demand:</strong> 0% PC RAM/CPU</span>
                         </div>
                         <div class="curation-card-feature-item" style="color: #eab308;">
-                          <i data-lucide="alert-circle" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span>Requires free Gemini API key (Upgrade to paid for zero rate limits)</span>
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★★★★ (Top)</span>
                         </div>
                       </div>
                     </div>
 
-                    <!-- Local 0.5B SLM Card -->
-                    <div class="curation-engine-card" id="curation-card-local" data-engine="local-slm">
+                    <!-- Local Qwen 1.5B (Recommended) -->
+                    <div class="curation-engine-card" id="curation-card-local-1.5b" data-engine="local-slm" data-model="1.5b">
                       <div>
                         <div class="curation-card-header">
                           <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="cpu" style="width: 18px; height: 18px;"></i>
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                              <i data-lucide="zap" style="width: 18px; height: 18px;"></i>
                             </div>
-                            <div class="curation-card-title">Qwen 0.5B (Local On-Device SLM)</div>
+                            <div class="curation-card-title">Qwen 1.5B (Fast & Smart) ⭐</div>
                           </div>
-                          <span class="badge badge-info" style="font-size: 0.68rem;">100% Offline</span>
+                          <span class="badge badge-success model-status-badge" style="font-size: 0.68rem;" id="badge-model-1.5b">Recommended</span>
                         </div>
                         <div class="curation-card-description">
-                          Simplest way to curate your index completely offline. Uses your local PC resources (CPU/RAM). Requires zero API keys or network setup. A little slower than cloud Gemini and may require brief manual review as some non-technical entries might remain.
+                          Recommended sweet spot for local curation! Excellent technical English vocabulary, fast execution, and strict JSON output. Runs 100% offline without API keys.
                         </div>
                       </div>
                       <div class="curation-card-features">
                         <div class="curation-card-feature-item">
-                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span>100% Offline & zero API key configuration</span>
+                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Download Size:</strong> ~1.1 GB (One-time)</span>
                         </div>
                         <div class="curation-card-feature-item">
-                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span>Zero rate limits or cloud service outages</span>
+                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Hardware Demand:</strong> ~1.5 GB RAM (Low)</span>
+                        </div>
+                        <div class="curation-card-feature-item" style="color: #38bdf8;">
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★★★☆ (Great)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Local Qwen 3B (Near Cloud Quality) -->
+                    <div class="curation-engine-card" id="curation-card-local-3b" data-engine="local-slm" data-model="3b">
+                      <div>
+                        <div class="curation-card-header">
+                          <div class="curation-card-icon-title">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                              <i data-lucide="brain-circuit" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="curation-card-title">Qwen 3B (Near-Cloud)</div>
+                          </div>
+                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-3b">Near-Cloud</span>
+                        </div>
+                        <div class="curation-card-description">
+                          High reasoning capacity for complex technical terms, tool names, and protocols. Produces near-cloud quality results completely offline without API rate limits.
+                        </div>
+                      </div>
+                      <div class="curation-card-features">
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="download" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Download Size:</strong> ~2.0 GB (One-time)</span>
+                        </div>
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Hardware Demand:</strong> ~2.8 GB RAM (Medium)</span>
+                        </div>
+                        <div class="curation-card-feature-item" style="color: #a78bfa;">
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★★★½ (High)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Local Qwen 0.5B (Ultra-Lightweight) -->
+                    <div class="curation-engine-card" id="curation-card-local-0.5b" data-engine="local-slm" data-model="0.5b">
+                      <div>
+                        <div class="curation-card-header">
+                          <div class="curation-card-icon-title">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                              <i data-lucide="feather" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="curation-card-title">Qwen 0.5B (Ultra-Light)</div>
+                          </div>
+                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-0.5b">Micro</span>
+                        </div>
+                        <div class="curation-card-description">
+                          Smallest, ultra-fast model for basic offline index cleaning. Lowest resource demand, but basic reasoning capabilities (recommended to review final list).
+                        </div>
+                      </div>
+                      <div class="curation-card-features">
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Download Size:</strong> ~398 MB (One-time)</span>
+                        </div>
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Hardware Demand:</strong> ~800 MB RAM (Micro)</span>
                         </div>
                         <div class="curation-card-feature-item" style="color: var(--text-muted);">
-                          <i data-lucide="info" style="width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; margin-top: 1px;"></i>
-                          <span>Uses local CPU/RAM; recommended to review final list</span>
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★☆☆☆ (Basic)</span>
                         </div>
                       </div>
                     </div>
@@ -775,15 +839,23 @@
                   <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Automatically generate mock questions based on the PDF content.</p>
                 </div>
                 
-                <div style="background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.2); padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                  <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <span style="font-weight: 600; color: #a78bfa; font-size: 0.9rem;">Generate Practice Quiz</span>
+                <div style="background: rgba(124, 58, 237, 0.04); border: 1px dashed rgba(124, 58, 237, 0.25); opacity: 0.75; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-weight: 600; color: #a78bfa; font-size: 0.9rem;">Generate Practice Quiz</span>
+                      <span style="font-size: 0.7rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: 10px; font-weight: 600;">Feature Coming Soon</span>
+                    </div>
                     <span style="font-size: 0.75rem; color: var(--text-muted);">Create multiple-choice questions for the quiz hub</span>
                   </div>
-                  <label class="switch-toggle">
-                    <input type="checkbox" id="auto-index-generate-quiz">
-                    <span class="slider-toggle"></span>
+                  <label class="switch-toggle" style="cursor: not-allowed;" title="Feature coming soon">
+                    <input type="checkbox" id="auto-index-generate-quiz" disabled>
+                    <span class="slider-toggle" style="cursor: not-allowed; opacity: 0.5;"></span>
                   </label>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #f87171; border-radius: 4px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 20px;">
+                  <i data-lucide="clock" style="width: 18px; height: 18px; color: #f87171; flex-shrink: 0;"></i>
+                  <span><strong>Feature Coming Soon:</strong> AI Practice Quiz generation is temporarily locked while we optimize the engine for reduced token consumption and local model support.</span>
                 </div>
 
                 <!-- Quiz parameters (Visible only when toggle checked) -->
@@ -852,10 +924,10 @@
                   </div>
                 </div>
 
-                <!-- API Free Tier Disclaimer Card -->
-                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-left: 4px solid #ef4444; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px;">
-                  <h4 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #f87171; display: flex; align-items: center; gap: 6px;">
-                    <i data-lucide="alert-circle" style="width: 16px; height: 16px;"></i>
+                <!-- API Free Tier Disclaimer Card (Shown only when Gemini Cloud AI is selected) -->
+                <div id="gemini-rate-limit-card" class="hidden" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-left: 4px solid #f59e0b; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px;">
+                  <h4 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="alert-triangle" style="width: 16px; height: 16px; color: #f59e0b;"></i>
                     API Free Tier Rate Limit Advisory
                   </h4>
                   <p style="margin: 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
@@ -1244,6 +1316,51 @@
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="ai-curation-cancel-btn" class="btn btn-secondary">Go Back</button>
         <button id="ai-curation-continue-btn" class="btn btn-accent">Continue</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Local SLM Model Download Confirmation Modal -->
+  <dialog id="model-download-confirm-modal" class="custom-dialog" style="max-width: 520px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary); border-bottom: none; padding-bottom: 0;">
+          <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+            <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+          </div>
+          <span id="dl-modal-title">Download Local Model</span>
+        </h3>
+        <button type="button" id="dl-modal-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2); padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 16px;">
+          <div style="font-weight: 600; color: #38bdf8; font-size: 0.92rem; margin-bottom: 4px;" id="dl-modal-model-name">Qwen 1.5B Instruct</div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;" id="dl-modal-model-desc">
+            File Size: <strong>~1.1 GB</strong> | RAM Demand: <strong>~1.5 GB RAM</strong> | Quality: <strong>Good (Recommended)</strong>
+          </div>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 12px 0;">
+          This model has not been downloaded yet. Would you like to download and cache it now? This is a <strong>one-time download</strong>; future indexings will run 100% offline instantly.
+        </p>
+
+        <!-- Progress Status Box (hidden until download starts) -->
+        <div id="dl-modal-progress-container" class="hidden" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-top: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--text-primary); margin-bottom: 6px;">
+            <span id="dl-modal-status-text" style="font-weight: 600; color: #38bdf8;">Downloading model weights...</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace; max-height: 90px; overflow-y: auto; white-space: pre-wrap; background: #090d16; padding: 8px; border-radius: 4px;" id="dl-modal-logs">
+            [+] Connecting to Hugging Face Hub...
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 14px;">
+        <button type="button" id="dl-modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="dl-modal-start-btn" class="btn btn-accent">Confirm & Download Model</button>
       </div>
     </div>
   </dialog>

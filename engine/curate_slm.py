@@ -1,7 +1,6 @@
 """
-Local 0.5B SLM Neural Index Curation Engine
-Uses Qwen2.5-0.5B-Instruct neural model locally to evaluate and curate index terms,
-filtering out non-technical words, verbs, and generic concepts while merging duplicates.
+Local SLM Neural Index Curation Engine
+Supports dynamic local model selection (0.5B, 1.5B, 3B), cache status checking, and on-demand model downloading.
 """
 
 import sys
@@ -13,6 +12,12 @@ from collections import defaultdict
 import subprocess
 
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
+MODEL_MAP = {
+    "0.5b": "Qwen/Qwen2.5-0.5B-Instruct",
+    "1.5b": "Qwen/Qwen2.5-1.5B-Instruct",
+    "3b": "Qwen/Qwen2.5-3B-Instruct"
+}
 
 def ensure_slm_dependencies():
     packages = {
@@ -55,7 +60,6 @@ try:
 except Exception:
     pass
 
-from nltk.corpus import words as nltk_words
 from wordfreq import zipf_frequency
 
 STOP_WORDS = {
@@ -102,9 +106,6 @@ def is_valid_candidate(term):
     return True
 
 def clean_model_json(text):
-    """
-    Clean markdown code blocks and extract JSON array or list of strings from model output.
-    """
     if not text:
         return []
     text = text.strip()
@@ -118,38 +119,47 @@ def clean_model_json(text):
                 return [str(item) for item in val]
         except Exception:
             pass
-    # Fallback to quoted string extraction
     quoted = re.findall(r'"([^"]+)"', text)
     return quoted if quoted else []
 
+def resolve_model_name(key_or_name):
+    key = str(key_or_name).lower().strip()
+    return MODEL_MAP.get(key, key_or_name)
+
+def is_model_downloaded(model_name):
+    try:
+        from huggingface_hub import try_to_load_from_cache
+        res = try_to_load_from_cache(repo_id=model_name, filename="config.json")
+        return isinstance(res, str) and os.path.exists(res)
+    except Exception:
+        return False
+
 # Initialize Local Neural SLM Model
-MODEL_REF = "Qwen/Qwen2.5-0.5B-Instruct"
 local_model = None
 local_tokenizer = None
+current_model_name = None
 
-def load_neural_slm():
-    global local_model, local_tokenizer
+def load_neural_slm(model_name):
+    global local_model, local_tokenizer, current_model_name
+    current_model_name = model_name
     try:
         from transformers import AutoModelForCausalLM, AutoTokenizer
         import torch
-        print(f"[+] Loading Local 0.5B Neural SLM ({MODEL_REF})...")
-        local_tokenizer = AutoTokenizer.from_pretrained(MODEL_REF, trust_remote_code=True)
+        print(f"[+] Loading Local Neural SLM ({model_name})...")
+        local_tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
         local_model = AutoModelForCausalLM.from_pretrained(
-            MODEL_REF,
+            model_name,
             dtype=torch.float32,
             device_map="auto" if torch.cuda.is_available() else None,
             trust_remote_code=True
         )
-        print(f"[+] Local 0.5B Neural SLM successfully loaded!")
+        print(f"[+] Local Neural SLM ({model_name}) successfully loaded!")
         return True
     except Exception as e:
         print(f"[-] Could not load neural SLM model ({e}). Using local NLP fast curator.")
         return False
 
 def neural_filter_batch(batch_terms):
-    """
-    Run local Qwen2.5-0.5B-Instruct neural evaluation on a batch of candidate terms.
-    """
     if not local_model or not local_tokenizer:
         return batch_terms
 
@@ -178,7 +188,6 @@ def neural_filter_batch(batch_terms):
         kept_terms = clean_model_json(gen_text)
         kept_set_lower = {k.lower().strip() for k in kept_terms}
 
-        # Filter batch terms based on model response
         filtered_batch = [item for item in batch_terms if item["topic"].lower().strip() in kept_set_lower]
         return filtered_batch
     except Exception as e:
@@ -186,14 +195,12 @@ def neural_filter_batch(batch_terms):
 
     return batch_terms
 
-def curate_terms_local_slm(input_entries):
-    print(f"[+] Local 0.5B SLM Curation Engine starting for {len(input_entries)} candidate terms...")
+def curate_terms_local_slm(input_entries, model_name):
+    print(f"[+] Local SLM Curation Engine ({model_name}) starting for {len(input_entries)} candidate terms...")
 
-    # Filter invalid candidates & group by normalized term
     candidates = [item for item in input_entries if is_valid_candidate(item.get("topic", ""))]
 
-    # Load neural SLM model if available
-    has_neural_model = load_neural_slm()
+    has_neural_model = load_neural_slm(model_name)
 
     curated_candidates = []
     if has_neural_model and len(candidates) > 0:
@@ -205,7 +212,6 @@ def curate_terms_local_slm(input_entries):
             curated_candidates.extend(filtered_batch)
             print(f"    Batch {i // batch_size + 1}/{(len(candidates) + batch_size - 1) // batch_size}: {len(batch)} -> {len(filtered_batch)} terms")
     else:
-        # Fast NLP Zipf frequency filter
         for item in candidates:
             topic = item.get("topic", "").strip()
             word_parts = topic.lower().split()
@@ -213,7 +219,6 @@ def curate_terms_local_slm(input_entries):
                 continue
             curated_candidates.append(item)
 
-    # Group and merge casing / page numbers
     grouped_terms = defaultdict(list)
     term_casing_map = {}
 
@@ -247,10 +252,34 @@ def curate_terms_local_slm(input_entries):
     return curated_list
 
 def main():
-    parser = argparse.ArgumentParser(description="Local 0.5B SLM Neural Index Curation Engine")
-    parser.add_argument("input_json", help="Path to input candidate terms JSON file")
-    parser.add_argument("output_json", help="Path where curated JSON file will be written")
+    parser = argparse.ArgumentParser(description="Local SLM Neural Index Curation Engine")
+    parser.add_argument("input_json", nargs="?", help="Path to input candidate terms JSON file")
+    parser.add_argument("output_json", nargs="?", help="Path where curated JSON file will be written")
+    parser.add_argument("--model", default="0.5b", help="Model key or repo name (0.5b, 1.5b, 3b)")
+    parser.add_argument("--check-downloaded", action="store_true", help="Check if model is downloaded locally")
+    parser.add_argument("--download-only", action="store_true", help="Pre-download and cache model weights")
     args = parser.parse_args()
+
+    model_name = resolve_model_name(args.model)
+
+    if args.check_downloaded:
+        downloaded = is_model_downloaded(model_name)
+        print(json.dumps({"model": model_name, "downloaded": downloaded}))
+        sys.exit(0)
+
+    if args.download_only:
+        print(f"[+] Downloading model weights for {model_name}...")
+        success = load_neural_slm(model_name)
+        if success:
+            print(f"[+] Model {model_name} successfully downloaded and cached!")
+            sys.exit(0)
+        else:
+            print(f"[-] Failed to download model {model_name}")
+            sys.exit(1)
+
+    if not args.input_json or not args.output_json:
+        print("[-] Missing input_json or output_json arguments.")
+        sys.exit(1)
 
     if not os.path.exists(args.input_json):
         print(f"[-] Input file not found: {args.input_json}")
@@ -259,7 +288,7 @@ def main():
     with open(args.input_json, "r", encoding="utf-8") as f:
         input_entries = json.load(f)
 
-    curated = curate_terms_local_slm(input_entries)
+    curated = curate_terms_local_slm(input_entries, model_name)
 
     with open(args.output_json, "w", encoding="utf-8") as f:
         json.dump(curated, f, indent=2, ensure_ascii=False)
