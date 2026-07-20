@@ -3775,15 +3775,19 @@ async function runDependencyCheck() {
     }
 
     // Setup Warnings Alerts
+    const isMac = (navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0) || (navigator.userAgent && navigator.userAgent.includes('Mac'));
     const warnings = [];
     if (!deps.python) {
-      warnings.push("<li><strong>Python is missing:</strong> Python 3.10+ is required. Click Install, or run <code>winget install Python.Python.3.12</code></li>");
+      const pyCmd = isMac ? 'brew install python' : 'winget install Python.Python.3.12';
+      warnings.push(`<li><strong>Python is missing:</strong> Python 3.10+ is required. Click Install, or run <code>${pyCmd}</code></li>`);
     }
     if (!deps.qpdf) {
-      warnings.push("<li><strong>qpdf is missing:</strong> Decryption of password-protected SANS books will fail. Click Install, or run <code>winget install QPDF.QPDF</code></li>");
+      const qpdfCmd = isMac ? 'brew install qpdf' : 'winget install QPDF.QPDF';
+      warnings.push(`<li><strong>qpdf is missing:</strong> Decryption of password-protected SANS books will fail. Click Install, or run <code>${qpdfCmd}</code></li>`);
     }
     if (!deps.pdftotext) {
-      warnings.push("<li><strong>pdftotext not found:</strong> The app will fall back to direct PDF text extraction. Click Install, or run <code>winget install oschwartz10612.Poppler</code></li>");
+      const popplerCmd = isMac ? 'brew install poppler' : 'winget install oschwartz10612.Poppler';
+      warnings.push(`<li><strong>pdftotext not found:</strong> The app will fall back to direct PDF text extraction. Click Install, or run <code>${popplerCmd}</code></li>`);
     }
 
     // Update overall badge

@@ -3,13 +3,52 @@ import argparse
 import re
 from io import BytesIO
 
+import sys
+import subprocess
+
+def ensure_dependencies():
+    packages = {
+        'pdfminer': 'pdfminer.six',
+        'nltk': 'nltk',
+        'wordfreq': 'wordfreq'
+    }
+    missing = []
+    for mod, pkg in packages.items():
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(pkg)
+    
+    if missing:
+        print(f"[+] First-time setup: Auto-installing required packages ({', '.join(missing)})...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+            print("[+] Packages installed successfully!")
+        except Exception as e:
+            print(f"[-] Failed to auto-install packages: {e}")
+
+ensure_dependencies()
+
 from pdfminer.high_level import extract_text as pdfminer_extract_text
 
 import nltk
-nltk.download('averaged_perceptron_tagger_eng', quiet=True)
-nltk.download('words', quiet=True)
-from nltk.corpus import words as nltk_words
+import ssl
 
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
+
+try:
+    nltk.download('averaged_perceptron_tagger_eng', quiet=True)
+    nltk.download('averaged_perceptron_tagger', quiet=True)
+    nltk.download('words', quiet=True)
+except Exception:
+    pass
+
+from nltk.corpus import words as nltk_words
 from wordfreq import zipf_frequency
 
 class WordFilter:
@@ -35,7 +74,14 @@ class WordFilter:
         CALENDAR = set(line.strip() for line in f)
 
     # load words
-    WORDS = set(word for word in nltk_words.words() if word.islower())
+    try:
+        WORDS = set(word for word in nltk_words.words() if word.islower())
+    except Exception:
+        try:
+            nltk.download('words', quiet=True)
+            WORDS = set(word for word in nltk_words.words() if word.islower())
+        except Exception:
+            WORDS = set()
 
     # contraction filter
     CONTRACTION_SUFFIXES = ("'re", "'ve", "'ll", "'d", "n't", "'m")

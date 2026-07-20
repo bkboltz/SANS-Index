@@ -5,6 +5,20 @@ const { exec, spawn, execSync } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
 
+// Ensure macOS system PATH includes Homebrew and standard binary paths
+if (process.platform === 'darwin') {
+  const macPaths = [
+    '/opt/homebrew/bin',
+    '/opt/homebrew/sbin',
+    '/usr/local/bin',
+    '/usr/local/sbin',
+    '/Library/Frameworks/Python.framework/Versions/Current/bin',
+    `${process.env.HOME}/.homebrew/bin`
+  ];
+  const currentPath = process.env.PATH || '';
+  process.env.PATH = macPaths.concat(currentPath.split(':')).filter(Boolean).join(':');
+}
+
 let mainWindow;
 const DATA_FILE = path.join(__dirname, 'sans_index.json');
 const BACKUPS_DIR = path.join(__dirname, 'backups');
@@ -274,10 +288,8 @@ async function checkCommand(command) {
   });
 }
 
-// Helper to resolve QPDF path on Windows
+// Helper to resolve QPDF path on Windows/macOS/Linux
 function resolveQpdfPath() {
-  if (process.platform !== 'win32') return 'qpdf';
-  
   try {
     execSync('qpdf --version', { stdio: 'ignore' });
     return 'qpdf';
@@ -285,28 +297,33 @@ function resolveQpdfPath() {
     // Ignore
   }
 
-  const searchDirs = ['C:\\Program Files', 'C:\\Program Files (x86)'];
-  for (const dir of searchDirs) {
-    if (fs.existsSync(dir)) {
-      const items = fs.readdirSync(dir);
-      for (const item of items) {
-        if (item.toLowerCase().startsWith('qpdf')) {
-          const binaryPath = path.join(dir, item, 'bin', 'qpdf.exe');
-          if (fs.existsSync(binaryPath)) {
-            return binaryPath;
+  if (process.platform === 'win32') {
+    const searchDirs = ['C:\\Program Files', 'C:\\Program Files (x86)'];
+    for (const dir of searchDirs) {
+      if (fs.existsSync(dir)) {
+        const items = fs.readdirSync(dir);
+        for (const item of items) {
+          if (item.toLowerCase().startsWith('qpdf')) {
+            const binaryPath = path.join(dir, item, 'bin', 'qpdf.exe');
+            if (fs.existsSync(binaryPath)) {
+              return binaryPath;
+            }
           }
         }
       }
+    }
+  } else {
+    const macCheckPaths = ['/opt/homebrew/bin/qpdf', '/usr/local/bin/qpdf'];
+    for (const p of macCheckPaths) {
+      if (fs.existsSync(p)) return p;
     }
   }
 
   return 'qpdf';
 }
 
-// Helper to resolve pdftotext path on Windows
+// Helper to resolve pdftotext path on Windows/macOS/Linux
 function resolvePdftotextPath() {
-  if (process.platform !== 'win32') return 'pdftotext';
-
   try {
     execSync('pdftotext -v', { stdio: 'ignore' });
     return 'pdftotext';
@@ -314,32 +331,121 @@ function resolvePdftotextPath() {
     // Ignore
   }
 
-  const gitPath = 'C:\\Program Files\\Git\\mingw64\\bin\\pdftotext.exe';
-  if (fs.existsSync(gitPath)) {
-    return gitPath;
-  }
+  if (process.platform === 'win32') {
+    const gitPath = 'C:\\Program Files\\Git\\mingw64\\bin\\pdftotext.exe';
+    if (fs.existsSync(gitPath)) {
+      return gitPath;
+    }
 
-  const searchDirs = ['C:\\Program Files', 'C:\\Program Files (x86)'];
-  for (const dir of searchDirs) {
-    if (fs.existsSync(dir)) {
-      const items = fs.readdirSync(dir);
-      for (const item of items) {
-        if (item.toLowerCase().includes('poppler')) {
-          const binaryPath = path.join(dir, item, 'bin', 'pdftotext.exe');
-          if (fs.existsSync(binaryPath)) {
-            return binaryPath;
+    const searchDirs = ['C:\\Program Files', 'C:\\Program Files (x86)'];
+    for (const dir of searchDirs) {
+      if (fs.existsSync(dir)) {
+        const items = fs.readdirSync(dir);
+        for (const item of items) {
+          if (item.toLowerCase().includes('poppler')) {
+            const binaryPath = path.join(dir, item, 'bin', 'pdftotext.exe');
+            if (fs.existsSync(binaryPath)) {
+              return binaryPath;
+            }
           }
         }
       }
+    }
+  } else {
+    const macCheckPaths = ['/opt/homebrew/bin/pdftotext', '/usr/local/bin/pdftotext'];
+    for (const p of macCheckPaths) {
+      if (fs.existsSync(p)) return p;
     }
   }
 
   return 'pdftotext';
 }
 
+// Helper: Determine system Python binary (python3 vs python)
+async function getSystemPythonCommand() {
+  if (await checkCommand('python3 --version')) return 'python3';
+  if (await checkCommand('python --version')) return 'python';
+  return process.platform === 'win32' ? 'python' : 'python3';
+}
+
+// Helper: Ensure Python virtual environment and required libraries exist
+async function ensurePythonEnvironment(event) {
+  const engineDir = path.join(__dirname, 'engine');
+  const venvPath = path.join(engineDir, '.venv');
+  const venvPython = process.platform === 'win32'
+    ? path.join(venvPath, 'Scripts', 'python.exe')
+    : path.join(venvPath, 'bin', 'python');
+
+  let venvValid = false;
+  if (fs.existsSync(venvPython)) {
+    venvValid = await new Promise((resolve) => {
+      exec(`"${venvPython}" -c "import pdfminer, nltk, wordfreq; print('ok')"`, (err, stdout) => {
+        resolve(!err && stdout.trim() === 'ok');
+      });
+    });
+  }
+
+  if (venvValid) {
+    return venvPython;
+  }
+
+  const sysPython = await getSystemPythonCommand();
+
+  if (event) {
+    event.sender.send('auto-index-progress', {
+      step: 'setup',
+      message: 'First-time setup: Checking/Installing required Python indexing libraries...'
+    });
+  }
+
+  if (!fs.existsSync(venvPath)) {
+    if (event) {
+      event.sender.send('auto-index-progress', {
+        step: 'setup',
+        message: 'Creating Python virtual environment (engine/.venv)...'
+      });
+    }
+    await new Promise((resolve, reject) => {
+      const venvSpawn = spawn(sysPython, ['-m', 'venv', '.venv'], { cwd: engineDir });
+      venvSpawn.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error('Failed to create Python virtual environment. Please ensure Python 3 is installed.'));
+      });
+    });
+  }
+
+  const pipPath = process.platform === 'win32'
+    ? path.join(venvPath, 'Scripts', 'pip.exe')
+    : path.join(venvPath, 'bin', 'pip');
+
+  if (fs.existsSync(pipPath)) {
+    if (event) {
+      event.sender.send('auto-index-progress', {
+        step: 'setup',
+        message: 'Installing required Python libraries into engine/.venv...'
+      });
+    }
+    await new Promise((resolve) => {
+      const pipSpawn = spawn(pipPath, ['install', '-r', 'requirements.txt'], { cwd: engineDir });
+      pipSpawn.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          // Fallback: Install essential indexing packages
+          const fallbackPip = spawn(pipPath, ['install', 'pdfminer.six', 'nltk', 'wordfreq', 'PyMuPDF', 'Pillow', 'tqdm'], { cwd: engineDir });
+          fallbackPip.on('close', () => resolve());
+        }
+      });
+    });
+  }
+
+  return fs.existsSync(venvPython) ? venvPython : sysPython;
+}
+
 // IPC Handler: Check Auto-Indexing Dependencies
 ipcMain.handle('check-dependencies', async () => {
-  const python = await checkCommand('python --version');
+  const python = (await checkCommand('python3 --version')) || (await checkCommand('python --version'));
+  const sysPython = await getSystemPythonCommand();
   const resolvedQpdf = resolveQpdfPath();
   const resolvedPdftotext = resolvePdftotextPath();
   
@@ -352,7 +458,7 @@ ipcMain.handle('check-dependencies', async () => {
   let ocr = false;
   if (python) {
     ocr = await new Promise((resolve) => {
-      exec('python -c "import doctr, torch; print(\'ok\')"', (error, stdout) => {
+      exec(`${sysPython} -c "import doctr, torch; print('ok')"`, (error, stdout) => {
         if (!error && stdout.trim() === 'ok') {
           resolve(true);
         } else {
@@ -369,7 +475,7 @@ ipcMain.handle('check-dependencies', async () => {
       : path.join(venvPath, 'bin', 'python');
     
     venvOcr = await new Promise((resolve) => {
-      exec(`"${venvPython}" -c "import doctr, torch; print(\'ok\')"`, (error, stdout) => {
+      exec(`"${venvPython}" -c "import doctr, torch; print('ok')"`, (error, stdout) => {
         if (!error && stdout.trim() === 'ok') {
           resolve(true);
         } else {
@@ -405,13 +511,14 @@ ipcMain.handle('select-pdf-file', async () => {
 
 // IPC Handler: Install OCR Dependencies (virtual environment creation and pip install)
 ipcMain.handle('install-ocr', async (event) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const engineDir = path.join(__dirname, 'engine');
     const venvPath = path.join(engineDir, '.venv');
+    const sysPython = await getSystemPythonCommand();
     
     event.sender.send('ocr-install-status', 'Creating virtual environment (engine/.venv)...');
     
-    const venvSpawn = spawn('python', ['-m', 'venv', '.venv'], { cwd: engineDir });
+    const venvSpawn = spawn(sysPython, ['-m', 'venv', '.venv'], { cwd: engineDir });
     
     venvSpawn.on('close', (code) => {
       if (code !== 0) {
@@ -451,10 +558,11 @@ ipcMain.handle('install-ocr', async (event) => {
 
 // IPC Handler: Install System Dependencies (Python, qpdf, Poppler pdftotext, OCR)
 ipcMain.handle('install-dependency', async (event, dependencyName) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (dependencyName === 'ocr') {
       const engineDir = path.join(__dirname, 'engine');
       const venvPath = path.join(engineDir, '.venv');
+      const sysPython = await getSystemPythonCommand();
       
       event.sender.send('dep-install-status', {
         dependency: 'ocr',
@@ -462,7 +570,7 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
         percent: 10
       });
       
-      const venvSpawn = spawn('python', ['-m', 'venv', '.venv'], { cwd: engineDir });
+      const venvSpawn = spawn(sysPython, ['-m', 'venv', '.venv'], { cwd: engineDir });
       
       venvSpawn.stdout.on('data', (data) => {
         event.sender.send('dep-install-log', data.toString());
@@ -537,95 +645,154 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
       return;
     }
 
-    let command = 'winget';
-    let args = [];
-    
-    if (dependencyName === 'python') {
-      args = ['install', 'Python.Python.3.12', '--accept-source-agreements', '--accept-package-agreements'];
-    } else if (dependencyName === 'qpdf') {
-      args = ['install', 'QPDF.QPDF', '--accept-source-agreements', '--accept-package-agreements'];
-    } else if (dependencyName === 'pdftotext') {
-      args = ['install', 'oschwartz10612.Poppler', '--accept-source-agreements', '--accept-package-agreements'];
-    } else {
-      reject(new Error(`Unknown dependency: ${dependencyName}`));
-      return;
-    }
-
-    event.sender.send('dep-install-status', {
-      dependency: dependencyName,
-      status: `Starting installation of ${dependencyName}...`,
-      percent: 5
-    });
-
-    const installerProcess = spawn(command, args, { shell: true });
-    let logBuffer = '';
-
-    installerProcess.stdout.on('data', (data) => {
-      const text = data.toString();
-      event.sender.send('dep-install-log', text);
-      logBuffer += text;
-
-      const pctMatch = text.match(/(\d+)\s*%/);
-      if (pctMatch) {
-        const pct = parseInt(pctMatch[1]);
-        event.sender.send('dep-install-status', {
-          dependency: dependencyName,
-          status: `Downloading/Installing ${dependencyName}...`,
-          percent: Math.min(95, Math.max(5, pct))
-        });
-      } else if (text.includes('Successfully installed') || text.includes('Installer exit code: 0')) {
-        event.sender.send('dep-install-status', {
-          dependency: dependencyName,
-          status: `Installation of ${dependencyName} succeeded!`,
-          percent: 100
-        });
-      } else if (text.includes('Downloading')) {
-        event.sender.send('dep-install-status', {
-          dependency: dependencyName,
-          status: `Downloading ${dependencyName}...`,
-          percent: 25
-        });
-      } else if (text.includes('Installing')) {
-        event.sender.send('dep-install-status', {
-          dependency: dependencyName,
-          status: `Installing ${dependencyName}...`,
-          percent: 75
-        });
-      }
-    });
-
-    installerProcess.stderr.on('data', (data) => {
-      const text = data.toString();
-      event.sender.send('dep-install-log', `ERROR: ${text}`);
-    });
-
-    installerProcess.on('close', (code) => {
-      const isAlreadyInstalled = code === 2316632107 || 
-                                 logBuffer.includes('already installed') || 
-                                 logBuffer.includes('No newer package versions are available') || 
-                                 logBuffer.includes('No available upgrade found') ||
-                                 logBuffer.includes('Command line alias already exists');
-                                 
-      if (code === 0 || isAlreadyInstalled || logBuffer.includes('Successfully installed')) {
-        const statusMsg = isAlreadyInstalled 
-          ? `${dependencyName} is already installed!`
-          : `Successfully completed installation of ${dependencyName}!`;
-          
-        event.sender.send('dep-install-status', {
-          dependency: dependencyName,
-          status: statusMsg,
-          percent: 100
-        });
-        resolve({ success: true });
+    if (process.platform === 'win32') {
+      let command = 'winget';
+      let args = [];
+      
+      if (dependencyName === 'python') {
+        args = ['install', 'Python.Python.3.12', '--accept-source-agreements', '--accept-package-agreements'];
+      } else if (dependencyName === 'qpdf') {
+        args = ['install', 'QPDF.QPDF', '--accept-source-agreements', '--accept-package-agreements'];
+      } else if (dependencyName === 'pdftotext') {
+        args = ['install', 'oschwartz10612.Poppler', '--accept-source-agreements', '--accept-package-agreements'];
       } else {
+        reject(new Error(`Unknown dependency: ${dependencyName}`));
+        return;
+      }
+
+      event.sender.send('dep-install-status', {
+        dependency: dependencyName,
+        status: `Starting installation of ${dependencyName}...`,
+        percent: 5
+      });
+
+      const installerProcess = spawn(command, args, { shell: true });
+      let logBuffer = '';
+
+      installerProcess.stdout.on('data', (data) => {
+        const text = data.toString();
+        event.sender.send('dep-install-log', text);
+        logBuffer += text;
+
+        const pctMatch = text.match(/(\d+)\s*%/);
+        if (pctMatch) {
+          const pct = parseInt(pctMatch[1]);
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: `Downloading/Installing ${dependencyName}...`,
+            percent: Math.min(95, Math.max(5, pct))
+          });
+        } else if (text.includes('Successfully installed') || text.includes('Installer exit code: 0')) {
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: `Installation of ${dependencyName} succeeded!`,
+            percent: 100
+          });
+        } else if (text.includes('Downloading')) {
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: `Downloading ${dependencyName}...`,
+            percent: 25
+          });
+        } else if (text.includes('Installing')) {
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: `Installing ${dependencyName}...`,
+            percent: 75
+          });
+        }
+      });
+
+      installerProcess.stderr.on('data', (data) => {
+        const text = data.toString();
+        event.sender.send('dep-install-log', `ERROR: ${text}`);
+      });
+
+      installerProcess.on('close', (code) => {
+        const isAlreadyInstalled = code === 2316632107 || 
+                                   logBuffer.includes('already installed') || 
+                                   logBuffer.includes('No newer package versions are available') || 
+                                   logBuffer.includes('No available upgrade found') ||
+                                   logBuffer.includes('Command line alias already exists');
+                                   
+        if (code === 0 || isAlreadyInstalled || logBuffer.includes('Successfully installed')) {
+          const statusMsg = isAlreadyInstalled 
+            ? `${dependencyName} is already installed!`
+            : `Successfully completed installation of ${dependencyName}!`;
+            
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: statusMsg,
+            percent: 100
+          });
+          resolve({ success: true });
+        } else {
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: `Failed to install ${dependencyName}. Exit code: ${code}`,
+            percent: 0
+          });
+          reject(new Error(`winget install exited with code ${code}. If you don't have winget, please install this dependency manually.`));
+        }
+      });
+    } else if (process.platform === 'darwin') {
+      let brewPkg = '';
+      if (dependencyName === 'python') brewPkg = 'python';
+      else if (dependencyName === 'qpdf') brewPkg = 'qpdf';
+      else if (dependencyName === 'pdftotext') brewPkg = 'poppler';
+      else {
+        reject(new Error(`Unknown dependency: ${dependencyName}`));
+        return;
+      }
+
+      const hasBrew = await checkCommand('brew --version');
+      if (!hasBrew) {
         event.sender.send('dep-install-status', {
           dependency: dependencyName,
-          status: `Failed to install ${dependencyName}. Exit code: ${code}`,
+          status: 'Homebrew (brew) is required on macOS. Opening brew.sh...',
           percent: 0
         });
-        reject(new Error(`winget install exited with code ${code}. If you don't have winget, please install this dependency manually.`));
+        shell.openExternal('https://brew.sh');
+        reject(new Error('Homebrew is not installed. Please install Homebrew from https://brew.sh first.'));
+        return;
       }
-    });
+
+      event.sender.send('dep-install-status', {
+        dependency: dependencyName,
+        status: `Running "brew install ${brewPkg}"...`,
+        percent: 25
+      });
+
+      const installerProcess = spawn('brew', ['install', brewPkg]);
+
+      installerProcess.stdout.on('data', (data) => {
+        event.sender.send('dep-install-log', data.toString());
+      });
+
+      installerProcess.stderr.on('data', (data) => {
+        event.sender.send('dep-install-log', data.toString());
+      });
+
+      installerProcess.on('close', (code) => {
+        if (code === 0) {
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: `Successfully installed ${brewPkg} via Homebrew!`,
+            percent: 100
+          });
+          resolve({ success: true });
+        } else {
+          event.sender.send('dep-install-status', {
+            dependency: dependencyName,
+            status: `Failed to install ${brewPkg} via Homebrew (exit code ${code}).`,
+            percent: 0
+          });
+          reject(new Error(`brew install ${brewPkg} failed with exit code ${code}`));
+        }
+      });
+    } else {
+      reject(new Error(`Unsupported platform: ${process.platform}`));
+    }
   });
 });
 
@@ -963,11 +1130,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     });
     
     let sourceFile = decryptedPdf;
-    const venvPath = path.join(__dirname, 'engine', '.venv');
-    const venvExists = fs.existsSync(venvPath);
-    const pythonExe = venvExists
-      ? (process.platform === 'win32' ? path.join(venvPath, 'Scripts', 'python.exe') : path.join(venvPath, 'bin', 'python'))
-      : 'python';
+    const pythonExe = await ensurePythonEnvironment(event);
       
     // OCR if enabled
     if (settings.useOcr) {

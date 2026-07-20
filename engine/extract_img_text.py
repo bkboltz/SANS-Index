@@ -1,5 +1,34 @@
 import io
 import argparse
+import sys
+import subprocess
+
+def ensure_ocr_dependencies():
+    packages = {
+        'fitz': 'PyMuPDF',
+        'numpy': 'numpy',
+        'tqdm': 'tqdm',
+        'doctr': 'python-doctr',
+        'torch': 'torch',
+        'PIL': 'Pillow'
+    }
+    missing = []
+    for mod, pkg in packages.items():
+        try:
+            __import__(mod)
+        except ImportError:
+            missing.append(pkg)
+    
+    if missing:
+        print(f"[+] First-time setup: Auto-installing OCR packages ({', '.join(missing)})...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+            print("[+] OCR packages installed successfully!")
+        except Exception as e:
+            print(f"[-] Failed to auto-install OCR packages: {e}")
+
+ensure_ocr_dependencies()
+
 import fitz
 import numpy as np
 import tqdm
