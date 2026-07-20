@@ -132,6 +132,7 @@ const elements = {
   curationCardLocal: document.getElementById('curation-card-local'),
   geminiSettingsContainer: document.getElementById('gemini-settings-container'),
   localSlmInfoContainer: document.getElementById('local-slm-info-container'),
+  aiCurationOptionsContainer: document.getElementById('ai-curation-options-container'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
@@ -3400,20 +3401,25 @@ function initAutoIndexingBindings() {
       });
     }
 
-    const validateGeminiKey = () => {
-      const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
-      const keyVal = elements.autoIndexGeminiKey.value.trim();
-      const hasKey = keyVal.length > 0;
+    const updateAiOptionsVisibility = () => {
+      const isEnabled = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+      if (elements.aiCurationOptionsContainer) {
+        if (isEnabled) {
+          elements.aiCurationOptionsContainer.classList.remove('hidden');
+        } else {
+          elements.aiCurationOptionsContainer.classList.add('hidden');
+        }
+      }
+    };
 
-      if (isLocalSlm || hasKey) {
+    const validateGeminiKey = () => {
+      if (elements.autoIndexUseAi) {
         elements.autoIndexUseAi.disabled = false;
-        elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
-      } else {
-        elements.autoIndexUseAi.disabled = true;
-        elements.autoIndexUseAi.checked = false;
-        localStorage.setItem('use_gemini_ai', 'false');
+      }
+      if (elements.autoIndexGeminiKey) {
         elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
       }
+      updateAiOptionsVisibility();
     };
 
     const setCurationEngine = (engineVal) => {
@@ -3475,6 +3481,13 @@ function initAutoIndexingBindings() {
 
     const initialKey = localStorage.getItem('gemini_api_key') || '';
     elements.autoIndexGeminiKey.value = initialKey;
+
+    // Checkbox restore
+    const savedUseAi = localStorage.getItem('use_gemini_ai') === 'true';
+    if (elements.autoIndexUseAi) {
+      elements.autoIndexUseAi.checked = savedUseAi;
+    }
+
     validateGeminiKey();
 
     // Auto-lock on startup if key is present
@@ -3486,12 +3499,6 @@ function initAutoIndexingBindings() {
       updateLockUi();
     }
 
-    // Checkbox restore
-    const savedUseAi = localStorage.getItem('use_gemini_ai') === 'true';
-    if (savedUseAi && !elements.autoIndexUseAi.disabled) {
-      elements.autoIndexUseAi.checked = true;
-    }
-
     elements.autoIndexGeminiKey.addEventListener('input', () => {
       localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
       validateGeminiKey();
@@ -3499,6 +3506,7 @@ function initAutoIndexingBindings() {
 
     elements.autoIndexUseAi.addEventListener('change', () => {
       localStorage.setItem('use_gemini_ai', elements.autoIndexUseAi.checked);
+      updateAiOptionsVisibility();
     });
 
     // Model selection persistence and sync
