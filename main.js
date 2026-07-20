@@ -1264,6 +1264,8 @@ ipcMain.handle('run-auto-index', async (event, args) => {
       indexArgs.push('--exclude-words', Array.from(excludeWordsSet).join(','));
     }
     
+    indexArgs.push(indexInputFile, indexOutputFile);
+    
     await new Promise((resolve, reject) => {
       const indexProc = spawn(pythonExe, indexArgs, { cwd: path.join(__dirname, 'engine') });
       let stderr = '';
