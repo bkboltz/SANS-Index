@@ -594,6 +594,7 @@ select:focus, input[type="text"]:focus, input[type="password"]:focus, input[type
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  position: relative;
 }
 
 .header-intro h1 {
@@ -866,23 +867,38 @@ th.sortable:hover .sort-icon {
 
 /* Column Dimensions */
 .col-book {
-  width: 15%;
+  width: 12%;
 }
 .col-pages {
-  width: 12%;
+  width: 20%;
   font-family: var(--font-mono);
   font-weight: 500;
-  white-space: nowrap !important;
+  white-space: normal !important;
+  word-break: break-word;
 }
 .col-topic {
-  width: 33%;
+  width: 38%;
   font-weight: 600;
   color: var(--text-primary);
 }
 .col-notes {
-  width: 32%;
+  width: 25%;
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+/* Page Badge Pill */
+.page-badge {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  margin: 2px 1px;
+  font-family: var(--font-mono);
+  border: 1px solid;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 .col-actions {
   width: 8%;
@@ -2846,6 +2862,231 @@ tr.auto-row:hover {
   opacity: 0.25;
   cursor: not-allowed;
 }
+
+/* ==========================================================================
+   AUTO-INDEX WIZARD & QUIZ HUB STYLES
+   ========================================================================== */
+
+/* Wizard Progress Bar */
+.wizard-progress-container {
+  position: relative;
+  margin-bottom: 32px;
+}
+.wizard-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+.wizard-step-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 3;
+  width: 75px;
+}
+.wizard-step-indicator .step-num {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.wizard-step-indicator.active .step-num {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #0f172a;
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.4);
+}
+.wizard-step-indicator.completed .step-num {
+  border-color: var(--color-accent);
+  background: rgba(20, 184, 166, 0.15);
+  color: var(--color-accent);
+}
+.wizard-step-indicator .step-text {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: center;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+.wizard-step-indicator.active .step-text {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+.wizard-step-indicator.completed .step-text {
+  color: var(--text-secondary);
+}
+
+.wizard-step-panel {
+  animation: fadeIn 0.25s ease-out;
+}
+.wizard-step-panel.hidden {
+  display: none !important;
+}
+
+/* Pulse Glow Hover Button */
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 4px rgba(20, 184, 166, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(20, 184, 166, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 4px rgba(20, 184, 166, 0.1);
+  }
+}
+.pulse-glow-btn {
+  position: relative;
+  transition: all 0.3s ease;
+}
+.pulse-glow-btn:hover {
+  animation: pulseGlow 1.8s infinite;
+  background-color: rgba(20, 184, 166, 0.1) !important;
+  color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+}
+
+/* Quiz Option Button List */
+.quiz-option-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* Choice Buttons */
+.quiz-choice-btn {
+  width: 100%;
+  text-align: left;
+  padding: 14px 18px;
+  background: rgba(30, 41, 59, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1.45;
+}
+.quiz-choice-btn .option-letter {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.quiz-choice-btn:hover:not(:disabled) .option-letter {
+  background: rgba(20, 184, 166, 0.15);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.quiz-choice-btn.selected {
+  border-color: var(--color-accent) !important;
+  background: rgba(20, 184, 166, 0.06) !important;
+}
+.quiz-choice-btn.selected .option-letter {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #0f172a;
+}
+.quiz-choice-btn.correct {
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+}
+.quiz-choice-btn.correct .option-letter {
+  background: #10b981;
+  border-color: #10b981;
+  color: #0f172a;
+}
+.quiz-choice-btn.incorrect {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+.quiz-choice-btn.incorrect .option-letter {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Scorecard Review item list */
+.scorecard-review-item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+.scorecard-review-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Floating Bouncing Notification Tag */
+.bounce-tag {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  pointer-events: none;
+  animation: slow-bounce 2s infinite ease-in-out;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slow-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
 
 
 

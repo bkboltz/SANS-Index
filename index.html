@@ -168,6 +168,13 @@
           <p class="summary-text">Index your course topics for rapid lookups during your open-book exam.</p>
         </div>
         <div class="header-actions">
+          <button id="practice-quiz-btn" class="btn btn-secondary pulse-glow-btn" style="margin-right: 8px;">
+            <i data-lucide="brain"></i>
+            <span>Practice Quiz</span>
+          </button>
+          <div id="quiz-new-questions-toast" class="bounce-tag hidden">
+            New questions added!
+          </div>
           <button id="print-index-btn" class="btn btn-primary">
             <i data-lucide="printer"></i>
             <span>Print Index</span>
@@ -442,21 +449,57 @@
         <!-- Overhauled Form Section -->
         <section class="auto-index-form-container panel-container" style="padding: 24px;">
           <form id="auto-index-form">
-            <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: start;">
+            <!-- Wizard Progress Bar Indicator -->
+            <div class="wizard-progress-container">
+              <div class="wizard-steps">
+                <div class="wizard-step-indicator active" data-step="1">
+                  <div class="step-num">1</div>
+                  <div class="step-text">Source</div>
+                </div>
+                <div class="wizard-step-indicator" data-step="2">
+                  <div class="step-num">2</div>
+                  <div class="step-text">Watermark</div>
+                </div>
+                <div class="wizard-step-indicator" data-step="3">
+                  <div class="step-num">3</div>
+                  <div class="step-text">AI Curation</div>
+                </div>
+                <div class="wizard-step-indicator" data-step="4">
+                  <div class="step-num">4</div>
+                  <div class="step-text">Quiz Setup</div>
+                </div>
+                <div class="wizard-step-indicator" data-step="5">
+                  <div class="step-num">5</div>
+                  <div class="step-text">Review</div>
+                </div>
+                <!-- Connector Line -->
+                <div style="position: absolute; top: 16px; left: 0; right: 0; height: 2px; background: var(--border-color); z-index: 1;"></div>
+                <div id="wizard-progress-bar" style="position: absolute; top: 16px; left: 0; width: 0%; height: 2px; background: var(--color-accent); z-index: 2; transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+
+            <!-- Step Contents -->
+            <div id="wizard-step-containers" style="margin-top: 24px;">
               
-              <!-- Left Column: Source Book & Watermark Configuration -->
-              <div style="display: flex; flex-direction: column; gap: 20px;">
+              <!-- Step 1: Source & Decryption -->
+              <div class="wizard-step-panel" id="step-panel-1">
+                <div style="margin-bottom: 20px;">
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 1: Source & Decryption</h3>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Choose the course book PDF you want to parse and index.</p>
+                </div>
                 
-                <!-- Panel 1: Source Config -->
-                <div style="display: flex; flex-direction: column; gap: 16px; background: rgba(30, 41, 59, 0.15); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
-                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">1. Source Configuration</h4>
-                  
+                <div style="display: flex; flex-direction: column; gap: 16px;">
                   <!-- Book Select -->
                   <div class="form-group">
                     <label for="auto-index-book-select">Target Book</label>
-                    <select id="auto-index-book-select">
-                      <!-- Populated dynamically -->
-                    </select>
+                    <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                      <select id="auto-index-book-select" class="flex-1">
+                        <!-- Populated dynamically -->
+                      </select>
+                      <button type="button" id="auto-index-add-book-btn" class="btn btn-secondary" style="height: 38px; width: 38px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0;" title="Add Book">
+                        <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+                      </button>
+                    </div>
                   </div>
 
                   <!-- PDF File Drop Area -->
@@ -474,60 +517,121 @@
                     <label for="auto-index-password">PDF Password (if encrypted)</label>
                     <input type="password" id="auto-index-password" placeholder="SANS Decryption Password">
                   </div>
-                </div>
-
-                <!-- Panel 2: Watermark Config -->
-                <div style="display: flex; flex-direction: column; gap: 16px; background: rgba(30, 41, 59, 0.15); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
-                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">2. PDF Watermark Removal (Optional)</h4>
-                  <span style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.45; display: block; margin-top: 4px;">By inputting the below information it eliminates false entries that are caused by the watermark that SANS E-Books have.</span>
                   
-                  <!-- Watermark Fields -->
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                      <label for="auto-index-fname">First Name</label>
-                      <input type="text" id="auto-index-fname" placeholder="John">
-                    </div>
-                    <div class="form-group">
-                      <label for="auto-index-lname">Last Name</label>
-                      <input type="text" id="auto-index-lname" placeholder="Doe">
-                    </div>
+                  <!-- Settings Accordion -->
+                  <div class="advanced-settings-header collapsible-header" id="auto-index-settings-toggle" style="margin-top: 12px;">
+                    <i data-lucide="settings" class="settings-icon"></i>
+                    <span>Advanced Indexing Parameters (Optional)</span>
+                    <i data-lucide="chevron-right" class="collapse-icon"></i>
                   </div>
                   
-                  <div class="form-group">
-                    <label for="auto-index-email">Email Address</label>
-                    <input type="email" id="auto-index-email" placeholder="john.doe@sans.org">
-                  </div>
+                  <div id="auto-index-settings-content" class="advanced-settings-content hidden" style="padding: 16px; border: 1px solid var(--border-color); border-top: none; border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); background: rgba(30, 41, 59, 0.15);">
+                    <div class="form-grid">
+                      <!-- Page Offset -->
+                      <div class="form-group flex-1">
+                        <label for="auto-index-offset" title="Number of pages to skip at the start of the PDF (e.g. index/cover pages)">Page Number Offset</label>
+                        <input type="number" id="auto-index-offset" value="2" min="0">
+                      </div>
 
-                  <!-- Warnings & Privacy Notes -->
-                  <div style="margin-top: 4px; font-size: 0.72rem; line-height: 1.45; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 12px;">
-                    <span style="display: inline-flex; align-items: flex-start; gap: 6px; color: #eab308;">
-                      <i data-lucide="alert-triangle" style="width: 14px; height: 14px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
-                      <span><strong>Warning:</strong> If your name is a common word, all occurrences of that word will be excluded from the generated index.</span>
-                    </span>
-                    <span style="display: inline-flex; align-items: flex-start; gap: 6px;">
-                      <i data-lucide="info" style="width: 14px; height: 14px; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px;"></i>
-                      <span>This information is never saved, stored, or transmitted. It is processed entirely locally in memory.</span>
-                    </span>
-                    <span style="display: inline-flex; align-items: flex-start; gap: 6px;">
-                      <i data-lucide="info" style="width: 14px; height: 14px; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px;"></i>
-                      <span>Based on the core indexing logic from the original NoStoneUnturned tool by Sketch-Turner.</span>
-                    </span>
+                      <!-- Min Length -->
+                      <div class="form-group flex-1">
+                        <label for="auto-index-min-len">Min Word Length</label>
+                        <input type="number" id="auto-index-min-len" value="2" min="1">
+                      </div>
+
+                      <!-- Max Length -->
+                      <div class="form-group flex-1">
+                        <label for="auto-index-max-len">Max Word Length</label>
+                        <input type="number" id="auto-index-max-len" value="50" min="1">
+                      </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-top: 15px;">
+                      <!-- Zipf Score -->
+                      <div class="form-group flex-1">
+                        <label for="auto-index-zipf" title="Exclude words more common than this on a logarithmic scale (default 4.0). Lower = stricter filtering.">Max Zipf Frequency Score</label>
+                        <input type="number" id="auto-index-zipf" value="4.0" step="0.1" min="1.0" max="7.0">
+                      </div>
+
+                      <!-- Min Frequency -->
+                      <div class="form-group flex-1">
+                        <label for="auto-index-min-freq" title="Exclude words that appear on fewer than N pages.">Min Page Frequency</label>
+                        <input type="number" id="auto-index-min-freq" value="1" min="1">
+                      </div>
+
+                      <!-- Max Frequency -->
+                      <div class="form-group flex-1">
+                        <label for="auto-index-max-freq" title="Exclude words that appear on more than N pages (removes noise).">Max Page Frequency</label>
+                        <input type="number" id="auto-index-max-freq" value="10" min="1">
+                      </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                      <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
+                        <input type="checkbox" id="auto-index-use-ocr">
+                        <span>Use OCR Engine to scan image-only / scanned pages (Slow, requires OCR dependencies)</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-
               </div>
 
-              <!-- Right Column: Gemini AI Curation -->
-              <div style="display: flex; flex-direction: column; gap: 16px; background: rgba(30, 41, 59, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; min-height: 100%;">
-                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">3. Gemini AI Curation (Beta)</h4>
+              <!-- Step 2: PDF Watermark Removal (Optional) -->
+              <div class="wizard-step-panel hidden" id="step-panel-2">
+                <div style="margin-bottom: 20px;">
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 2: PDF Watermark Removal (Optional)</h3>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Exclude watermark terms to prevent noise in the generated index.</p>
+                </div>
                 
-                <!-- Highly Prominent AI Enable Toggle Container -->
-                <div style="background: rgba(20, 184, 166, 0.06); border: 1px solid rgba(20, 184, 166, 0.2); padding: 12px 16px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                  <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <span style="font-weight: 600; color: #2dd4bf; font-size: 0.88rem;">Enable AI Curation</span>
-                    <span style="font-size: 0.72rem; color: var(--text-muted);">Deduplicate, group, and clean up index terms</span>
+                <span style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; display: block; margin-bottom: 16px;">
+                  By inputting the below information it eliminates false entries that are caused by the watermark that SANS E-Books have.
+                </span>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                  <div class="form-group">
+                    <label for="auto-index-fname">First Name</label>
+                    <input type="text" id="auto-index-fname" placeholder="John">
                   </div>
-                  <!-- Switch Toggle -->
+                  <div class="form-group">
+                    <label for="auto-index-lname">Last Name</label>
+                    <input type="text" id="auto-index-lname" placeholder="Doe">
+                  </div>
+                </div>
+                
+                <div class="form-group">
+                  <label for="auto-index-email">Email Address</label>
+                  <input type="email" id="auto-index-email" placeholder="john.doe@sans.org">
+                </div>
+
+                <!-- Warnings & Privacy Notes -->
+                <div style="margin-top: 24px; font-size: 0.78rem; line-height: 1.45; color: var(--text-secondary); display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 16px;">
+                  <span style="display: inline-flex; align-items: flex-start; gap: 8px; color: #eab308; padding: 10px; background: rgba(234, 179, 8, 0.05); border: 1px solid rgba(234, 179, 8, 0.15); border-radius: var(--radius-sm);">
+                    <i data-lucide="alert-triangle" style="width: 16px; height: 16px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
+                    <span><strong>Warning:</strong> If your name is a common word, all occurrences of that word will be excluded from the generated index.</span>
+                  </span>
+                  <span style="display: inline-flex; align-items: flex-start; gap: 8px;">
+                    <i data-lucide="info" style="width: 16px; height: 16px; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>This information is never saved, stored, or transmitted. It is processed entirely locally in memory.</span>
+                  </span>
+                  <span style="display: inline-flex; align-items: flex-start; gap: 8px;">
+                    <i data-lucide="info" style="width: 16px; height: 16px; color: var(--text-secondary); flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>Based on the core indexing logic from the original NoStoneUnturned tool by Sketch-Turner.</span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Step 3: Gemini AI Curation (Beta) -->
+              <div class="wizard-step-panel hidden" id="step-panel-3">
+                <div style="margin-bottom: 20px;">
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 3: Gemini AI Curation (Beta)</h3>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Use Gemini AI to clean up, deduplicate, and group extracted terms.</p>
+                </div>
+                
+                <div style="background: rgba(20, 184, 166, 0.06); border: 1px solid rgba(20, 184, 166, 0.2); padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-weight: 600; color: #2dd4bf; font-size: 0.9rem;">Enable AI Curation</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Deduplicate, group, and clean up index terms</span>
+                  </div>
                   <label class="switch-toggle">
                     <input type="checkbox" id="auto-index-use-ai" disabled>
                     <span class="slider-toggle"></span>
@@ -535,8 +639,8 @@
                 </div>
 
                 <!-- Gemini API Key -->
-                <div class="form-group" style="position: relative; margin-top: 4px;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <div class="form-group" style="position: relative; margin-bottom: 16px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                     <label for="auto-index-gemini-key" style="margin: 0;">Gemini API Key</label>
                     <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.72rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-weight: 500;">
                       <i data-lucide="external-link" style="width: 11px; height: 11px;"></i>
@@ -556,7 +660,7 @@
                 </div>
 
                 <!-- Gemini Model Selection -->
-                <div class="form-group" style="margin-top: 4px;">
+                <div class="form-group">
                   <label for="auto-index-model-select">Gemini Model Selection</label>
                   <select id="auto-index-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
                     <option value="gemini-flash-latest" selected>Gemini 1.5 Flash (Default - Recommended, Fast)</option>
@@ -570,70 +674,125 @@
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Settings Accordion -->
-            <div class="advanced-settings-header collapsible-header" id="auto-index-settings-toggle" style="margin-top: 24px;">
-              <i data-lucide="settings" class="settings-icon"></i>
-              <span>Advanced Indexing Parameters (Optional)</span>
-              <i data-lucide="chevron-right" class="collapse-icon"></i>
-            </div>
-            
-            <div id="auto-index-settings-content" class="advanced-settings-content hidden" style="padding: 16px; border: 1px solid var(--border-color); border-top: none; border-bottom-left-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); background: rgba(30, 41, 59, 0.15);">
-              <div class="form-grid">
-                <!-- Page Offset -->
-                <div class="form-group flex-1">
-                  <label for="auto-index-offset" title="Number of pages to skip at the start of the PDF (e.g. index/cover pages)">Page Number Offset</label>
-                  <input type="number" id="auto-index-offset" value="2" min="0">
+              <!-- Step 4: Practice Quiz Setup (Optional) -->
+              <div class="wizard-step-panel hidden" id="step-panel-4">
+                <div style="margin-bottom: 20px;">
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 4: Practice Quiz Setup (Optional)</h3>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Automatically generate mock questions based on the PDF content.</p>
+                </div>
+                
+                <div style="background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.2); padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-weight: 600; color: #a78bfa; font-size: 0.9rem;">Generate Practice Quiz</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Create multiple-choice questions for the quiz hub</span>
+                  </div>
+                  <label class="switch-toggle">
+                    <input type="checkbox" id="auto-index-generate-quiz">
+                    <span class="slider-toggle"></span>
+                  </label>
                 </div>
 
-                <!-- Min Length -->
-                <div class="form-group flex-1">
-                  <label for="auto-index-min-len">Min Word Length</label>
-                  <input type="number" id="auto-index-min-len" value="2" min="1">
-                </div>
-
-                <!-- Max Length -->
-                <div class="form-group flex-1">
-                  <label for="auto-index-max-len">Max Word Length</label>
-                  <input type="number" id="auto-index-max-len" value="50" min="1">
-                </div>
-              </div>
-
-              <div class="form-grid" style="margin-top: 15px;">
-                <!-- Zipf Score -->
-                <div class="form-group flex-1">
-                  <label for="auto-index-zipf" title="Exclude words more common than this on a logarithmic scale (default 4.0). Lower = stricter filtering.">Max Zipf Frequency Score</label>
-                  <input type="number" id="auto-index-zipf" value="4.0" step="0.1" min="1.0" max="7.0">
-                </div>
-
-                <!-- Min Frequency -->
-                <div class="form-group flex-1">
-                  <label for="auto-index-min-freq" title="Exclude words that appear on fewer than N pages.">Min Page Frequency</label>
-                  <input type="number" id="auto-index-min-freq" value="1" min="1">
-                </div>
-
-                <!-- Max Frequency -->
-                <div class="form-group flex-1">
-                  <label for="auto-index-max-freq" title="Exclude words that appear on more than N pages (removes noise).">Max Page Frequency</label>
-                  <input type="number" id="auto-index-max-freq" value="10" min="1">
+                <!-- Quiz parameters (Visible only when toggle checked) -->
+                <div id="quiz-generation-settings" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
+                  <div class="form-group">
+                    <label for="auto-index-quiz-count">Number of Questions</label>
+                    <select id="auto-index-quiz-count" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
+                      <option value="10" selected>10 Questions</option>
+                      <option value="20">20 Questions</option>
+                      <option value="50">50 Questions</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="auto-index-quiz-difficulty">Difficulty Level</label>
+                    <select id="auto-index-quiz-difficulty" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
+                      <option value="Conceptual" selected>Conceptual (Definitions, Architecture)</option>
+                      <option value="Practical">Practical (Commands, Tool Syntax, Logs)</option>
+                      <option value="Advanced">Advanced (Scenarios, Attack Vector Analysis)</option>
+                    </select>
+                  </div>
+                  
+                  <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; padding: 10px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                    <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--color-accent); flex-shrink: 0; margin-top: 1px;"></i>
+                    <span>This runs a separate AI generation pass that scans the textbook text, creating tailored cyber-security multiple choice questions.</span>
+                  </div>
                 </div>
               </div>
 
-              <div class="form-group" style="margin-top: 15px;">
-                <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
-                  <input type="checkbox" id="auto-index-use-ocr">
-                  <span>Use OCR Engine to scan image-only / scanned pages (Slow, requires OCR dependencies)</span>
-                </label>
+              <!-- Step 5: Review & API Warnings -->
+              <div class="wizard-step-panel hidden" id="step-panel-5">
+                <div style="margin-bottom: 20px;">
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 5: Review & API Warnings</h3>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Confirm your setup before initiating the extraction pipeline.</p>
+                </div>
+                
+                <!-- Config Summary Card -->
+                <div style="background: rgba(30, 41, 59, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px;">
+                  <h4 style="margin: 0; font-size: 0.88rem; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 8px;">Configuration Summary</h4>
+                  
+                  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 24px; font-size: 0.82rem;">
+                    <div>
+                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Target Book:</span>
+                      <strong id="summary-target-book" style="color: var(--text-primary);">Not selected</strong>
+                    </div>
+                    <div>
+                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">PDF File:</span>
+                      <strong id="summary-pdf-file" style="color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;" title="">Not selected</strong>
+                    </div>
+                    <div>
+                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Watermark Filter:</span>
+                      <strong id="summary-watermark-status" style="color: var(--text-primary);">Disabled</strong>
+                    </div>
+                    <div>
+                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">AI Curation:</span>
+                      <strong id="summary-ai-curation" style="color: var(--text-primary);">Disabled</strong>
+                    </div>
+                    <div>
+                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Gemini Model:</span>
+                      <strong id="summary-gemini-model" style="color: var(--text-primary);">-</strong>
+                    </div>
+                    <div>
+                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Practice Quiz:</span>
+                      <strong id="summary-quiz-status" style="color: var(--text-primary);">Disabled</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- API Free Tier Disclaimer Card -->
+                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-left: 4px solid #ef4444; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px;">
+                  <h4 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #f87171; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="alert-circle" style="width: 16px; height: 16px;"></i>
+                    API Free Tier Rate Limit Advisory
+                  </h4>
+                  <p style="margin: 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
+                    Google's free Gemini API key is subject to strict constraints, including <strong>15 RPM (Requests Per Minute)</strong> and <strong>Tokens Per Minute (TPM) limits</strong>. 
+                  </p>
+                  <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.75rem; color: var(--text-muted); line-height: 1.45;">
+                    <li>Analyzing a complete SANS textbook involves substantial context, which can trigger rate limit exceptions (such as TPM exhaustion).</li>
+                    <li>To prevent hitting daily caps or experiencing request failures, we recommend indexing <strong>no more than 1-2 books per day</strong>.</li>
+                    <li>If you experience persistent API errors, consider upgrading your Google AI Studio key to a pay-as-you-go plan, or spacing out your indexing tasks.</li>
+                  </ul>
+                </div>
               </div>
             </div>
 
-            <!-- Submit Button -->
-            <div class="form-actions-row" style="margin-top: 24px; display: flex; justify-content: flex-end;">
-              <button type="submit" id="start-indexing-btn" class="btn btn-accent btn-large" style="padding: 12px 28px; font-size: 0.95rem; border-radius: var(--radius-md);">
-                <i data-lucide="play" style="width: 16px; height: 16px; margin-right: 6px;"></i>
-                <span>Build Index from PDF</span>
+            <!-- Wizard Navigation -->
+            <div class="wizard-nav-row" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <button type="button" id="wizard-prev-btn" class="btn btn-secondary hidden" style="display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+                <span>Previous</span>
               </button>
+              <div style="margin-left: auto; display: flex; gap: 12px;">
+                <button type="button" id="wizard-next-btn" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span>Next</span>
+                  <i data-lucide="arrow-right" style="width: 14px; height: 14px;"></i>
+                </button>
+                <button type="submit" id="start-indexing-btn" class="btn btn-accent btn-large hidden" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <i data-lucide="play" style="width: 16px; height: 16px;"></i>
+                  <span>Build Index from PDF</span>
+                </button>
+              </div>
             </div>
           </form>
         </section>
@@ -698,6 +857,18 @@
             </div>
           </div>
 
+          <!-- Quiz Generation Error alert box -->
+          <div id="quiz-generation-error-alert" class="hidden" style="display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; margin: 16px 0; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; border-radius: 4px; font-size: 0.8rem; color: var(--text-primary); line-height: 1.45;">
+            <i data-lucide="alert-circle" style="width: 16px; height: 16px; color: #ef4444; flex-shrink: 0; margin-top: 1px;"></i>
+            <div style="flex: 1;">
+              <strong style="color: #f87171;">Practice Quiz Generation Failed:</strong> 
+              <span id="quiz-generation-error-text" style="color: var(--text-secondary);">Google's free tier rate limit was exceeded. Try again later.</span>
+              <p style="color: var(--text-muted); margin: 6px 0 0 0; font-size: 0.75rem;">
+                Your index terms were successfully extracted and curated. However, the AI quiz generator encountered an error (likely due to TPM/RPM rate limits or daily API quotas). You can still import your index below, and try generating a quiz next time you index or when your API limit resets tomorrow.
+              </p>
+            </div>
+          </div>
+
           <div class="table-controls-container" style="border: none; padding: 15px 0 10px 0; background: transparent;">
             <div class="search-wrapper">
               <i data-lucide="search" class="search-icon"></i>
@@ -725,6 +896,98 @@
             </table>
           </div>
         </section>
+      </div>
+
+      <!-- SANS Practice Quiz Workspace View -->
+      <div id="quiz-practice-view" class="workspace-view hidden no-print" style="max-width: 800px; margin: 0 auto; padding: 24px;">
+        <div class="panel-container" style="padding: 30px; position: relative;">
+          <!-- Top bar: progress & score -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span id="quiz-progress-text" style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Question 1 of 10</span>
+              <div style="width: 200px; height: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden;">
+                <div id="quiz-progress-fill" style="width: 10%; height: 100%; background: var(--color-accent); transition: width 0.3s;"></div>
+              </div>
+            </div>
+            
+            <div id="quiz-live-score-container" class="hidden" style="text-align: right;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Current Score</span>
+              <strong id="quiz-live-score" style="font-size: 1.1rem; color: #10b981;">0/0</strong>
+            </div>
+            
+            <button id="quiz-exit-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">
+              <i data-lucide="log-out" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i>
+              <span>Exit Quiz</span>
+            </button>
+          </div>
+          
+          <!-- Question Display -->
+          <div id="quiz-question-container" style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+              <span id="quiz-question-book-badge" class="badge" style="background: rgba(20, 184, 166, 0.1); color: var(--color-accent); font-size: 0.72rem; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(20, 184, 166, 0.2);">Book 1</span>
+              <span id="quiz-question-diff-badge" class="badge" style="background: rgba(124, 58, 237, 0.1); color: #a78bfa; font-size: 0.72rem; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(124, 58, 237, 0.2);">Conceptual</span>
+            </div>
+            <h3 id="quiz-question-text" style="font-size: 1.25rem; font-weight: 600; line-height: 1.5; color: var(--text-primary); margin: 0 0 20px 0;">Which utility is used to capture network packets?</h3>
+            
+            <div id="quiz-options-container" class="quiz-option-list">
+              <!-- Option buttons are dynamically injected here -->
+            </div>
+          </div>
+          
+          <!-- Explanation / Feedback Panel (Hidden by default) -->
+          <div id="quiz-feedback-panel" class="hidden" style="margin-bottom: 24px; padding: 20px; background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color); border-radius: var(--radius-md); animation: slideUp 0.3s ease;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span id="quiz-feedback-indicator" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.95rem;">
+                <i id="quiz-feedback-icon" data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i>
+                <span id="quiz-feedback-title">Correct!</span>
+              </span>
+            </div>
+            <p id="quiz-explanation-text" style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);">Explanation text goes here...</p>
+          </div>
+          
+          <!-- Next / Submit navigation -->
+          <div style="display: flex; justify-content: flex-end;">
+            <button id="quiz-next-question-btn" class="btn btn-accent" style="padding: 10px 24px;">
+              <span>Next Question</span>
+              <i data-lucide="chevron-right" style="width: 16px; height: 16px; margin-left: 4px;"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- SANS Practice Quiz Scorecard View -->
+      <div id="quiz-scorecard-view" class="workspace-view hidden no-print" style="max-width: 600px; margin: 0 auto; padding: 24px;">
+        <div class="panel-container" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 24px;">
+          <div style="background: rgba(20, 184, 166, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--color-accent); border: 2px solid rgba(20, 184, 166, 0.2);">
+            <i data-lucide="trophy" style="width: 40px; height: 40px;"></i>
+          </div>
+          
+          <div>
+            <h2 style="margin: 0 0 8px 0; font-size: 1.75rem; font-weight: 700; color: var(--text-primary);">Quiz Completed!</h2>
+            <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted);">Here is your performance breakdown.</p>
+          </div>
+          
+          <div style="display: flex; justify-content: center; gap: 40px; margin: 10px 0; width: 100%; max-width: 400px;">
+            <div style="background: rgba(30, 41, 59, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; flex: 1; text-align: center;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Score</span>
+              <strong id="scorecard-ratio" style="font-size: 1.8rem; color: var(--color-accent);">8/10</strong>
+            </div>
+            <div style="background: rgba(30, 41, 59, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; flex: 1; text-align: center;">
+              <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Accuracy</span>
+              <strong id="scorecard-percent" style="font-size: 1.8rem; color: #10b981;">80%</strong>
+            </div>
+          </div>
+          
+          <!-- Detailed questions breakdown -->
+          <div id="scorecard-review-container" style="text-align: left; width: 100%; max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.3); padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+            <!-- Review items injected here -->
+          </div>
+          
+          <div style="display: flex; gap: 16px; width: 100%; justify-content: center;">
+            <button id="scorecard-retry-btn" class="btn btn-accent" style="padding: 10px 24px; flex: 1; max-width: 180px;">Try Again</button>
+            <button id="scorecard-close-btn" class="btn btn-secondary" style="padding: 10px 24px; flex: 1; max-width: 180px;">Back to Hub</button>
+          </div>
+        </div>
       </div>
 
     </main>
@@ -889,6 +1152,61 @@
         <button id="ai-curation-cancel-btn" class="btn btn-secondary">Go Back</button>
         <button id="ai-curation-continue-btn" class="btn btn-accent">Continue</button>
       </div>
+    </div>
+  </dialog>
+
+  <!-- Practice Quiz Dialog/Modal -->
+  <dialog id="quiz-config-dialog" class="custom-dialog" style="max-width: 500px;">
+    <div class="dialog-content">
+      <h3 style="margin: 0 0 16px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="brain" style="width: 20px; height: 20px; color: var(--color-accent);"></i>
+        <span>SANS Practice Quiz Hub</span>
+      </h3>
+      
+      <form id="quiz-config-form">
+        <!-- Select Books checklist -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 8px;">Select Books (Mix Subjects)</label>
+          <div id="quiz-config-books-checklist" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-app);">
+            <!-- Populated dynamically with checkboxes -->
+          </div>
+        </div>
+        
+        <!-- Question Count -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="quiz-config-count">Question Count</label>
+          <select id="quiz-config-count" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
+            <option value="5">5 Questions</option>
+            <option value="10" selected>10 Questions</option>
+            <option value="20">20 Questions</option>
+            <option value="50">50 Questions</option>
+          </select>
+        </div>
+        
+        <!-- Difficulty -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="quiz-config-difficulty">Difficulty Level</label>
+          <select id="quiz-config-difficulty" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
+            <option value="Conceptual" selected>Conceptual</option>
+            <option value="Practical">Practical</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+        </div>
+        
+        <!-- Feedback Mode -->
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label for="quiz-config-feedback">Feedback Mode</label>
+          <select id="quiz-config-feedback" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
+            <option value="immediate" selected>Immediate Feedback (Shows answer & explanation immediately)</option>
+            <option value="graded">Graded at the End (Shows scorecard & review at the end)</option>
+          </select>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary close-dialog-btn" id="quiz-config-close-btn">Cancel</button>
+          <button type="submit" class="btn btn-accent" id="quiz-config-start-btn">Start Practice Quiz</button>
+        </div>
+      </form>
     </div>
   </dialog>
 

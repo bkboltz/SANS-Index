@@ -170,7 +170,58 @@ const elements = {
   previewSelectAll: document.getElementById('preview-select-all'),
   previewSelectNone: document.getElementById('preview-select-none'),
   previewTableBody: document.getElementById('preview-table-body'),
-  previewHeaderCheckbox: document.getElementById('preview-header-checkbox')
+  previewHeaderCheckbox: document.getElementById('preview-header-checkbox'),
+  quizNewQuestionsToast: document.getElementById('quiz-new-questions-toast'),
+
+  // Practice Quiz Hub & Setup elements
+  practiceQuizBtn: document.getElementById('practice-quiz-btn'),
+  quizConfigDialog: document.getElementById('quiz-config-dialog'),
+  quizConfigForm: document.getElementById('quiz-config-form'),
+  quizConfigBooksChecklist: document.getElementById('quiz-config-books-checklist'),
+  quizConfigCount: document.getElementById('quiz-config-count'),
+  quizConfigDifficulty: document.getElementById('quiz-config-difficulty'),
+  quizConfigFeedback: document.getElementById('quiz-config-feedback'),
+  quizConfigCloseBtn: document.getElementById('quiz-config-close-btn'),
+  
+  quizPracticeView: document.getElementById('quiz-practice-view'),
+  quizProgressText: document.getElementById('quiz-progress-text'),
+  quizProgressFill: document.getElementById('quiz-progress-fill'),
+  quizLiveScoreContainer: document.getElementById('quiz-live-score-container'),
+  quizLiveScore: document.getElementById('quiz-live-score'),
+  quizExitBtn: document.getElementById('quiz-exit-btn'),
+  
+  quizQuestionContainer: document.getElementById('quiz-question-container'),
+  quizQuestionBookBadge: document.getElementById('quiz-question-book-badge'),
+  quizQuestionDiffBadge: document.getElementById('quiz-question-diff-badge'),
+  quizQuestionText: document.getElementById('quiz-question-text'),
+  quizOptionsContainer: document.getElementById('quiz-options-container'),
+  
+  quizFeedbackPanel: document.getElementById('quiz-feedback-panel'),
+  quizFeedbackIndicator: document.getElementById('quiz-feedback-indicator'),
+  quizFeedbackIcon: document.getElementById('quiz-feedback-icon'),
+  quizFeedbackTitle: document.getElementById('quiz-feedback-title'),
+  quizExplanationText: document.getElementById('quiz-explanation-text'),
+  quizNextQuestionBtn: document.getElementById('quiz-next-question-btn'),
+  
+  quizScorecardView: document.getElementById('quiz-scorecard-view'),
+  scorecardRatio: document.getElementById('scorecard-ratio'),
+  scorecardPercent: document.getElementById('scorecard-percent'),
+  scorecardReviewContainer: document.getElementById('scorecard-review-container'),
+  scorecardRetryBtn: document.getElementById('scorecard-retry-btn'),
+  scorecardCloseBtn: document.getElementById('scorecard-close-btn'),
+
+  autoIndexGenerateQuiz: document.getElementById('auto-index-generate-quiz'),
+  quizGenerationSettings: document.getElementById('quiz-generation-settings'),
+  autoIndexQuizCount: document.getElementById('auto-index-quiz-count'),
+  autoIndexQuizDifficulty: document.getElementById('auto-index-quiz-difficulty'),
+  quizGenerationErrorAlert: document.getElementById('quiz-generation-error-alert'),
+  quizGenerationErrorText: document.getElementById('quiz-generation-error-text'),
+
+  // Wizard step buttons & progress
+  wizardPrevBtn: document.getElementById('wizard-prev-btn'),
+  wizardNextBtn: document.getElementById('wizard-next-btn'),
+  wizardProgressBar: document.getElementById('wizard-progress-bar'),
+  autoIndexAddBookBtn: document.getElementById('auto-index-add-book-btn')
 };
 
 // Application State Store
@@ -179,6 +230,7 @@ let state = {
   books: [],
   entries: [],
   todos: [],
+  quizzes: [],
   currentCourseId: null
 };
 
@@ -190,6 +242,10 @@ let activeAutocompleteIndex = -1;
 let courseAutocompleteIndex = -1;
 let bannerTimeoutId = null;
 let promptedCourses = new Set();
+
+// Global temporary variables for generated quizzes
+let lastGeneratedQuiz = null;
+let lastQuizError = null;
 
 // ==========================================================================
 // APP INITIALIZATION & SYNC
@@ -205,6 +261,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.books = loadedData.books || [];
     state.entries = loadedData.entries || [];
     state.todos = loadedData.todos || [];
+    state.quizzes = loadedData.quizzes || [];
+    
+    // Migrate existing entries to compress pages
+    let migrated = false;
+    state.entries.forEach(entry => {
+      if (entry && entry.pages) {
+        const compressed = compressPageList(entry.pages);
+        if (compressed !== entry.pages) {
+          entry.pages = compressed;
+          migrated = true;
+        }
+      }
+    });
+    if (migrated) {
+      saveState();
+    }
     
     if (state.courses.length > 0) {
       state.currentCourseId = state.courses[0].id;
@@ -370,6 +442,14 @@ function escapeHtml(text) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function renderPageBadgesHtml(pagesStr, bookColor) {
+  if (!pagesStr) return '';
+  const parts = pagesStr.split(',').map(p => p.trim()).filter(p => p.length > 0);
+  return parts.map(part => {
+    return `<span class="page-badge" style="border-color: ${bookColor}33; background-color: ${bookColor}12; color: ${bookColor};">${escapeHtml(part)}</span>`;
+  }).join(' ');
 }
 
 let activeSubtaskInputTodoId = null;
@@ -856,7 +936,7 @@ function renderEntries() {
             </span>
           </div>
         </td>
-        <td class="col-pages">${entry.pages}</td>
+        <td class="col-pages">${renderPageBadgesHtml(entry.pages, bookColor)}</td>
         <td class="col-topic">${highlightText(entry.topic, query)}${autoBadgeHtml}</td>
         <td class="col-notes">${entry.notes ? highlightText(formatNoteMarkup(entry.notes), query) : ''}</td>
         <td class="col-actions no-print">
@@ -1931,6 +2011,70 @@ function deleteBook(bookId) {
 // ==========================================================================
 // PAGE VALIDATION & SEARCH CONTAINMENT HELPERS
 // ==========================================================================
+// Helper: compress sequential pages list into ranges (e.g., 4, 5, 6, 7, 8 -> 4-8)
+function compressPageList(pagesStr) {
+  if (!pagesStr) return '';
+  const cleanInput = pagesStr.trim();
+  if (!/^[0-9,\-\s]+$/.test(cleanInput)) {
+    return cleanInput;
+  }
+
+  const parts = cleanInput.split(',').map(p => p.trim()).filter(p => p.length > 0);
+  const pagesSet = new Set();
+
+  for (const part of parts) {
+    if (part.includes('-')) {
+      const rangeParts = part.split('-').map(x => x.trim());
+      if (rangeParts.length === 2) {
+        const start = parseInt(rangeParts[0], 10);
+        const end = parseInt(rangeParts[1], 10);
+        if (!isNaN(start) && !isNaN(end)) {
+          const actualStart = Math.min(start, end);
+          const actualEnd = Math.max(start, end);
+          for (let i = actualStart; i <= actualEnd; i++) {
+            pagesSet.add(i);
+          }
+        }
+      }
+    } else {
+      const val = parseInt(part, 10);
+      if (!isNaN(val)) {
+        pagesSet.add(val);
+      }
+    }
+  }
+
+  const sortedPages = Array.from(pagesSet).sort((a, b) => a - b);
+  if (sortedPages.length === 0) return cleanInput;
+
+  const ranges = [];
+  let rangeStart = sortedPages[0];
+  let rangeEnd = sortedPages[0];
+
+  for (let i = 1; i < sortedPages.length; i++) {
+    const current = sortedPages[i];
+    if (current === rangeEnd + 1) {
+      rangeEnd = current;
+    } else {
+      if (rangeStart === rangeEnd) {
+        ranges.push(`${rangeStart}`);
+      } else {
+        ranges.push(`${rangeStart}-${rangeEnd}`);
+      }
+      rangeStart = current;
+      rangeEnd = current;
+    }
+  }
+  
+  if (rangeStart === rangeEnd) {
+    ranges.push(`${rangeStart}`);
+  } else {
+    ranges.push(`${rangeStart}-${rangeEnd}`);
+  }
+
+  return ranges.join(', ');
+}
+
 function parseAndValidatePages(pagesInput) {
   const cleanInput = pagesInput.trim();
   if (!/^[0-9,\-\s]+$/.test(cleanInput)) {
@@ -1945,8 +2089,6 @@ function parseAndValidatePages(pagesInput) {
     return { isValid: false, error: "Please enter at least one page number." };
   }
 
-  const parsedItems = [];
-
   for (const part of parts) {
     if (part.includes('-')) {
       const rangeParts = part.split('-').map(x => x.trim());
@@ -1960,54 +2102,17 @@ function parseAndValidatePages(pagesInput) {
       if (isNaN(start) || isNaN(end)) {
         return { isValid: false, error: `Invalid numbers in range: '${part}'.` };
       }
-      
-      const actualStart = Math.min(start, end);
-      const actualEnd = Math.max(start, end);
-      
-      parsedItems.push({
-        type: 'range',
-        start: actualStart,
-        end: actualEnd,
-        display: `${actualStart}-${actualEnd}`
-      });
     } else {
       const val = parseInt(part, 10);
       if (isNaN(val)) {
         return { isValid: false, error: `Invalid page number: '${part}'.` };
       }
-      parsedItems.push({
-        type: 'single',
-        start: val,
-        end: val,
-        display: `${val}`
-      });
     }
   }
 
-  // Sort: single page goes right before the range it falls within, else sort by start page
-  parsedItems.sort((a, b) => {
-    if (a.type === 'single' && b.type === 'range') {
-      if (a.start >= b.start && a.start <= b.end) {
-        return -1;
-      }
-    }
-    if (b.type === 'single' && a.type === 'range') {
-      if (b.start >= a.start && b.start <= a.end) {
-        return 1;
-      }
-    }
-    
-    if (a.start !== b.start) {
-      return a.start - b.start;
-    }
-    return a.end - b.end;
-  });
-
-  const formattedString = parsedItems.map(item => item.display).join(', ');
-
   return {
     isValid: true,
-    formatted: formattedString
+    formatted: compressPageList(cleanInput)
   };
 }
 
@@ -3484,6 +3589,12 @@ function initAutoIndexingBindings() {
       if (elements.aiCurationErrorAlert) {
         elements.aiCurationErrorAlert.classList.add('hidden');
       }
+      if (elements.quizGenerationErrorAlert) {
+        elements.quizGenerationErrorAlert.classList.add('hidden');
+      }
+      
+      wizardCurrentStep = 1;
+      updateWizardUI();
     });
   }
 
@@ -3563,6 +3674,56 @@ function initAutoIndexingBindings() {
         renderVerificationTable();
       }
     });
+  }
+
+  // Initialize wizard logic
+  initAutoIndexWizard();
+
+  // Practice Quiz button inside header
+  if (elements.practiceQuizBtn) {
+    const newQuizBtn = elements.practiceQuizBtn.cloneNode(true);
+    elements.practiceQuizBtn.parentNode.replaceChild(newQuizBtn, elements.practiceQuizBtn);
+    elements.practiceQuizBtn = newQuizBtn;
+    
+    elements.practiceQuizBtn.addEventListener('click', openQuizConfig);
+  }
+
+  // Quiz config dialog bindings
+  if (elements.quizConfigForm) {
+    const newForm = elements.quizConfigForm.cloneNode(true);
+    elements.quizConfigForm.parentNode.replaceChild(newForm, elements.quizConfigForm);
+    elements.quizConfigForm = newForm;
+    elements.quizConfigForm.addEventListener('submit', handleQuizConfigSubmit);
+    
+    elements.quizConfigBooksChecklist = document.getElementById('quiz-config-books-checklist');
+    elements.quizConfigCount = document.getElementById('quiz-config-count');
+    elements.quizConfigDifficulty = document.getElementById('quiz-config-difficulty');
+    elements.quizConfigFeedback = document.getElementById('quiz-config-feedback');
+    elements.quizConfigCloseBtn = document.getElementById('quiz-config-close-btn');
+  }
+  
+  if (elements.quizConfigCloseBtn) {
+    elements.quizConfigCloseBtn.addEventListener('click', () => {
+      if (elements.quizConfigDialog) elements.quizConfigDialog.close();
+    });
+  }
+
+  // Quiz Practice View Exit & Next bindings
+  if (elements.quizExitBtn) {
+    elements.quizExitBtn.addEventListener('click', handleQuizExit);
+  }
+
+  if (elements.quizNextQuestionBtn) {
+    elements.quizNextQuestionBtn.addEventListener('click', handleQuizNextClick);
+  }
+
+  // Scorecard View retry & close bindings
+  if (elements.scorecardRetryBtn) {
+    elements.scorecardRetryBtn.addEventListener('click', retryQuizSession);
+  }
+
+  if (elements.scorecardCloseBtn) {
+    elements.scorecardCloseBtn.addEventListener('click', exitQuizMode);
   }
 }
 
@@ -3784,7 +3945,10 @@ async function handleAutoIndexSubmit(e) {
     minFrequency: parseInt(elements.autoIndexMinFreq.value) || 1,
     maxFrequency: parseInt(elements.autoIndexMaxFreq.value) || 10,
     zipf: parseFloat(elements.autoIndexZipf.value) || 4.0,
-    useOcr: elements.autoIndexUseOcr.checked
+    useOcr: elements.autoIndexUseOcr.checked,
+    generateQuiz: elements.autoIndexGenerateQuiz ? elements.autoIndexGenerateQuiz.checked : false,
+    quizCount: parseInt(elements.autoIndexQuizCount.value) || 10,
+    quizDifficulty: elements.autoIndexQuizDifficulty.value || 'Conceptual'
   };
 
   const startProcess = () => {
@@ -3796,7 +3960,7 @@ async function handleAutoIndexSubmit(e) {
     startFunFactsRotation();
 
     window.api.onAutoIndexProgress((progress) => {
-      // Dynamic loading warnings for AI curation step
+      // Dynamic loading warnings for AI curation/quiz step
       if (progress.step === 'curating') {
         if (progress.isOverloaded) {
           elements.indexingProgressStatus.innerHTML = `
@@ -3815,6 +3979,13 @@ async function handleAutoIndexSubmit(e) {
             </div>
           `;
         }
+      } else if (progress.step === 'quiz-generating') {
+        elements.indexingProgressStatus.innerHTML = `
+          Generating Practice Quiz...
+          <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+            ${progress.message || 'Prompting Gemini to write Cybersecurity Practice questions...'}
+          </div>
+        `;
       } else {
         elements.indexingProgressStatus.textContent = progress.message;
       }
@@ -3827,10 +3998,39 @@ async function handleAutoIndexSubmit(e) {
         
         if (result.success) {
           autoExtractedEntries = result.entries;
+          
+          let addedQuestions = false;
+          if (result.quizGenerated && result.quizQuestions && result.quizQuestions.length > 0) {
+            if (!state.quizzes) state.quizzes = [];
+            const newQuiz = {
+              id: 'quiz-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+              courseId: state.currentCourseId,
+              bookId: bookId,
+              difficulty: settings.quizDifficulty,
+              questions: result.quizQuestions,
+              createdAt: new Date().toISOString()
+            };
+            state.quizzes.push(newQuiz);
+            saveState();
+            addedQuestions = true;
+          }
+          
+          lastQuizError = result.quizError;
+
           if (autoExtractedEntries.length === 0) {
             alert("Auto-indexing completed, but no words or phrases matched your filter settings. Try adjusting the parameters and try again.");
             elements.autoIndexForm.closest('section').classList.remove('hidden');
           } else {
+            if (addedQuestions && elements.quizNewQuestionsToast) {
+              elements.quizNewQuestionsToast.classList.remove('hidden');
+              
+              if (window.quizToastTimeout) {
+                clearTimeout(window.quizToastTimeout);
+              }
+              window.quizToastTimeout = setTimeout(() => {
+                elements.quizNewQuestionsToast.classList.add('hidden');
+              }, 8000);
+            }
             // Display AI curation error if it occurred
             if (elements.aiCurationErrorAlert && elements.aiCurationErrorText) {
               if (result.curationError) {
@@ -3838,6 +4038,16 @@ async function handleAutoIndexSubmit(e) {
                 elements.aiCurationErrorAlert.classList.remove('hidden');
               } else {
                 elements.aiCurationErrorAlert.classList.add('hidden');
+              }
+            }
+
+            // Display Quiz generation error if it occurred
+            if (elements.quizGenerationErrorAlert && elements.quizGenerationErrorText) {
+              if (result.quizError) {
+                elements.quizGenerationErrorText.textContent = result.quizError;
+                elements.quizGenerationErrorAlert.classList.remove('hidden');
+              } else {
+                elements.quizGenerationErrorAlert.classList.add('hidden');
               }
             }
             
@@ -3907,7 +4117,7 @@ function renderVerificationTable() {
         <input type="text" class="preview-topic-input" value="${escapeHtml(entry.topic)}" data-idx="${idx}">
       </td>
       <td style="width: 150px;">
-        <input type="text" class="preview-pages-input" value="${escapeHtml(entry.pages)}" data-idx="${idx}">
+        <input type="text" class="preview-pages-input" value="${escapeHtml(compressPageList(entry.pages))}" data-idx="${idx}">
       </td>
       <td>
         <input type="text" class="preview-notes-input" placeholder="Optional notes context..." data-idx="${idx}">
@@ -3970,7 +4180,7 @@ async function handleImportCheckedEntries() {
         courseId: state.currentCourseId,
         bookId: targetBookId,
         topic: topicInput.value.trim(),
-        pages: pagesInput.value.trim(),
+        pages: compressPageList(pagesInput.value.trim()),
         notes: notesInput.value.trim(),
         source: isAiCurated ? 'auto-ai' : 'auto',
         createdAt: new Date().toISOString()
@@ -3983,14 +4193,27 @@ async function handleImportCheckedEntries() {
 
   if (importCount > 0) {
     await saveState();
-    
+
     alert(`Successfully imported ${importCount} auto-indexed entries!`);
+
+    if (lastQuizError) {
+      alert(`Friendly Notice:\nCuration succeeded and entries were imported, but practice quiz generation failed due to API limits/traffic:\n\n${lastQuizError}\n\nPlease try generating a quiz next time or tomorrow!`);
+      lastQuizError = null;
+    }
     
     elements.verificationPreviewSection.classList.add('hidden');
     elements.autoIndexForm.closest('section').classList.remove('hidden');
     if (elements.aiCurationErrorAlert) {
       elements.aiCurationErrorAlert.classList.add('hidden');
     }
+    if (elements.quizGenerationErrorAlert) {
+      elements.quizGenerationErrorAlert.classList.add('hidden');
+    }
+    
+    // Reset setup wizard steps
+    wizardCurrentStep = 1;
+    updateWizardUI();
+
     selectedPdfPath = '';
     elements.autoIndexFileName.textContent = 'No file selected';
     elements.autoIndexFileName.title = '';
@@ -4025,4 +4248,547 @@ async function handleImportCheckedEntries() {
     
     renderAll();
   }
+}
+
+// ==========================================================================
+// AUTO-INDEX MULTI-STEP SETUP WIZARD & QUIZ HUB
+// ==========================================================================
+let wizardCurrentStep = 1;
+
+function initAutoIndexWizard() {
+  wizardCurrentStep = 1;
+  updateWizardUI();
+
+  if (elements.wizardNextBtn) {
+    const nextBtnClone = elements.wizardNextBtn.cloneNode(true);
+    elements.wizardNextBtn.parentNode.replaceChild(nextBtnClone, elements.wizardNextBtn);
+    elements.wizardNextBtn = nextBtnClone;
+    elements.wizardNextBtn.addEventListener('click', () => {
+      if (validateWizardStep(wizardCurrentStep)) {
+        wizardCurrentStep++;
+        updateWizardUI();
+      }
+    });
+  }
+
+  if (elements.wizardPrevBtn) {
+    const prevBtnClone = elements.wizardPrevBtn.cloneNode(true);
+    elements.wizardPrevBtn.parentNode.replaceChild(prevBtnClone, elements.wizardPrevBtn);
+    elements.wizardPrevBtn = prevBtnClone;
+    elements.wizardPrevBtn.addEventListener('click', () => {
+      if (wizardCurrentStep > 1) {
+        wizardCurrentStep--;
+        updateWizardUI();
+      }
+    });
+  }
+
+  if (elements.autoIndexAddBookBtn) {
+    const addBtnClone = elements.autoIndexAddBookBtn.cloneNode(true);
+    elements.autoIndexAddBookBtn.parentNode.replaceChild(addBtnClone, elements.autoIndexAddBookBtn);
+    elements.autoIndexAddBookBtn = addBtnClone;
+    elements.autoIndexAddBookBtn.addEventListener('click', () => {
+      openBookDialog();
+    });
+  }
+
+  if (elements.autoIndexGenerateQuiz) {
+    const quizToggleClone = elements.autoIndexGenerateQuiz.cloneNode(true);
+    elements.autoIndexGenerateQuiz.parentNode.replaceChild(quizToggleClone, elements.autoIndexGenerateQuiz);
+    elements.autoIndexGenerateQuiz = quizToggleClone;
+    
+    elements.quizGenerationSettings = document.getElementById('quiz-generation-settings');
+    elements.autoIndexQuizCount = document.getElementById('auto-index-quiz-count');
+    elements.autoIndexQuizDifficulty = document.getElementById('auto-index-quiz-difficulty');
+    
+    const syncQuizToggle = () => {
+      if (elements.autoIndexGenerateQuiz.checked) {
+        elements.quizGenerationSettings.classList.remove('hidden');
+      } else {
+        elements.quizGenerationSettings.classList.add('hidden');
+      }
+    };
+    
+    elements.autoIndexGenerateQuiz.addEventListener('change', syncQuizToggle);
+    syncQuizToggle();
+  }
+}
+
+function validateWizardStep(step) {
+  if (step === 1) {
+    if (!elements.autoIndexBookSelect.value) {
+      alert("Please select a target book to assign the index terms.");
+      return false;
+    }
+    if (!selectedPdfPath) {
+      alert("Please select a course book PDF file.");
+      return false;
+    }
+  } else if (step === 3) {
+    const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+    if (useAi) {
+      const key = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
+      if (!key) {
+        alert("Please enter a Gemini API Key to use AI Curation.");
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function updateWizardUI() {
+  for (let i = 1; i <= 5; i++) {
+    const panel = document.getElementById(`step-panel-${i}`);
+    if (panel) {
+      if (i === wizardCurrentStep) {
+        panel.classList.remove('hidden');
+      } else {
+        panel.classList.add('hidden');
+      }
+    }
+    
+    const indicator = document.querySelector(`.wizard-step-indicator[data-step="${i}"]`);
+    if (indicator) {
+      indicator.classList.remove('active', 'completed');
+      if (i < wizardCurrentStep) {
+        indicator.classList.add('completed');
+      } else if (i === wizardCurrentStep) {
+        indicator.classList.add('active');
+      }
+    }
+  }
+
+  if (elements.wizardProgressBar) {
+    const percentage = ((wizardCurrentStep - 1) / 4) * 100;
+    elements.wizardProgressBar.style.width = `${percentage}%`;
+  }
+
+  if (wizardCurrentStep === 1) {
+    elements.wizardPrevBtn.classList.add('hidden');
+  } else {
+    elements.wizardPrevBtn.classList.remove('hidden');
+  }
+
+  if (wizardCurrentStep === 5) {
+    elements.wizardNextBtn.classList.add('hidden');
+    elements.startIndexingBtn.classList.remove('hidden');
+    updateWizardSummary();
+  } else {
+    elements.wizardNextBtn.classList.remove('hidden');
+    elements.startIndexingBtn.classList.add('hidden');
+  }
+}
+
+function updateWizardSummary() {
+  const summaryTargetBook = document.getElementById('summary-target-book');
+  const summaryPdfFile = document.getElementById('summary-pdf-file');
+  const summaryWatermarkStatus = document.getElementById('summary-watermark-status');
+  const summaryAiCuration = document.getElementById('summary-ai-curation');
+  const summaryGeminiModel = document.getElementById('summary-gemini-model');
+  const summaryQuizStatus = document.getElementById('summary-quiz-status');
+
+  if (summaryTargetBook) {
+    const selectedOpt = elements.autoIndexBookSelect.options[elements.autoIndexBookSelect.selectedIndex];
+    summaryTargetBook.textContent = selectedOpt ? selectedOpt.textContent : 'None selected';
+  }
+
+  if (summaryPdfFile) {
+    const fileName = selectedPdfPath ? selectedPdfPath.split(/[\\/]/).pop() : 'None selected';
+    summaryPdfFile.textContent = fileName;
+    summaryPdfFile.title = selectedPdfPath || '';
+  }
+
+  if (summaryWatermarkStatus) {
+    const fname = elements.autoIndexFname.value.trim();
+    const lname = elements.autoIndexLname.value.trim();
+    const email = elements.autoIndexEmail.value.trim();
+    if (fname || lname || email) {
+      summaryWatermarkStatus.textContent = `Enabled (${[fname, lname].filter(Boolean).join(' ')} - ${email || 'No email'})`;
+    } else {
+      summaryWatermarkStatus.textContent = 'Disabled';
+    }
+  }
+
+  if (summaryAiCuration) {
+    const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+    summaryAiCuration.textContent = useAi ? 'Enabled' : 'Disabled';
+  }
+
+  if (summaryGeminiModel) {
+    const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+    if (useAi && elements.autoIndexModelSelect) {
+      const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
+      summaryGeminiModel.textContent = selectedModelOpt ? selectedModelOpt.textContent.split(' ')[0] : '-';
+    } else {
+      summaryGeminiModel.textContent = '-';
+    }
+  }
+
+  if (summaryQuizStatus) {
+    const generateQuiz = elements.autoIndexGenerateQuiz ? elements.autoIndexGenerateQuiz.checked : false;
+    if (generateQuiz) {
+      const count = elements.autoIndexQuizCount.value;
+      const difficulty = elements.autoIndexQuizDifficulty.value;
+      summaryQuizStatus.textContent = `Enabled (${count} Qs, ${difficulty})`;
+    } else {
+      summaryQuizStatus.textContent = 'Disabled';
+    }
+  }
+}
+
+// Quiz Hub Gameplay logic
+let quizSession = {
+  questions: [],
+  currentQuestionIndex: 0,
+  userAnswers: [],
+  score: 0,
+  feedbackMode: 'immediate',
+  selectedBooks: [],
+  difficulty: 'Conceptual'
+};
+
+function openQuizConfig() {
+  if (!state.currentCourseId) {
+    alert("Please select or create a course first!");
+    return;
+  }
+
+  if (elements.quizConfigBooksChecklist) {
+    elements.quizConfigBooksChecklist.innerHTML = '';
+    const courseBooks = state.books.filter(b => b.courseId === state.currentCourseId);
+    
+    // Filter books that actually have questions in state.quizzes
+    const booksWithQs = courseBooks.filter(book => {
+      const totalQs = state.quizzes
+        .filter(q => q.bookId === book.id)
+        .reduce((sum, q) => sum + (q.questions ? q.questions.length : 0), 0);
+      return totalQs > 0;
+    });
+
+    if (booksWithQs.length === 0) {
+      elements.quizConfigBooksChecklist.innerHTML = `
+        <div style="font-size: 0.88rem; color: var(--text-secondary); font-style: italic; line-height: 1.4; padding: 12px 8px; border: 1px dashed var(--border-color); border-radius: var(--radius-sm); text-align: center; width: 100%;">
+          You haven't generated any quiz questions yet. Visit the Auto-Indexer to get started!
+        </div>
+      `;
+    } else {
+      booksWithQs.forEach(book => {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '8px';
+        
+        const totalQs = state.quizzes
+          .filter(q => q.bookId === book.id)
+          .reduce((sum, q) => sum + (q.questions ? q.questions.length : 0), 0);
+
+        div.innerHTML = `
+          <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.85rem; width: 100%;">
+            <input type="checkbox" class="quiz-book-checkbox" value="${book.id}" checked style="flex-shrink: 0;">
+            <span class="book-indicator-dot" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${book.color || 'var(--color-accent)'}; flex-shrink: 0; display: inline-block;"></span>
+            <span style="line-height: 1.2;">${book.name} (${totalQs} Qs available)</span>
+          </label>
+        `;
+        elements.quizConfigBooksChecklist.appendChild(div);
+      });
+    }
+  }
+
+  if (elements.quizConfigDialog) {
+    elements.quizConfigDialog.showModal();
+  }
+}
+
+function handleQuizConfigSubmit(e) {
+  e.preventDefault();
+  
+  const checkedCheckboxes = elements.quizConfigBooksChecklist.querySelectorAll('.quiz-book-checkbox:checked');
+  const selectedBookIds = Array.from(checkedCheckboxes).map(cb => cb.value);
+  
+  if (selectedBookIds.length === 0) {
+    alert("Please select at least one book to pull questions from!");
+    return;
+  }
+
+  const questionCount = parseInt(elements.quizConfigCount.value) || 10;
+  const difficulty = elements.quizConfigDifficulty.value;
+  const feedbackMode = elements.quizConfigFeedback.value;
+
+  let pool = [];
+  state.quizzes.forEach(quiz => {
+    if (selectedBookIds.includes(quiz.bookId) && quiz.difficulty === difficulty) {
+      if (quiz.questions && Array.isArray(quiz.questions)) {
+        const bookObj = state.books.find(b => b.id === quiz.bookId);
+        quiz.questions.forEach(q => {
+          pool.push({
+            ...q,
+            bookName: bookObj ? bookObj.name : 'Unknown Book',
+            bookColor: bookObj ? bookObj.color : '#0d9488'
+          });
+        });
+      }
+    }
+  });
+
+  if (pool.length === 0) {
+    alert(`No questions found matching difficulty "${difficulty}" in the selected books. Please generate some questions first by auto-indexing a book and selecting "Generate Practice Quiz" in Step 4.`);
+    return;
+  }
+
+  pool = shuffleArray(pool);
+  const selectedQuestions = pool.slice(0, questionCount);
+
+  quizSession = {
+    questions: selectedQuestions,
+    currentQuestionIndex: 0,
+    userAnswers: new Array(selectedQuestions.length).fill(null),
+    score: 0,
+    feedbackMode: feedbackMode,
+    selectedBooks: selectedBookIds,
+    difficulty: difficulty
+  };
+
+  if (elements.quizConfigDialog) {
+    elements.quizConfigDialog.close();
+  }
+
+  enterQuizMode();
+}
+
+function shuffleArray(array) {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function enterQuizMode() {
+  document.querySelectorAll('.no-print-in-quiz').forEach(el => el.classList.add('hidden'));
+  elements.manualIndexView.classList.add('hidden');
+  elements.autoIndexView.classList.add('hidden');
+  
+  elements.quizPracticeView.classList.remove('hidden');
+  elements.quizScorecardView.classList.add('hidden');
+
+  if (quizSession.feedbackMode === 'immediate') {
+    elements.quizLiveScoreContainer.classList.remove('hidden');
+    elements.quizLiveScore.textContent = '0/0';
+  } else {
+    elements.quizLiveScoreContainer.classList.add('hidden');
+  }
+
+  displayQuizQuestion();
+}
+
+function displayQuizQuestion() {
+  const currentQ = quizSession.questions[quizSession.currentQuestionIndex];
+  
+  elements.quizProgressText.textContent = `Question ${quizSession.currentQuestionIndex + 1} of ${quizSession.questions.length}`;
+  if (elements.quizProgressFill) {
+    const fillPercent = ((quizSession.currentQuestionIndex + 1) / quizSession.questions.length) * 100;
+    elements.quizProgressFill.style.width = `${fillPercent}%`;
+  }
+
+  elements.quizQuestionBookBadge.textContent = currentQ.bookName || 'SANS Book';
+  elements.quizQuestionBookBadge.style.color = currentQ.bookColor || 'var(--color-accent)';
+  elements.quizQuestionBookBadge.style.borderColor = currentQ.bookColor || 'var(--color-accent)';
+  
+  elements.quizQuestionDiffBadge.textContent = quizSession.difficulty;
+  elements.quizQuestionText.textContent = currentQ.question;
+  elements.quizFeedbackPanel.classList.add('hidden');
+  elements.quizOptionsContainer.innerHTML = '';
+  
+  const isLastQuestion = quizSession.currentQuestionIndex === quizSession.questions.length - 1;
+  elements.quizNextQuestionBtn.innerHTML = isLastQuestion 
+    ? `<span>Submit Quiz</span><i data-lucide="check" style="width: 16px; height: 16px; margin-left: 4px;"></i>`
+    : `<span>Next Question</span><i data-lucide="chevron-right" style="width: 16px; height: 16px; margin-left: 4px;"></i>`;
+  lucide.createIcons({ nodeList: [elements.quizNextQuestionBtn] });
+
+  elements.quizNextQuestionBtn.classList.add('hidden');
+
+  currentQ.options.forEach((optText, index) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'quiz-choice-btn';
+    btn.innerHTML = `
+      <span class="option-letter">${String.fromCharCode(65 + index)}</span>
+      <span>${escapeHtml(optText)}</span>
+    `;
+
+    btn.addEventListener('click', () => handleQuizOptionClick(index));
+    elements.quizOptionsContainer.appendChild(btn);
+  });
+}
+
+function handleQuizOptionClick(selectedIndex) {
+  const currentQ = quizSession.questions[quizSession.currentQuestionIndex];
+  quizSession.userAnswers[quizSession.currentQuestionIndex] = selectedIndex;
+
+  const buttons = elements.quizOptionsContainer.querySelectorAll('.quiz-choice-btn');
+
+  if (quizSession.feedbackMode === 'immediate') {
+    buttons.forEach((btn, idx) => {
+      btn.disabled = true;
+      if (idx === currentQ.correctIndex) {
+        btn.classList.add('correct');
+      } else if (idx === selectedIndex) {
+        btn.classList.add('incorrect');
+      }
+    });
+
+    const isCorrect = selectedIndex === currentQ.correctIndex;
+    if (isCorrect) {
+      quizSession.score++;
+    }
+    
+    const answeredCount = quizSession.currentQuestionIndex + 1;
+    elements.quizLiveScore.textContent = `${quizSession.score}/${answeredCount}`;
+
+    elements.quizFeedbackPanel.classList.remove('hidden');
+    elements.quizFeedbackTitle.textContent = isCorrect ? 'Correct!' : 'Incorrect';
+    
+    if (elements.quizFeedbackIndicator) {
+      elements.quizFeedbackIndicator.style.color = isCorrect ? '#10b981' : '#ef4444';
+    }
+    
+    if (elements.quizFeedbackIcon) {
+      elements.quizFeedbackIcon.setAttribute('data-lucide', isCorrect ? 'check-circle-2' : 'alert-circle');
+      lucide.createIcons({ nodeList: [elements.quizFeedbackIcon] });
+    }
+
+    elements.quizExplanationText.textContent = currentQ.explanation;
+  } else {
+    buttons.forEach((btn, idx) => {
+      btn.classList.remove('selected');
+      if (idx === selectedIndex) {
+        btn.classList.add('selected');
+      }
+    });
+  }
+
+  elements.quizNextQuestionBtn.classList.remove('hidden');
+}
+
+function handleQuizNextClick() {
+  const isLastQuestion = quizSession.currentQuestionIndex === quizSession.questions.length - 1;
+  
+  if (isLastQuestion) {
+    showQuizScorecard();
+  } else {
+    quizSession.currentQuestionIndex++;
+    displayQuizQuestion();
+  }
+}
+
+function showQuizScorecard() {
+  elements.quizPracticeView.classList.add('hidden');
+  elements.quizScorecardView.classList.remove('hidden');
+
+  let correctCount = 0;
+  if (quizSession.feedbackMode === 'graded') {
+    quizSession.questions.forEach((q, idx) => {
+      if (quizSession.userAnswers[idx] === q.correctIndex) {
+        correctCount++;
+      }
+    });
+    quizSession.score = correctCount;
+  } else {
+    correctCount = quizSession.score;
+  }
+
+  const accuracy = Math.round((correctCount / quizSession.questions.length) * 100) || 0;
+
+  elements.scorecardRatio.textContent = `${correctCount}/${quizSession.questions.length}`;
+  elements.scorecardPercent.textContent = `${accuracy}%`;
+  
+  if (accuracy >= 80) {
+    elements.scorecardPercent.style.color = '#10b981';
+  } else if (accuracy >= 60) {
+    elements.scorecardPercent.style.color = '#eab308';
+  } else {
+    elements.scorecardPercent.style.color = '#ef4444';
+  }
+
+  elements.scorecardReviewContainer.innerHTML = '';
+  quizSession.questions.forEach((q, idx) => {
+    const userAns = quizSession.userAnswers[idx];
+    const isCorrect = userAns === q.correctIndex;
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'scorecard-review-item';
+    
+    const letter = userAns !== null ? String.fromCharCode(65 + userAns) : 'None';
+    const correctLetter = String.fromCharCode(65 + q.correctIndex);
+
+    itemDiv.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 12px;">
+        <span style="font-weight: 600; font-size: 0.88rem; color: var(--text-primary);">Q${idx + 1}: ${escapeHtml(q.question)}</span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 700; color: ${isCorrect ? '#10b981' : '#ef4444'}; flex-shrink: 0; padding: 2px 6px; background: ${isCorrect ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'}; border: 1px solid ${isCorrect ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; border-radius: 4px;">
+          <i data-lucide="${isCorrect ? 'check' : 'x'}" style="width: 12px; height: 12px;"></i>
+          <span>${isCorrect ? 'Correct' : 'Incorrect'}</span>
+        </span>
+      </div>
+      
+      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+        <span>Your Answer: <strong style="color: ${isCorrect ? '#10b981' : '#ef4444'};">${letter}</strong></span> | 
+        <span>Correct Answer: <strong style="color: #10b981;">${correctLetter}</strong></span>
+      </div>
+      
+      <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45; padding: 10px; background: rgba(255, 255, 255, 0.02); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <strong>Explanation:</strong> ${escapeHtml(q.explanation)}
+      </div>
+    `;
+    elements.scorecardReviewContainer.appendChild(itemDiv);
+  });
+  lucide.createIcons({ nodeList: elements.scorecardReviewContainer });
+}
+
+function handleQuizExit() {
+  if (confirm("Are you sure you want to exit the practice session? Your progress will not be saved.")) {
+    exitQuizMode();
+  }
+}
+
+function exitQuizMode() {
+  elements.quizPracticeView.classList.add('hidden');
+  elements.quizScorecardView.classList.add('hidden');
+
+  document.querySelectorAll('.no-print-in-quiz').forEach(el => el.classList.remove('hidden'));
+  
+  const activeTab = document.querySelector('.workspace-tabs .tab-btn.active');
+  const targetTab = activeTab ? activeTab.getAttribute('data-view-tab') : 'manual-index';
+  
+  if (targetTab === 'manual-index') {
+    elements.manualIndexView.classList.remove('hidden');
+    elements.autoIndexView.classList.add('hidden');
+  } else {
+    elements.manualIndexView.classList.add('hidden');
+    elements.autoIndexView.classList.remove('hidden');
+  }
+}
+
+function retryQuizSession() {
+  const shuffled = shuffleArray(quizSession.questions);
+  
+  quizSession = {
+    ...quizSession,
+    questions: shuffled,
+    currentQuestionIndex: 0,
+    userAnswers: new Array(shuffled.length).fill(null),
+    score: 0
+  };
+
+  elements.quizPracticeView.classList.remove('hidden');
+  elements.quizScorecardView.classList.add('hidden');
+
+  if (quizSession.feedbackMode === 'immediate') {
+    elements.quizLiveScoreContainer.classList.remove('hidden');
+    elements.quizLiveScore.textContent = '0/0';
+  } else {
+    elements.quizLiveScoreContainer.classList.add('hidden');
+  }
+
+  displayQuizQuestion();
 }

@@ -753,6 +753,154 @@ Return a JSON array of objects with the exact same structure as the input:
   }
 }
 
+// Helper: Generate Practice Quiz with Gemini AI
+async function generateQuizWithGemini(textFile, numQuestions, difficulty, geminiApiKey, event, geminiModel) {
+  logDebug(`[Gemini Quiz Gen] Initiating. Questions: ${numQuestions}, Difficulty: ${difficulty}, Model: ${geminiModel || 'gemini-flash-latest'}`);
+
+  if (!fs.existsSync(textFile)) {
+    throw new Error("Text file for quiz generation does not exist.");
+  }
+
+  let textContent = fs.readFileSync(textFile, 'utf8');
+  // Clean up content slightly (remove excessive whitespace)
+  textContent = textContent.replace(/\s+/g, ' ');
+
+  // SANS books can be long. Slicing the first 250,000 characters
+  // is plenty for generating representative cybersecurity multiple-choice questions.
+  const maxChars = 250000;
+  const textSample = textContent.length > maxChars ? textContent.substring(0, maxChars) : textContent;
+
+  const prompt = `You are an expert SANS Cybersecurity Instructor and exam writer. Your goal is to write a high-quality practice quiz based on the course material provided below.
+
+Generate exactly ${numQuestions} multiple-choice questions at the ${difficulty} difficulty level.
+
+Strictly adhere to these guidelines:
+1. Questions must be highly technical and realistic SANS exam questions.
+2. The options must contain one correct answer and three plausible but incorrect distractors.
+3. Provide a detailed, paragraph-long SANS-level answer explanation explaining the concepts, why the correct option is right, and why the other options are wrong.
+4. Output must be valid JSON in the specified format, with no other text, markdown blocks, or formatting around it.
+
+Format your response strictly as a JSON array of objects:
+[
+  {
+    "question": "The question text here...",
+    "options": [
+      "Option A text",
+      "Option B text",
+      "Option C text",
+      "Option D text"
+    ],
+    "correctIndex": 0,
+    "explanation": "Thorough SANS-style explanation here..."
+  }
+]
+
+Course Content:
+${textSample}
+`;
+
+  const maxAttempts = 3;
+  let attempt = 0;
+
+  while (attempt < maxAttempts) {
+    attempt++;
+    logDebug(`[Gemini Quiz Gen] Attempt ${attempt}/${maxAttempts}...`);
+
+    if (event) {
+      event.sender.send('auto-index-progress', { 
+        step: 'quiz-generating', 
+        attempt: attempt, 
+        maxAttempts: maxAttempts,
+        isOverloaded: attempt > 1,
+        message: `Generating ${numQuestions} Practice Quiz questions (${difficulty})...`
+      });
+    }
+
+    try {
+      const model = geminiModel || 'gemini-flash-latest';
+      const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { 
+            responseMimeType: "application/json"
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logDebug(`[Gemini Quiz Gen] API returned error: ${response.status} - ${errorText}`);
+        let parsedError = errorText;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error && errorJson.error.message) {
+            parsedError = errorJson.error.message;
+          }
+        } catch (e) {}
+        throw new Error(`Gemini API Error: ${parsedError}`);
+      }
+
+      const resData = await response.json();
+      if (!resData.candidates || resData.candidates.length === 0) {
+        throw new Error('Gemini API returned empty response candidates.');
+      }
+
+      const responseText = resData.candidates[0].content.parts[0].text;
+      const questions = JSON.parse(responseText);
+
+      if (Array.isArray(questions) && questions.length > 0) {
+        const validated = questions.filter(q => {
+          return q.question && Array.isArray(q.options) && q.options.length === 4 && typeof q.correctIndex === 'number' && q.explanation;
+        });
+
+        if (validated.length > 0) {
+          logDebug(`[Gemini Quiz Gen] Successfully generated ${validated.length} quiz questions.`);
+          return { questions: validated, error: null };
+        }
+      }
+      throw new Error("Invalid JSON structure returned by Gemini.");
+
+    } catch (error) {
+      logDebug(`[Gemini Quiz Gen] Attempt ${attempt} failed: ${error.message}`);
+      
+      const errLower = error.message.toLowerCase();
+      const isHighDemand = errLower.includes("high demand") || 
+                           errLower.includes("quota exceeded") || 
+                           errLower.includes("resource has been exhausted") || 
+                           errLower.includes("429") || 
+                           errLower.includes("503") || 
+                           errLower.includes("rate limit") || 
+                           errLower.includes("volume of traffic");
+
+      if (isHighDemand && attempt < maxAttempts) {
+        const waitTimeSeconds = 15 * Math.pow(2, attempt - 1);
+        logDebug(`[Gemini Quiz Gen] Rate limit detected. Waiting ${waitTimeSeconds} seconds...`);
+        for (let remaining = waitTimeSeconds; remaining > 0; remaining--) {
+          if (event) {
+            event.sender.send('auto-index-progress', { 
+              step: 'quiz-generating', 
+              attempt: attempt + 1, 
+              maxAttempts: maxAttempts,
+              isOverloaded: true,
+              message: `Gemini models are experiencing high volumes of traffic right now. Retrying in ${remaining}s... 🤙` 
+            });
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        continue;
+      }
+
+      let finalErrorMessage = error.message;
+      if (attempt === maxAttempts && isHighDemand) {
+        finalErrorMessage = "Google's free tier rate limit was exceeded. Try again later.";
+      }
+      return { questions: [], error: finalErrorMessage };
+    }
+  }
+}
+
 // IPC Handler: Run Auto-Indexing
 ipcMain.handle('run-auto-index', async (event, args) => {
   const { pdfPath, password, fname, lname, email, geminiApiKey, geminiModel, settings } = args;
@@ -949,6 +1097,39 @@ ipcMain.handle('run-auto-index', async (event, args) => {
       finalEntries = curationResult.entries;
       curationError = curationResult.error;
     }
+
+    // Quiz Generation (Sequential & Independent)
+    let quizQuestions = [];
+    let quizError = null;
+    let quizGenerated = false;
+
+    if (settings.generateQuiz && geminiApiKey) {
+      // Ensure text file is available
+      if (!fs.existsSync(textFile) && fs.existsSync(sourceFile)) {
+        event.sender.send('auto-index-progress', { step: 'converting', message: 'Extracting text for quiz generation...' });
+        const pythonTextExtractCode = `import sys; from pdfminer.high_level import extract_text; open(sys.argv[2], "w", encoding="utf-8").write(extract_text(sys.argv[1]))`;
+        await new Promise((resolve) => {
+          const proc = spawn(pythonExe, ['-c', pythonTextExtractCode, sourceFile, textFile]);
+          proc.on('close', () => resolve());
+        });
+      }
+      
+      const quizResult = await generateQuizWithGemini(
+        textFile, 
+        settings.quizCount, 
+        settings.quizDifficulty, 
+        geminiApiKey, 
+        event, 
+        geminiModel
+      );
+      
+      if (quizResult.error) {
+        quizError = quizResult.error;
+      } else {
+        quizQuestions = quizResult.questions;
+        quizGenerated = true;
+      }
+    }
     
     // Cleanup
     try {
@@ -961,7 +1142,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
       }
     } catch (e) {}
     
-    return { success: true, entries: finalEntries, curationError };
+    return { success: true, entries: finalEntries, curationError, quizQuestions, quizError, quizGenerated };
     
   } catch (error) {
     console.error('Auto-indexing pipeline error:', error);
