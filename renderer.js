@@ -3465,7 +3465,7 @@ function initAutoIndexingBindings() {
 Your sole task is to filter candidate index terms extracted from course materials and KEEP ONLY genuine technical cybersecurity concepts.
 
 ### INCLUSION CRITERIA (KEEP):
-- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump)
+- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump, Certify.exe, Rubeus.exe, SharpHound)
 - Protocols, network standards, and acronyms (e.g., Kerberos, BGP, IPsec, TLS 1.3, DNSSEC, SNMPv3, ARP, SMBv3)
 - Operating system commands, parameters, and flags (e.g., chmod 755, netstat -an, reg add, vssadmin, ps -ef, ls -la)
 - System artifacts, registry keys, and file paths (e.g., HKLM\\Software, MFT, NTFS, SAM database, Event ID 4624, Prefetch)
@@ -3474,11 +3474,12 @@ Your sole task is to filter candidate index terms extracted from course material
 
 ### EXCLUSION CRITERIA (REJECT / DROP):
 - Generic textbook headings, section titles, and page markers (e.g., Overview, Introduction, Summary, Discussion, Chapter 1, Figure 2.3, Table of Contents)
+- Action verbs, phrasal verbs, or prepositions (e.g., 'turned off', 'setting up', 'getting started', 'looking for', 'used by', 'refer to', 'based on')
 - Non-technical English words or generic meta-phrases (e.g., Following Steps, Basic Concept, Main Features, System Configuration, Important Note, Additional Information, Key Takeaway, Best Practices, Module Summary)
 - Standalone generic English words unless part of a technical phrase (e.g., reject 'system', 'process', 'method', 'data', 'user' alone; keep 'Access Control List' or 'System Call')
 
 ### FEW-SHOT EXAMPLES:
-Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Following Steps", "Mimikatz", "Basic Concept", "Event ID 4624", "Summary Table"]
+Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Turned Off", "Mimikatz", "Following Steps", "Event ID 4624", "Setting Up"]
 Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]
 
 Output ONLY a raw JSON array of strings containing the kept terms. Do NOT include any markdown code fences, preambles, or conversational commentary.`;

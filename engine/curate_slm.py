@@ -1,6 +1,6 @@
 """
 Local SLM Neural Index Curation Engine
-Supports dynamic local model selection (0.5B, 1.5B, 3B), custom system prompts, cache status checking, and on-demand model downloading.
+Supports dynamic local model selection (0.5B, 1.5B, 3B), custom system prompts, automatic candidate sanitization, verb phrase filtering, cache status checking, and on-demand model downloading.
 """
 
 import sys
@@ -23,7 +23,7 @@ DEFAULT_SYSTEM_PROMPT = (
     "You are a strict SANS Cybersecurity Course Index Curator.\n"
     "Your sole task is to filter candidate index terms extracted from course materials and KEEP ONLY genuine technical cybersecurity concepts.\n\n"
     "### INCLUSION CRITERIA (KEEP):\n"
-    "- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump)\n"
+    "- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump, Certify.exe, Rubeus.exe, SharpHound)\n"
     "- Protocols, network standards, and acronyms (e.g., Kerberos, BGP, IPsec, TLS 1.3, DNSSEC, SNMPv3, ARP, SMBv3)\n"
     "- Operating system commands, parameters, and flags (e.g., chmod 755, netstat -an, reg add, vssadmin, ps -ef, ls -la)\n"
     "- System artifacts, registry keys, and file paths (e.g., HKLM\\Software, MFT, NTFS, SAM database, Event ID 4624, Prefetch)\n"
@@ -31,10 +31,11 @@ DEFAULT_SYSTEM_PROMPT = (
     "- Security frameworks, standards, and laws (e.g., NIST SP 800-53, ISO 27001, MITRE ATT&CK, CIS Controls, HIPAA)\n\n"
     "### EXCLUSION CRITERIA (REJECT / DROP):\n"
     "- Generic textbook headings, section titles, and page markers (e.g., Overview, Introduction, Summary, Discussion, Chapter 1, Figure 2.3, Table of Contents)\n"
+    "- Action verbs, phrasal verbs, or prepositions (e.g., 'turned off', 'setting up', 'getting started', 'looking for', 'used by', 'refer to', 'based on')\n"
     "- Non-technical English words or generic meta-phrases (e.g., Following Steps, Basic Concept, Main Features, System Configuration, Important Note, Additional Information, Key Takeaway, Best Practices, Module Summary)\n"
     "- Standalone generic English words unless part of a technical phrase (e.g., reject 'system', 'process', 'method', 'data', 'user' alone; keep 'Access Control List' or 'System Call')\n\n"
     "### FEW-SHOT EXAMPLES:\n"
-    'Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Following Steps", "Mimikatz", "Basic Concept", "Event ID 4624", "Summary Table"]\n'
+    'Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Turned Off", "Mimikatz", "Following Steps", "Event ID 4624", "Setting Up"]\n'
     'Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]\n\n'
     "Output ONLY a raw JSON array of strings containing the kept terms. Do NOT include any markdown code fences, preambles, or conversational commentary."
 )
@@ -99,6 +100,65 @@ STOP_WORDS = {
     "you've", 'your', 'yours', 'yourself', 'yourselves'
 }
 
+COMMON_ACTION_VERBS = {
+    'turned', 'turning', 'turns', 'turn',
+    'setting', 'set', 'sets',
+    'getting', 'get', 'gets',
+    'looking', 'look', 'looks',
+    'going', 'go', 'goes',
+    'using', 'use', 'uses',
+    'working', 'work', 'works',
+    'running', 'run', 'runs',
+    'making', 'make', 'makes',
+    'doing', 'do', 'does',
+    'taking', 'take', 'takes',
+    'building', 'build', 'builds',
+    'referring', 'refer', 'refers',
+    'seeing', 'see', 'sees',
+    'showing', 'show', 'shows',
+    'finding', 'find', 'finds'
+}
+
+ACTION_PARTICLES = {'off', 'on', 'up', 'down', 'out', 'in', 'at', 'for', 'by', 'to', 'with', 'about', 'from', 'into', 'over', 'after'}
+
+def sanitize_candidate_term(topic):
+    if not topic:
+        return ""
+    t = topic.strip()
+    
+    # 1. Strip leading single letter bullet/list artifacts or drive letter artifacts
+    # e.g., 'c certify.exe' -> 'certify.exe', 'a mimikatz.exe' -> 'mimikatz.exe', 'c:\tools' -> 'tools'
+    t = re.sub(r'^[a-zA-Z]\s+', '', t)
+    t = re.sub(r'^[a-zA-Z]:\\(?:tools\\)?', '', t, flags=re.IGNORECASE)
+    t = re.sub(r'^[a-zA-Z]:\s*', '', t)
+    t = re.sub(r'\b[a-zA-Z]\s+(?=[a-zA-Z0-9_\-\.])', '', t)
+
+    # 2. Strip surrounding quotes/parentheses
+    t = t.strip('\'"`()[]{}')
+
+    # 3. Handle duplicate repeated token artifacts e.g. "mimikatz.exe mimikatz" -> "mimikatz.exe" if repeated stem
+    parts = t.split()
+    if len(parts) >= 2 and parts[0].lower().split('.')[0] == parts[1].lower().split('.')[0]:
+        t = parts[0]
+
+    return t.strip()
+
+def is_action_verb_phrase(topic):
+    t_lower = topic.lower().strip()
+    words = t_lower.split()
+    if not words:
+        return True
+    
+    # E.g. "turned off", "setting up", "looking for", "getting started"
+    if len(words) == 2 and words[0] in COMMON_ACTION_VERBS and words[1] in ACTION_PARTICLES:
+        return True
+    if len(words) >= 2 and words[0] in COMMON_ACTION_VERBS and words[1] in ACTION_PARTICLES:
+        return True
+    if len(words) == 2 and words[0] in {'getting', 'turned', 'going', 'looking', 'setting', 'refer'} and words[1] in {'started', 'off', 'on', 'to', 'at', 'up', 'out'}:
+        return True
+
+    return False
+
 def parse_pages_str(pages_str):
     if not pages_str:
         return []
@@ -118,10 +178,12 @@ def combine_pages_list(pages_list):
     return ", ".join(unique_pages)
 
 def is_valid_candidate(term):
-    t_clean = term.strip()
+    t_clean = sanitize_candidate_term(term)
     if not t_clean or t_clean.isdigit() or len(t_clean) <= 1:
         return False
     if t_clean.lower() in STOP_WORDS:
+        return False
+    if is_action_verb_phrase(t_clean):
         return False
     return True
 
@@ -206,9 +268,9 @@ def neural_filter_batch(batch_terms, system_prompt):
 
         gen_text = local_tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
         kept_terms = clean_model_json(gen_text)
-        kept_set_lower = {k.lower().strip() for k in kept_terms}
+        kept_set_lower = {sanitize_candidate_term(k).lower().strip() for k in kept_terms}
 
-        filtered_batch = [item for item in batch_terms if item["topic"].lower().strip() in kept_set_lower]
+        filtered_batch = [item for item in batch_terms if sanitize_candidate_term(item["topic"]).lower().strip() in kept_set_lower]
         return filtered_batch
     except Exception as e:
         print(f"[-] Neural batch evaluation error: {e}")
@@ -220,7 +282,34 @@ def curate_terms_local_slm(input_entries, model_name, system_prompt):
     print(f"[VERIFICATION] Active Model Target: {model_name}")
     print(f"[VERIFICATION] System Prompt Length: {len(system_prompt)} characters")
 
-    candidates = [item for item in input_entries if is_valid_candidate(item.get("topic", ""))]
+    # Pre-clean and deduplicate input entries by sanitized topic
+    pre_grouped = defaultdict(list)
+    topic_casing_map = {}
+
+    for item in input_entries:
+        raw_topic = item.get("topic", "")
+        clean_topic = sanitize_candidate_term(raw_topic)
+        pages = item.get("pages", "")
+
+        if not is_valid_candidate(clean_topic):
+            continue
+
+        norm_key = clean_topic.lower()
+        if norm_key not in topic_casing_map:
+            topic_casing_map[norm_key] = clean_topic
+        else:
+            existing = topic_casing_map[norm_key]
+            if any(c.isupper() for c in clean_topic) and not any(c.isupper() for c in existing):
+                topic_casing_map[norm_key] = clean_topic
+
+        if pages:
+            pre_grouped[norm_key].append(pages)
+
+    candidates = []
+    for norm_key in sorted(pre_grouped.keys()):
+        display_topic = topic_casing_map[norm_key]
+        combined_pages = combine_pages_list(pre_grouped[norm_key])
+        candidates.append({"topic": display_topic, "pages": combined_pages})
 
     has_neural_model = load_neural_slm(model_name)
 
@@ -228,7 +317,7 @@ def curate_terms_local_slm(input_entries, model_name, system_prompt):
     if has_neural_model and len(candidates) > 0:
         batch_size = 15
         total_batches = (len(candidates) + batch_size - 1) // batch_size
-        print(f"[+] Processing {len(candidates)} candidates through Neural SLM ({model_name}) in {total_batches} batches...")
+        print(f"[+] Processing {len(candidates)} sanitized candidates through Neural SLM ({model_name}) in {total_batches} batches...")
         for i in range(0, len(candidates), batch_size):
             batch = candidates[i:i + batch_size]
             filtered_batch = neural_filter_batch(batch, system_prompt)
@@ -246,7 +335,7 @@ def curate_terms_local_slm(input_entries, model_name, system_prompt):
     term_casing_map = {}
 
     for item in curated_candidates:
-        topic = item.get("topic", "").strip()
+        topic = sanitize_candidate_term(item.get("topic", ""))
         pages = item.get("pages", "").strip()
         norm_key = topic.lower()
 
