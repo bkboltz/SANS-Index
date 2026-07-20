@@ -12,6 +12,8 @@ import re
 from collections import defaultdict
 import subprocess
 
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 def ensure_slm_dependencies():
     packages = {
         'nltk': 'nltk',
@@ -99,7 +101,26 @@ def is_valid_candidate(term):
         return False
     return True
 
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+def clean_model_json(text):
+    """
+    Clean markdown code blocks and extract JSON array or list of strings from model output.
+    """
+    if not text:
+        return []
+    text = text.strip()
+    text = re.sub(r'^```(?:json)?\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\s*```$', '', text, flags=re.IGNORECASE)
+    match = re.search(r'\[.*\]', text, re.DOTALL)
+    if match:
+        try:
+            val = json.loads(match.group(0))
+            if isinstance(val, list):
+                return [str(item) for item in val]
+        except Exception:
+            pass
+    # Fallback to quoted string extraction
+    quoted = re.findall(r'"([^"]+)"', text)
+    return quoted if quoted else []
 
 # Initialize Local Neural SLM Model
 MODEL_REF = "Qwen/Qwen2.5-0.5B-Instruct"
@@ -136,45 +157,30 @@ def neural_filter_batch(batch_terms):
         import torch
         topics_list = [item["topic"] for item in batch_terms]
         prompt = (
-            "<|im_start|>system\nYou are a cybersecurity course index curator. "
-            "Filter the list of candidate terms. Keep ONLY distinct technical terms, tools, protocols, commands, security concepts, registry paths, or file extensions. "
-            "Filter out generic non-technical English words (e.g. 'think', 'figure', 'example', 'different', 'process', 'page', 'user', 'file'). "
-            "Return JSON array of kept strings.<|im_end|>\n"
+            "<|im_start|>system\nYou are a SANS Cybersecurity course index curator. "
+            "Review candidate terms. Select ONLY items that are specific technical security concepts, software tools, network protocols, commands, or registry paths. "
+            "REJECT generic non-technical words and textbook section titles (e.g. 'example', 'overview', 'chapter', 'figure', 'following steps', 'system configuration', 'basic concept', 'main feature', 'additional information'). "
+            "Return a valid JSON array of kept strings.<|im_end|>\n"
             f"<|im_start|>user\nCandidate terms:\n{json.dumps(topics_list)}\n<|im_end|>\n"
-            "<|im_start|>assistant\n["
+            "<|im_start|>assistant\n"
         )
 
         inputs = local_tokenizer(prompt, return_tensors="pt")
         with torch.no_grad():
             outputs = local_model.generate(
                 **inputs,
-                max_new_tokens=512,
+                max_new_tokens=384,
                 do_sample=False,
                 pad_token_id=local_tokenizer.eos_token_id
             )
 
         gen_text = local_tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-        full_text = "[" + gen_text.strip()
-        
-        kept_set = set()
-        match = re.search(r'\[.*?\]', full_text, re.DOTALL)
-        if match:
-            try:
-                kept_set = set(json.loads(match.group(0)))
-            except Exception:
-                pass
+        kept_terms = clean_model_json(gen_text)
+        kept_set_lower = {k.lower().strip() for k in kept_terms}
 
-        if not kept_set:
-            # Fallback regex string extraction for quoted terms in model output
-            quoted = re.findall(r'"([^"]+)"', full_text)
-            if quoted:
-                kept_set = set(quoted)
-
-        if kept_set:
-            kept_set_lower = {k.lower().strip() for k in kept_set}
-            filtered = [item for item in batch_terms if item["topic"].lower().strip() in kept_set_lower]
-            if filtered:
-                return filtered
+        # Filter batch terms based on model response
+        filtered_batch = [item for item in batch_terms if item["topic"].lower().strip() in kept_set_lower]
+        return filtered_batch
     except Exception as e:
         print(f"[-] Neural batch evaluation error: {e}")
 
@@ -191,7 +197,7 @@ def curate_terms_local_slm(input_entries):
 
     curated_candidates = []
     if has_neural_model and len(candidates) > 0:
-        batch_size = 40
+        batch_size = 15
         print(f"[+] Processing {len(candidates)} candidates through Neural SLM in batches of {batch_size}...")
         for i in range(0, len(candidates), batch_size):
             batch = candidates[i:i + batch_size]
