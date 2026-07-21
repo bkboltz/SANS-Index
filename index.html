@@ -192,6 +192,10 @@
           <i data-lucide="cpu"></i>
           <span>Auto-Index PDF Tool</span>
         </button>
+        <button class="tab-btn" data-view-tab="notes-editor" id="notes-editor-nav-btn">
+          <i data-lucide="file-text"></i>
+          <span>Notes Editor</span>
+        </button>
       </div>
 
       <!-- Manual Indexing Workspace View -->
@@ -1147,6 +1151,242 @@
           </div>
         </div>
       </div>
+
+      <!-- Notes Text Editor Workspace View -->
+      <div id="notes-editor-view" class="workspace-view hidden no-print">
+        <div class="notes-editor-container notes-theme-dark">
+          
+          <!-- Top Header / Document Title & Settings Ribbon -->
+          <div class="notes-editor-header">
+            <div class="notes-doc-title-container">
+              <i data-lucide="file-text" class="notes-doc-icon"></i>
+              <input type="text" id="notes-doc-title" class="notes-doc-title-input" value="Untitled Notes" placeholder="Document Title...">
+              <span id="notes-save-status" class="notes-save-badge">
+                <i data-lucide="check" style="width: 12px; height: 12px;"></i>
+                <span>Saved</span>
+              </span>
+            </div>
+            
+            <div class="notes-header-actions">
+              <button id="notes-theme-toggle-btn" class="btn btn-secondary btn-sm" title="Toggle Editor Light/Dark Theme">
+                <i data-lucide="sun" id="notes-theme-icon-sun" class="hidden"></i>
+                <i data-lucide="moon" id="notes-theme-icon-moon"></i>
+                <span id="notes-theme-text">Dark Mode</span>
+              </button>
+              
+              <button id="notes-print-btn" class="btn btn-secondary btn-sm" title="Print or Save as PDF">
+                <i data-lucide="printer" style="width: 14px; height: 14px;"></i>
+                <span>Print / PDF</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Full Word-like Rich Formatting Toolbar -->
+          <div class="notes-toolbar" id="notes-toolbar">
+            
+            <!-- History Group -->
+            <div class="toolbar-group">
+              <button class="tb-btn" data-command="undo" title="Undo (Ctrl+Z)">
+                <i data-lucide="undo-2"></i>
+              </button>
+              <button class="tb-btn" data-command="redo" title="Redo (Ctrl+Y)">
+                <i data-lucide="redo-2"></i>
+              </button>
+            </div>
+
+            <div class="tb-divider"></div>
+
+            <!-- Paragraph / Heading Style -->
+            <div class="toolbar-group">
+              <select id="tb-heading-select" class="tb-select" title="Paragraph Format">
+                <option value="p">Normal Text</option>
+                <option value="h1">Heading 1</option>
+                <option value="h2">Heading 2</option>
+                <option value="h3">Heading 3</option>
+                <option value="pre">Code Block</option>
+                <option value="blockquote">Quote</option>
+              </select>
+            </div>
+
+            <div class="tb-divider"></div>
+
+            <!-- Font Family & Size -->
+            <div class="toolbar-group">
+              <select id="tb-font-family" class="tb-select font-family-select" title="Font Family">
+                <option value="Inter, sans-serif">Inter</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="'Courier New', monospace">Courier New</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+              </select>
+              
+              <select id="tb-font-size" class="tb-select font-size-select" title="Font Size">
+                <option value="1">10pt</option>
+                <option value="2">11pt</option>
+                <option value="3" selected>12pt</option>
+                <option value="4">14pt</option>
+                <option value="5">18pt</option>
+                <option value="6">24pt</option>
+                <option value="7">36pt</option>
+              </select>
+            </div>
+
+            <div class="tb-divider"></div>
+
+            <!-- Text Formatting (Bold, Italic, Underline, Strikethrough, Sub, Super) -->
+            <div class="toolbar-group">
+              <button class="tb-btn" data-command="bold" title="Bold (Ctrl+B)">
+                <i data-lucide="bold"></i>
+              </button>
+              <button class="tb-btn" data-command="italic" title="Italic (Ctrl+I)">
+                <i data-lucide="italic"></i>
+              </button>
+              <button class="tb-btn" data-command="underline" title="Underline (Ctrl+U)">
+                <i data-lucide="underline"></i>
+              </button>
+              <button class="tb-btn" data-command="strikeThrough" title="Strikethrough">
+                <i data-lucide="strikethrough"></i>
+              </button>
+              <button class="tb-btn" data-command="subscript" title="Subscript">
+                <i data-lucide="subscript"></i>
+              </button>
+              <button class="tb-btn" data-command="superscript" title="Superscript">
+                <i data-lucide="superscript"></i>
+              </button>
+            </div>
+
+            <div class="tb-divider"></div>
+
+            <!-- Colors (Text Color & Highlight Color) -->
+            <div class="toolbar-group">
+              <div class="color-picker-wrapper" title="Text Color">
+                <i data-lucide="baseline" class="tb-icon"></i>
+                <input type="color" id="tb-text-color" value="#000000" class="tb-color-input">
+              </div>
+              <div class="color-picker-wrapper" title="Highlight Color">
+                <i data-lucide="highlighter" class="tb-icon"></i>
+                <input type="color" id="tb-bg-color" value="#fef08a" class="tb-color-input">
+              </div>
+            </div>
+
+            <div class="tb-divider"></div>
+
+            <!-- Alignments -->
+            <div class="toolbar-group">
+              <button class="tb-btn" data-command="justifyLeft" title="Align Left">
+                <i data-lucide="align-left"></i>
+              </button>
+              <button class="tb-btn" data-command="justifyCenter" title="Align Center">
+                <i data-lucide="align-center"></i>
+              </button>
+              <button class="tb-btn" data-command="justifyRight" title="Align Right">
+                <i data-lucide="align-right"></i>
+              </button>
+              <button class="tb-btn" data-command="justifyFull" title="Justify">
+                <i data-lucide="align-justify"></i>
+              </button>
+            </div>
+
+            <div class="tb-divider"></div>
+
+            <!-- Lists & Indents -->
+            <div class="toolbar-group">
+              <button class="tb-btn" data-command="insertUnorderedList" title="Bulleted List">
+                <i data-lucide="list"></i>
+              </button>
+              <button class="tb-btn" data-command="insertOrderedList" title="Numbered List">
+                <i data-lucide="list-ordered"></i>
+              </button>
+              <button class="tb-btn" data-command="outdent" title="Decrease Indent">
+                <i data-lucide="indent-decrease"></i>
+              </button>
+              <button class="tb-btn" data-command="indent" title="Increase Indent">
+                <i data-lucide="indent-increase"></i>
+              </button>
+            </div>
+
+            <div class="tb-divider"></div>
+
+            <!-- Insert Objects & Special Actions -->
+            <div class="toolbar-group">
+              <button class="tb-btn" id="tb-insert-table-btn" title="Insert Table">
+                <i data-lucide="table"></i>
+              </button>
+              <button class="tb-btn" data-command="insertHorizontalRule" title="Insert Horizontal Line">
+                <i data-lucide="minus"></i>
+              </button>
+              <button class="tb-btn" id="tb-insert-page-break-btn" title="Insert Page Break">
+                <i data-lucide="scissors"></i>
+              </button>
+              <button class="tb-btn" id="tb-insert-link-btn" title="Insert Link">
+                <i data-lucide="link"></i>
+              </button>
+              <button class="tb-btn" data-command="removeFormat" title="Clear Formatting">
+                <i data-lucide="remove-formatting"></i>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Document Canvas Area (Word Paper Pages Layout) -->
+          <div class="notes-canvas-viewport" id="notes-canvas-viewport">
+            
+            <!-- Horizontal Ruler -->
+            <div class="notes-ruler-container" id="notes-ruler">
+              <div class="ruler-margin-left"></div>
+              <div class="ruler-ticks">
+                <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span>
+              </div>
+              <div class="ruler-margin-right"></div>
+            </div>
+
+            <!-- Paper Pages Container -->
+            <div class="notes-pages-wrapper" id="notes-pages-wrapper">
+              <!-- Contenteditable Document Page -->
+              <div class="editor-page" id="editor-page-main">
+                <div class="page-header-area">
+                  <span class="header-text-left" id="page-header-doc-title">Untitled Notes</span>
+                  <span class="header-text-right">SANS Study Notes</span>
+                </div>
+                
+                <div class="page-content-editable" id="notes-content-editor" contenteditable="true" spellcheck="true" data-placeholder="Start typing your study notes here...">
+                  <p>Welcome to your SANS Study Notes editor!</p>
+                  <p>You can format text, adjust sizes, create tables, add highlights, and structure your course notes with full pagination support.</p>
+                </div>
+                
+                <div class="page-footer-area">
+                  <span class="footer-text-left">Page <span class="current-page-num">1</span></span>
+                  <span class="footer-text-right">CONFIDENTIAL / PERSONAL STUDY GUIDE</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Editor Status Bar -->
+          <div class="notes-status-bar">
+            <div class="status-info-group">
+              <span id="notes-page-count-badge" class="status-item">
+                <i data-lucide="file" style="width: 13px; height: 13px;"></i>
+                <span>Page 1 of 1</span>
+              </span>
+              <span id="notes-word-count" class="status-item">0 words</span>
+              <span id="notes-char-count" class="status-item">0 characters</span>
+            </div>
+            
+            <div class="status-info-group">
+              <span class="status-item zoom-controls">
+                <button id="zoom-out-btn" class="zoom-btn" title="Zoom Out">-</button>
+                <span id="zoom-level-text">100%</span>
+                <button id="zoom-in-btn" class="zoom-btn" title="Zoom In">+</button>
+              </span>
+            </div>
+          </div>
+
+        </div>
+      </div>
       
       <!-- SANS Practice Quiz Scorecard View -->
       <div id="quiz-scorecard-view" class="workspace-view hidden no-print" style="max-width: 600px; margin: 0 auto; padding: 24px;">
@@ -1306,11 +1546,15 @@
         <span>Print Preview</span>
       </h3>
       <div class="print-preview-actions">
-        <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; margin-right: 8px;">
+        <select id="print-format-select">
           <option value="standard">Standard Format (Continuous)</option>
           <option value="booklet">Booklet Format (Per-Book Booklets + Cover)</option>
         </select>
-        <button id="print-preview-confirm-btn" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 6px;">
+        <button id="print-preview-save-pdf-btn" class="btn btn-secondary">
+          <i data-lucide="file-down"></i>
+          <span>Save as PDF</span>
+        </button>
+        <button id="print-preview-confirm-btn" class="btn btn-accent">
           <i data-lucide="printer"></i>
           <span>Print</span>
         </button>

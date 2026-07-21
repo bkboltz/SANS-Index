@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('api', {
   loadData: () => ipcRenderer.invoke('load-data'),
   saveData: (data) => ipcRenderer.invoke('save-data', data),
   print: () => ipcRenderer.invoke('print-app'),
+  savePdf: (options) => ipcRenderer.invoke('save-pdf', options),
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
   installOcr: () => ipcRenderer.invoke('install-ocr'),
   installDependency: (dep) => ipcRenderer.invoke('install-dependency', dep),
