@@ -175,6 +175,10 @@
           <div id="quiz-new-questions-toast" class="bounce-tag hidden">
             New questions added!
           </div>
+          <label id="print-include-notes-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-right: 10px;" title="Include the Notes/Reference Details column in the printed index">
+            <input type="checkbox" id="print-include-notes" checked>
+            <span>Include Notes</span>
+          </label>
           <button id="print-index-btn" class="btn btn-primary">
             <i data-lucide="printer"></i>
             <span>Print Index</span>
@@ -300,6 +304,10 @@
               <input type="checkbox" id="settings-show-ai-badges" checked>
               <span>Show Source Badges</span>
             </label>
+            <button id="reenable-delete-warning-btn" class="hidden" style="display: none; align-items: center; gap: 5px; margin-left: 10px; background: none; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 0.75rem; padding: 3px 8px; cursor: pointer; font-family: var(--font-sans); transition: color 0.15s, border-color 0.15s;" title="Re-enable the delete confirmation warning dialog">
+              <i data-lucide="shield-alert" style="width: 12px; height: 12px;"></i>
+              <span>Re-enable Delete Warning</span>
+            </button>
           </div>
         </section>
 
@@ -1114,8 +1122,9 @@
       </h3>
       <div class="print-preview-actions">
         <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; margin-right: 8px;">
-          <option value="standard">Standard Format (Continuous)</option>
-          <option value="booklet">Booklet Format (Per-Book Booklets + Cover)</option>
+          <option value="standard">Topic Sorted Format</option>
+          <option value="topic-by-book">Topic Sorted By Book</option>
+          <option value="booklet">Chronologically Sorted Format</option>
         </select>
         <button id="print-preview-confirm-btn" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 6px;">
           <i data-lucide="printer"></i>
@@ -1151,6 +1160,29 @@
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="ai-curation-cancel-btn" class="btn btn-secondary">Go Back</button>
         <button id="ai-curation-continue-btn" class="btn btn-accent">Continue</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Delete Confirmation Dialog -->
+  <dialog id="delete-confirm-dialog" class="custom-dialog" style="max-width: 420px; border-top: 4px solid var(--danger);">
+    <div class="dialog-content">
+      <div style="display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px;">
+        <div style="background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--danger); flex-shrink: 0; margin-top: 2px;">
+          <i data-lucide="trash-2" style="width: 22px; height: 22px;"></i>
+        </div>
+        <div>
+          <h3 style="margin: 0 0 8px 0; font-size: 1.1rem; font-weight: 600; color: var(--text-primary); border-bottom: none; padding-bottom: 0;">Delete Entry?</h3>
+          <p style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);">This action cannot be undone. The index entry will be permanently removed.</p>
+        </div>
+      </div>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; user-select: none; margin-bottom: 20px;">
+        <input type="checkbox" id="delete-confirm-dont-show-again">
+        <span>Don't show this warning again</span>
+      </label>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button id="delete-confirm-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="delete-confirm-ok-btn" class="btn" style="background-color: var(--danger); color: #fff; font-weight: 600;">Delete</button>
       </div>
     </div>
   </dialog>

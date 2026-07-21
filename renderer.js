@@ -81,6 +81,14 @@ const elements = {
   printPreviewConfirmBtn: document.getElementById('print-preview-confirm-btn'),
   printFormatSelect: document.getElementById('print-format-select'),
   printOnlyContainer: document.getElementById('print-only-container'),
+  printIncludeNotes: document.getElementById('print-include-notes'),
+
+  // Delete confirmation dialog
+  deleteConfirmDialog: document.getElementById('delete-confirm-dialog'),
+  deleteConfirmOkBtn: document.getElementById('delete-confirm-ok-btn'),
+  deleteConfirmCancelBtn: document.getElementById('delete-confirm-cancel-btn'),
+  deleteConfirmDontShowAgain: document.getElementById('delete-confirm-dont-show-again'),
+  reEnableDeleteWarningBtn: document.getElementById('reenable-delete-warning-btn'),
 
   // Sidebar To-Do
   todoInput: document.getElementById('todo-input'),
@@ -242,6 +250,7 @@ let activeAutocompleteIndex = -1;
 let courseAutocompleteIndex = -1;
 let bannerTimeoutId = null;
 let promptedCourses = new Set();
+let pendingDeleteEntryId = null;
 
 // Global temporary variables for generated quizzes
 let lastGeneratedQuiz = null;
@@ -2225,7 +2234,42 @@ function endEditEntry() {
 }
 
 
+// Helper: sync visibility of the re-enable delete warning button
+function syncReEnableDeleteWarningBtn() {
+  const btn = elements.reEnableDeleteWarningBtn;
+  if (!btn) return;
+  const isSkipped = localStorage.getItem('skip_delete_warning') === 'true';
+  if (isSkipped) {
+    btn.style.display = 'inline-flex';
+    btn.classList.remove('hidden');
+  } else {
+    btn.style.display = 'none';
+    btn.classList.add('hidden');
+  }
+}
+
 function deleteEntry(entryId) {
+  const skipWarning = localStorage.getItem('skip_delete_warning') === 'true';
+  if (skipWarning) {
+    performDeleteEntry(entryId);
+  } else {
+    // Show confirmation dialog
+    pendingDeleteEntryId = entryId;
+    if (elements.deleteConfirmDontShowAgain) {
+      elements.deleteConfirmDontShowAgain.checked = false;
+    }
+    if (elements.deleteConfirmDialog) {
+      lucide.createIcons({
+        attrs: { class: 'lucide-icon' },
+        nameAttr: 'data-lucide',
+        nodeList: elements.deleteConfirmDialog.querySelectorAll('[data-lucide]')
+      });
+      elements.deleteConfirmDialog.showModal();
+    }
+  }
+}
+
+function performDeleteEntry(entryId) {
   state.entries = state.entries.filter(e => e && e.id !== entryId);
   
   saveState();
@@ -2800,6 +2844,52 @@ function initEventBindings() {
 
   elements.printFormatSelect.addEventListener('change', renderPrintPreview);
 
+  // Include Notes checkbox — persist and re-render preview when toggled
+  if (elements.printIncludeNotes) {
+    elements.printIncludeNotes.checked = localStorage.getItem('print_include_notes') !== 'false';
+    elements.printIncludeNotes.addEventListener('change', () => {
+      localStorage.setItem('print_include_notes', elements.printIncludeNotes.checked);
+      renderPrintPreview();
+    });
+  }
+
+  // Delete Confirmation Dialog — wiring
+  if (elements.deleteConfirmDialog) {
+    // Cancel button closes the dialog without deleting
+    elements.deleteConfirmCancelBtn.addEventListener('click', () => {
+      pendingDeleteEntryId = null;
+      elements.deleteConfirmDontShowAgain.checked = false;
+      elements.deleteConfirmDialog.close();
+    });
+
+    // Confirm button performs the actual deletion
+    elements.deleteConfirmOkBtn.addEventListener('click', () => {
+      if (elements.deleteConfirmDontShowAgain.checked) {
+        localStorage.setItem('skip_delete_warning', 'true');
+        syncReEnableDeleteWarningBtn();
+      }
+      elements.deleteConfirmDialog.close();
+      if (pendingDeleteEntryId) {
+        performDeleteEntry(pendingDeleteEntryId);
+        pendingDeleteEntryId = null;
+      }
+      elements.deleteConfirmDontShowAgain.checked = false;
+    });
+  }
+
+  // Re-enable delete warning button
+  if (elements.reEnableDeleteWarningBtn) {
+    elements.reEnableDeleteWarningBtn.addEventListener('click', () => {
+      localStorage.removeItem('skip_delete_warning');
+      syncReEnableDeleteWarningBtn();
+    });
+  }
+
+  // Initialize re-enable button visibility
+  syncReEnableDeleteWarningBtn();
+
+
+
   // Close button on floating exam date notification banner
   const closeBannerBtn = elements.examNotificationBanner.querySelector('.close-banner-btn');
   if (closeBannerBtn) {
@@ -2893,6 +2983,8 @@ function renderPrintPreview() {
   let generatedHtml = '';
   if (format === 'booklet') {
     generatedHtml = generateBookletPrintHTML(activeEntries);
+  } else if (format === 'topic-by-book') {
+    generatedHtml = generateTopicByBookPrintHTML(activeEntries);
   } else {
     generatedHtml = generateStandardPrintHTML(activeEntries);
   }
@@ -2909,54 +3001,96 @@ function renderPrintPreview() {
 }
 
 function generateStandardPrintHTML(activeEntries) {
-  const entriesCopy = [...activeEntries];
-  sortData(entriesCopy);
+  const includeNotes = elements.printIncludeNotes.checked;
 
-  const rowsHtml = entriesCopy.map(entry => {
-    const book = state.books.find(b => b.id === entry.bookId);
-    const bookNameFull = book ? book.name : 'Unknown';
-    const bookNameShort = bookNameFull.includes(':') ? bookNameFull.split(':')[0].trim() : bookNameFull;
-    const bookColor = book ? book.color : '#4b5563';
-    const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
-    
-    const isAuto = entry.source === 'auto';
-    const rowClass = [
-      entry.starred ? 'starred-row' : '',
-      isAuto ? 'auto-row' : ''
-    ].filter(Boolean).join(' ');
-    const autoBadge = isAuto ? '<span class="auto-badge-print">[Auto]</span>' : '';
-    
+  // Dynamic column widths based on whether notes are shown
+  const topicW = includeNotes ? '25%' : '40%';
+  const refsW  = includeNotes ? '35%' : '60%';
+  const notesW = '40%';
+  // Topic column: only break words when they would overflow (not aggressively)
+  const topicWordWrap = 'overflow-wrap: break-word; word-break: normal;';
+
+  // Always sort alphabetically by topic
+  const sorted = [...activeEntries].sort((a, b) =>
+    a.topic.localeCompare(b.topic, undefined, { sensitivity: 'base', numeric: true })
+  );
+
+  // Combine like topics: group entries by topic (case-insensitive)
+  const topicMap = new Map();
+  sorted.forEach(entry => {
+    const key = entry.topic.trim().toLowerCase();
+    if (!topicMap.has(key)) {
+      topicMap.set(key, { topic: entry.topic, entries: [], notes: [] });
+    }
+    const group = topicMap.get(key);
+    group.entries.push(entry);
+    if (entry.notes && entry.notes.trim()) {
+      group.notes.push(entry.notes.trim());
+    }
+  });
+
+  // Build rows — one per unique topic
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  const bookOrderMap = new Map(activeBooks.map((b, i) => [b.id, i]));
+
+  const rowsHtml = [...topicMap.values()].map(group => {
+    // Sort book references by sidebar book order
+    const booksSorted = [...group.entries].sort((a, b) => {
+      const ai = bookOrderMap.has(a.bookId) ? bookOrderMap.get(a.bookId) : 999;
+      const bi = bookOrderMap.has(b.bookId) ? bookOrderMap.get(b.bookId) : 999;
+      return ai - bi;
+    });
+
+    // Build ref inline HTML — one line per book: "Book X:  pages"
+    const refLines = booksSorted.map(entry => {
+      const book = state.books.find(b => b && b.id === entry.bookId);
+      const bookNameFull = book ? book.name : 'Unknown';
+      const bookNameShort = bookNameFull.includes(':') ? bookNameFull.split(':')[0].trim() : bookNameFull;
+      const bookColor = book ? book.color : '#4b5563';
+      // Normalize pages: single space after each comma
+      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ');
+      return `<div style="line-height: 1.65;"><span style="color: ${bookColor}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span>&nbsp;&nbsp;${escapeHtml(normalizedPages)}</div>`;
+    }).join('');
+
+    const refsHtml = `<div>${refLines}</div>`;
+
+    // Combine notes (deduplicated)
+    const uniqueNotes = [...new Set(group.notes)];
+    const combinedNotes = uniqueNotes.map(n => formatNoteMarkup(n)).join('<hr style="border:none; border-top: 1px solid #e2e8f0; margin: 4px 0;">');
+
+    // Starred if any entry is starred
+    const isStarred = group.entries.some(e => e.starred);
+    const rowClass = isStarred ? 'starred-row' : '';
+
+    const notesCell = includeNotes
+      ? `<td class="col-notes">${combinedNotes}</td>`
+      : '';
+
     return `
       <tr class="${rowClass}">
-        <td class="col-book">
-          <span class="book-badge" style="color: ${bookColor}">
-            <span class="badge-dot" style="background-color: ${bookColor}"></span>
-            <span>${bookNameShort}</span>
-          </span>
-        </td>
-        <td class="col-pages">${entry.pages}</td>
-        <td class="col-topic">${entry.topic}${autoBadge}</td>
-        <td class="col-notes">${formattedNotes}</td>
-      </tr>
-    `;
+        <td class="col-topic" style="font-weight: 700; ${topicWordWrap}">${escapeHtml(group.topic)}</td>
+        <td class="col-references">${refsHtml}</td>
+        ${notesCell}
+      </tr>`;
   }).join('');
+
+  const notesHeader = includeNotes ? `<th class="col-notes" style="width: ${notesW};">Notes / Reference Details</th>` : '';
 
   return `
     <div class="print-header">
-      <h1>${elements.currentCourseTitle.textContent}</h1>
+      <h1>${escapeHtml(elements.currentCourseTitle.textContent)}</h1>
       <div class="print-meta">
         <span>SANS Study Index</span>
         <span>Date: ${new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-        <span>Total Topics: ${entriesCopy.length}</span>
+        <span>Total Topics: ${topicMap.size}</span>
       </div>
     </div>
-    <table class="index-table">
+    <table class="index-table" style="table-layout: fixed; width: 100%;">
       <thead>
         <tr>
-          <th class="col-book">Book</th>
-          <th class="col-pages">Pages</th>
-          <th class="col-topic">Topic</th>
-          <th class="col-notes">Notes / Reference Details</th>
+          <th class="col-topic" style="width: ${topicW}; ${topicWordWrap}">Topic</th>
+          <th class="col-references" style="width: ${refsW};">References</th>
+          ${notesHeader}
         </tr>
       </thead>
       <tbody>
@@ -2967,112 +3101,179 @@ function generateStandardPrintHTML(activeEntries) {
 }
 
 function generateBookletPrintHTML(activeEntries) {
-  // 1. Cover Page Index (Quick scan index sorted by topic alphabetically, with NO notes)
-  const sortedByTopic = [...activeEntries].sort((a, b) => a.topic.localeCompare(b.topic, undefined, { sensitivity: 'base', numeric: true }));
-  const masterRowsHtml = sortedByTopic.map(entry => {
-    const book = state.books.find(b => b.id === entry.bookId);
-    const bookNameFull = book ? book.name : 'Unknown';
-    const bookNameShort = bookNameFull.includes(':') ? bookNameFull.split(':')[0].trim() : bookNameFull;
-    const bookColor = book ? book.color : '#4b5563';
-    const isAuto = entry.source === 'auto';
-    const autoBadge = isAuto ? '<span class="auto-badge-print">[Auto]</span>' : '';
-    return `
-      <tr class="${isAuto ? 'auto-row' : ''}">
-        <td class="col-topic" style="font-weight: 600;">${entry.topic}${autoBadge}</td>
-        <td class="col-book">
-          <span class="book-badge" style="color: ${bookColor}">
-            <span class="badge-dot" style="background-color: ${bookColor}"></span>
-            <span>${bookNameShort}</span>
-          </span>
-        </td>
-        <td class="col-pages" style="font-weight: 600;">${entry.pages}</td>
-      </tr>
-    `;
-  }).join('');
+  const includeNotes = elements.printIncludeNotes.checked;
+
+  // Dynamic column widths based on whether notes are shown
+  const topicW = includeNotes ? '25%' : '40%';
+  const refsW  = includeNotes ? '35%' : '60%';
+  const notesW = '40%';
+  // Topic column: only break words when they would overflow (not aggressively)
+  const topicWordWrap = 'overflow-wrap: break-word; word-break: normal;';
+
+  // Get books in sidebar order (only those that have entries)
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
 
   let html = `
     <div class="print-header">
-      <h1>${elements.currentCourseTitle.textContent}</h1>
+      <h1>${escapeHtml(elements.currentCourseTitle.textContent)}</h1>
       <div class="print-meta">
-        <strong>MASTER COVER PAGE INDEX (Quick Scan)</strong>
+        <span>SANS Study Index — Booklet Format</span>
         <span>Date: ${new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        <span>Total Entries: ${activeEntries.length}</span>
       </div>
     </div>
-    <table class="index-table">
-      <thead>
-        <tr>
-          <th class="col-topic">Topic</th>
-          <th class="col-book">Book</th>
-          <th class="col-pages">Page(s)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${masterRowsHtml}
-      </tbody>
-    </table>
-    
-    <div class="print-page-break"></div>
   `;
 
-  // 2. Individual Booklets per Book
-  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
-  activeBooks.forEach((book, index) => {
-    const bookEntries = activeEntries.filter(e => e.bookId === book.id);
+  const notesHeader = includeNotes ? `<th class="col-notes" style="width: ${notesW};">Notes / Reference Details</th>` : '';
+
+  let firstBook = true;
+  activeBooks.forEach(book => {
+    const bookEntries = activeEntries.filter(e => e && e.bookId === book.id);
     if (bookEntries.length === 0) return; // skip books with no entries
 
-    // Sort book entries by page number
+    // Sort by page number of first reference, then topic as tiebreaker
     const sortedBookEntries = [...bookEntries].sort((a, b) => {
       const pageComp = comparePages(a.pages, b.pages);
       if (pageComp !== 0) return pageComp;
       return a.topic.localeCompare(b.topic, undefined, { sensitivity: 'base', numeric: true });
     });
 
-    const bookRowsHtml = sortedBookEntries.map(entry => {
-      const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
-      const isAuto = entry.source === 'auto';
-      const rowClass = [
-        entry.starred ? 'starred-row' : '',
-        isAuto ? 'auto-row' : ''
-      ].filter(Boolean).join(' ');
-      const autoBadge = isAuto ? '<span class="auto-badge-print">[Auto]</span>' : '';
-      return `
-        <tr class="${rowClass}">
-          <td class="col-pages" style="font-weight: 700;">${entry.pages}</td>
-          <td class="col-topic" style="font-weight: 600;">${entry.topic}${autoBadge}</td>
-          <td class="col-notes">${formattedNotes}</td>
-        </tr>
-      `;
-    }).join('');
-
+    // Build the book section header — using book color
+    const headerMargin = firstBook ? 'margin-top: 16px;' : 'margin-top: 32px;';
     html += `
-      <div class="booklet-header">
-        <h2 style="color: ${book.color}; border-bottom: 2px solid ${book.color}; padding-bottom: 6px; display: inline-block; width: 100%;">
-          ${book.name} - Detailed Booklet Index
-        </h2>
+      <div class="print-book-section-header" style="${headerMargin}">
+        <h3 style="color: ${book.color};">
+          <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${book.color}; margin-right:6px; vertical-align:middle;"></span>
+          ${escapeHtml(book.name)}
+        </h3>
       </div>
-      <table class="index-table">
+      <table class="index-table" style="table-layout: fixed; width: 100%;">
         <thead>
           <tr>
-            <th class="col-pages">Page(s)</th>
-            <th class="col-topic">Topic</th>
-            <th class="col-notes">Notes / Reference Details</th>
+            <th class="col-topic" style="width: ${topicW}; ${topicWordWrap}">Topic</th>
+            <th class="col-references" style="width: ${refsW};">References</th>
+            ${notesHeader}
           </tr>
         </thead>
         <tbody>
-          ${bookRowsHtml}
+    `;
+
+    sortedBookEntries.forEach(entry => {
+      const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
+      const rowClass = entry.starred ? 'starred-row' : '';
+
+      // References cell: single book entry — inline format "Book X:  pages"
+      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ');
+      const bookNameShort = book.name.includes(':') ? book.name.split(':')[0].trim() : book.name;
+      const refsHtml = `<div><span style="color: ${book.color}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span>&nbsp;&nbsp;${escapeHtml(normalizedPages)}</div>`;
+
+      const notesCell = includeNotes
+        ? `<td class="col-notes">${formattedNotes}</td>`
+        : '';
+
+      html += `
+          <tr class="${rowClass}">
+            <td class="col-topic" style="font-weight: 700; ${topicWordWrap}">${escapeHtml(entry.topic)}</td>
+            <td class="col-references">${refsHtml}</td>
+            ${notesCell}
+          </tr>`;
+    });
+
+    html += `
         </tbody>
       </table>
     `;
 
-    // Add page break after each booklet (except the last one)
-    if (index < activeBooks.length - 1) {
-      html += `<div class="print-page-break"></div>`;
-    }
+    firstBook = false;
   });
 
   return html;
 }
-  
+
+function generateTopicByBookPrintHTML(activeEntries) {
+  const includeNotes = elements.printIncludeNotes.checked;
+
+  // Dynamic column widths based on whether notes are shown
+  const topicW = includeNotes ? '25%' : '40%';
+  const refsW  = includeNotes ? '35%' : '60%';
+  const notesW = '40%';
+  const topicWordWrap = 'overflow-wrap: break-word; word-break: normal;';
+
+  // Get books in sidebar order
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+
+  let html = `
+    <div class="print-header">
+      <h1>${escapeHtml(elements.currentCourseTitle.textContent)}</h1>
+      <div class="print-meta">
+        <span>SANS Study Index — Topic Sorted By Book</span>
+        <span>Date: ${new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        <span>Total Entries: ${activeEntries.length}</span>
+      </div>
+    </div>
+  `;
+
+  const notesHeader = includeNotes ? `<th class="col-notes" style="width: ${notesW};">Notes / Reference Details</th>` : '';
+
+  let firstBook = true;
+  activeBooks.forEach(book => {
+    const bookEntries = activeEntries.filter(e => e && e.bookId === book.id);
+    if (bookEntries.length === 0) return;
+
+    // Sort alphabetically by topic within each book
+    const sortedBookEntries = [...bookEntries].sort((a, b) =>
+      a.topic.localeCompare(b.topic, undefined, { sensitivity: 'base', numeric: true })
+    );
+
+    const headerMargin = firstBook ? 'margin-top: 16px;' : 'margin-top: 32px;';
+    html += `
+      <div class="print-book-section-header" style="${headerMargin}">
+        <h3 style="color: ${book.color};">
+          <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${book.color}; margin-right:6px; vertical-align:middle;"></span>
+          ${escapeHtml(book.name)}
+        </h3>
+      </div>
+      <table class="index-table" style="table-layout: fixed; width: 100%;">
+        <thead>
+          <tr>
+            <th class="col-topic" style="width: ${topicW}; ${topicWordWrap}">Topic</th>
+            <th class="col-references" style="width: ${refsW};">References</th>
+            ${notesHeader}
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    sortedBookEntries.forEach(entry => {
+      const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
+      const rowClass = entry.starred ? 'starred-row' : '';
+      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ');
+      const bookNameShort = book.name.includes(':') ? book.name.split(':')[0].trim() : book.name;
+      const refsHtml = `<div><span style="color: ${book.color}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span>&nbsp;&nbsp;${escapeHtml(normalizedPages)}</div>`;
+
+      const notesCell = includeNotes
+        ? `<td class="col-notes">${formattedNotes}</td>`
+        : '';
+
+      html += `
+          <tr class="${rowClass}">
+            <td class="col-topic" style="font-weight: 700; ${topicWordWrap}">${escapeHtml(entry.topic)}</td>
+            <td class="col-references">${refsHtml}</td>
+            ${notesCell}
+          </tr>`;
+    });
+
+    html += `
+        </tbody>
+      </table>
+    `;
+
+    firstBook = false;
+  });
+
+  return html;
+}
+
   // Import/Export dialog binds
   elements.exportJsonBtn.addEventListener('click', exportToJSON);
   elements.exportCsvBtn.addEventListener('click', exportToCSV);
