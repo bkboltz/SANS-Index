@@ -920,6 +920,64 @@ Return a JSON array of objects with the exact same structure as the input:
   }
 }
 
+// Helper: Curate Index with Local SLM Engine
+async function curateIndexWithLocalSLM(entries, pythonExe, tempDir, event, localSlmModel = '0.5b', localSlmPrompt = null) {
+  logDebug(`[Local SLM Curation] Initiating (${localSlmModel}) with ${entries.length} candidate terms...`);
+
+  if (event) {
+    event.sender.send('auto-index-progress', { 
+      step: 'curating-slm', 
+      message: `Running Local Neural SLM (${localSlmModel.toUpperCase()}) Curation Engine...` 
+    });
+  }
+
+  const inputJsonFile = path.join(tempDir, 'slm_input_entries.json');
+  const outputJsonFile = path.join(tempDir, 'slm_output_entries.json');
+
+  fs.writeFileSync(inputJsonFile, JSON.stringify(entries, null, 2), 'utf8');
+
+  const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
+  const args = [curateScript, inputJsonFile, outputJsonFile, '--model', localSlmModel];
+  if (localSlmPrompt && localSlmPrompt.trim()) {
+    args.push('--custom-prompt', localSlmPrompt.trim());
+  }
+
+  return new Promise((resolve) => {
+    const proc = spawn(pythonExe, args, { cwd: path.join(__dirname, 'engine') });
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => {
+      const msg = data.toString();
+      logDebug(`[Local SLM Curation Output] ${msg}`);
+      if (event && msg.includes('[VERIFICATION]')) {
+        event.sender.send('auto-index-progress', { 
+          step: 'curating-slm', 
+          message: msg.trim() 
+        });
+      }
+    });
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0 && fs.existsSync(outputJsonFile)) {
+        try {
+          const curatedEntries = JSON.parse(fs.readFileSync(outputJsonFile, 'utf8'));
+          logDebug(`[Local SLM Curation] Curation successful! Returned ${curatedEntries.length} terms.`);
+          resolve({ entries: curatedEntries, error: null });
+          return;
+        } catch (err) {
+          logDebug(`[Local SLM Curation] Failed to parse output JSON: ${err.message}`);
+        }
+      }
+      logDebug(`[Local SLM Curation] Failed with exit code ${code}: ${stderr}`);
+      resolve({ entries: entries, error: `Local SLM curation failed: ${stderr || 'Unknown error'}` });
+    });
+  });
+}
+
 // Helper: Generate Practice Quiz with Gemini AI
 async function generateQuizWithGemini(textFile, numQuestions, difficulty, geminiApiKey, event, geminiModel) {
   logDebug(`[Gemini Quiz Gen] Initiating. Questions: ${numQuestions}, Difficulty: ${difficulty}, Model: ${geminiModel || 'gemini-flash-latest'}`);
@@ -1175,7 +1233,6 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     }
     
     const indexInputFile = usePdfDirectly ? sourceFile : textFile;
-    
     // Indexing
     event.sender.send('auto-index-progress', { step: 'indexing', message: 'Generating index terms...' });
     
@@ -1253,12 +1310,19 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         });
       }
     }
+
     let finalEntries = entries;
     let curationError = null;
-    if (geminiApiKey && entries.length > 0) {
-      const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
-      finalEntries = curationResult.entries;
-      curationError = curationResult.error;
+    if (entries.length > 0) {
+      if (settings.curationEngine === 'local-slm') {
+        const curationResult = await curateIndexWithLocalSLM(entries, pythonExe, tempDir, event, settings.localSlmModel || '0.5b', settings.localSlmPrompt || null);
+        finalEntries = curationResult.entries;
+        curationError = curationResult.error;
+      } else if (geminiApiKey) {
+        const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
+        finalEntries = curationResult.entries;
+        curationError = curationResult.error;
+      }
     }
 
     // Quiz Generation (Sequential & Independent)
@@ -1267,7 +1331,6 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     let quizGenerated = false;
 
     if (settings.generateQuiz && geminiApiKey) {
-      // Ensure text file is available
       if (!fs.existsSync(textFile) && fs.existsSync(sourceFile)) {
         event.sender.send('auto-index-progress', { step: 'converting', message: 'Extracting text for quiz generation...' });
         const pythonTextExtractCode = `import sys; from pdfminer.high_level import extract_text; open(sys.argv[2], "w", encoding="utf-8").write(extract_text(sys.argv[1]))`;
@@ -1293,7 +1356,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         quizGenerated = true;
       }
     }
-    
+
     // Cleanup
     try {
       if (fs.existsSync(tempDir)) {
@@ -1332,5 +1395,59 @@ ipcMain.handle('retry-gemini-curation', async (event, args) => {
   } catch (error) {
     logDebug(`[Auto-Index Handler] Retry curation failed: ${error.message}`);
     return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('check-local-model-status', async (event, modelKey) => {
+  try {
+    const pythonExe = await getSystemPythonCommand();
+    const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
+    return new Promise((resolve) => {
+      const proc = spawn(pythonExe, [curateScript, '--model', modelKey || '0.5b', '--check-downloaded'], { cwd: path.join(__dirname, 'engine') });
+      let stdout = '';
+      proc.stdout.on('data', (data) => { stdout += data.toString(); });
+      proc.on('close', (code) => {
+        if (code === 0 && stdout) {
+          try {
+            const parsed = JSON.parse(stdout.trim());
+            resolve({ downloaded: !!parsed.downloaded, model: parsed.model });
+            return;
+          } catch (e) {}
+        }
+        resolve({ downloaded: false, model: modelKey });
+      });
+    });
+  } catch (err) {
+    return { downloaded: false, error: err.message };
+  }
+});
+
+ipcMain.handle('download-local-model', async (event, modelKey) => {
+  try {
+    const pythonExe = await getSystemPythonCommand();
+    const curateScript = path.join(__dirname, 'engine', 'curate_slm.py');
+    return new Promise((resolve) => {
+      const proc = spawn(pythonExe, [curateScript, '--model', modelKey || '0.5b', '--download-only'], { cwd: path.join(__dirname, 'engine') });
+      let outputLogs = '';
+      proc.stdout.on('data', (data) => {
+        const str = data.toString();
+        outputLogs += str;
+        event.sender.send('model-download-progress', { modelKey, text: str });
+      });
+      proc.stderr.on('data', (data) => {
+        const str = data.toString();
+        outputLogs += str;
+        event.sender.send('model-download-progress', { modelKey, text: str });
+      });
+      proc.on('close', (code) => {
+        if (code === 0) {
+          resolve({ success: true, modelKey });
+        } else {
+          resolve({ success: false, error: outputLogs });
+        }
+      });
+    });
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 });

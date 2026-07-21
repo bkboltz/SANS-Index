@@ -168,9 +168,9 @@
           <p class="summary-text">Index your course topics for rapid lookups during your open-book exam.</p>
         </div>
         <div class="header-actions">
-          <button id="practice-quiz-btn" class="btn btn-secondary pulse-glow-btn" style="margin-right: 8px;">
+          <button id="practice-quiz-btn" class="btn btn-secondary" title="Practice Quiz (Feature coming soon)" style="margin-right: 8px; opacity: 0.55; cursor: not-allowed;">
             <i data-lucide="brain"></i>
-            <span>Practice Quiz</span>
+            <span>Practice Quiz (Coming Soon)</span>
           </button>
           <div id="quiz-new-questions-toast" class="bounce-tag hidden">
             New questions added!
@@ -628,57 +628,242 @@
                 </div>
               </div>
 
-              <!-- Step 3: Gemini AI Curation (Beta) -->
+              <!-- Step 3: AI Curation Engine Selection -->
               <div class="wizard-step-panel hidden" id="step-panel-3">
                 <div style="margin-bottom: 20px;">
-                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 3: Gemini AI Curation (Beta)</h3>
-                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Use Gemini AI to clean up, deduplicate, and group extracted terms.</p>
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 3: AI Curation Engine</h3>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+                    AI Curation automatically reviews extracted raw terms, removes non-technical English words, standardizes proper casing (e.g. <em>"active directory"</em> &rarr; <em>"Active Directory"</em>), and consolidates duplicate page entries.
+                  </p>
                 </div>
                 
                 <div style="background: rgba(20, 184, 166, 0.06); border: 1px solid rgba(20, 184, 166, 0.2); padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
                   <div style="display: flex; flex-direction: column; gap: 2px;">
                     <span style="font-weight: 600; color: #2dd4bf; font-size: 0.9rem;">Enable AI Curation</span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">Deduplicate, group, and clean up index terms</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">Automatically clean and deduplicate index terms</span>
                   </div>
                   <label class="switch-toggle">
-                    <input type="checkbox" id="auto-index-use-ai" disabled>
+                    <input type="checkbox" id="auto-index-use-ai">
                     <span class="slider-toggle"></span>
                   </label>
                 </div>
 
-                <!-- Gemini API Key -->
-                <div class="form-group" style="position: relative; margin-bottom: 16px;">
-                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <label for="auto-index-gemini-key" style="margin: 0;">Gemini API Key</label>
-                    <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.72rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-weight: 500;">
-                      <i data-lucide="external-link" style="width: 11px; height: 11px;"></i>
-                      Get Free Key
-                    </a>
-                  </div>
-                  <div style="display: flex; gap: 8px; align-items: center;">
-                    <div style="position: relative; flex: 1;">
-                      <input type="password" id="auto-index-gemini-key" placeholder="Paste Gemini API Key to enable AI curation" style="padding-right: 40px; margin: 0;">
-                      <i id="api-key-status-icon" data-lucide="unlock" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;"></i>
-                    </div>
-                    <button type="button" id="api-key-lock-btn" class="btn btn-secondary" style="padding: 0 16px; height: 38px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; min-width: 85px;">
-                      <i data-lucide="lock" style="width: 14px; height: 14px;"></i>
-                      <span>Lock</span>
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Gemini Model Selection -->
-                <div class="form-group">
-                  <label for="auto-index-model-select">Gemini Model Selection</label>
-                  <select id="auto-index-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
-                    <option value="gemini-flash-latest" selected>Gemini 1.5 Flash (Default - Recommended, Fast)</option>
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash (Experimental, Ultra-Fast)</option>
-                    <option value="gemini-pro-latest">Gemini 1.5 Pro (Best Quality, Slower)</option>
-                    <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight, Faster)</option>
-                    <option value="gemini-3.5-flash">Gemini 3.5 Flash (Preview, Experimental)</option>
+                <!-- Options Container (hidden when AI Curation toggle is off) -->
+                <div id="ai-curation-options-container">
+                  <!-- Hidden select for backward compatibility -->
+                  <select id="auto-index-curation-engine" class="hidden">
+                    <option value="gemini" selected>Gemini Cloud API</option>
+                    <option value="local-slm">Local 0.5B SLM Engine</option>
                   </select>
-                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
-                    * Choose a different model if you run into global traffic rate limits or "high demand" errors during curation.
+
+                  <!-- Selectable Cards Grid -->
+                  <div style="margin-bottom: 8px;">
+                    <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Select AI Engine</label>
+                  </div>
+
+                  <div class="curation-card-grid">
+                    <!-- Gemini Cloud AI Card -->
+                    <div class="curation-engine-card active" id="curation-card-gemini" data-engine="gemini">
+                      <div>
+                        <div class="curation-card-header">
+                          <div class="curation-card-icon-title">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                              <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="curation-card-title">Google Gemini (Cloud AI)</div>
+                          </div>
+                          <span class="badge badge-success" style="font-size: 0.68rem;">Cloud</span>
+                        </div>
+                        <div class="curation-card-description">
+                          Highest quality curation using Google Gemini cloud models. Simple manual API key setup required. Uses 0% local PC resources (best for lightweight laptops). Prone to free-tier traffic rate limits.
+                        </div>
+                      </div>
+                      <div class="curation-card-features">
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Download Size:</strong> 0 MB (Cloud)</span>
+                        </div>
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Hardware Demand:</strong> 0% PC RAM/CPU</span>
+                        </div>
+                        <div class="curation-card-feature-item" style="color: #eab308;">
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★★★★ (Top)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Local Qwen 1.5B (Recommended) -->
+                    <div class="curation-engine-card" id="curation-card-local-1.5b" data-engine="local-slm" data-model="1.5b">
+                      <div>
+                        <div class="curation-card-header">
+                          <div class="curation-card-icon-title">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                              <i data-lucide="zap" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="curation-card-title">Qwen 1.5B (Fast & Smart) ⭐</div>
+                          </div>
+                          <span class="badge badge-success model-status-badge" style="font-size: 0.68rem;" id="badge-model-1.5b">Recommended</span>
+                        </div>
+                        <div class="curation-card-description">
+                          Recommended sweet spot for local curation! Excellent technical English vocabulary, fast execution, and strict JSON output. Runs 100% offline without API keys.
+                        </div>
+                      </div>
+                      <div class="curation-card-features">
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Download Size:</strong> ~1.1 GB (One-time)</span>
+                        </div>
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Hardware Demand:</strong> ~1.5 GB RAM (Low)</span>
+                        </div>
+                        <div class="curation-card-feature-item" style="color: #38bdf8;">
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★★★☆ (Great)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Local Qwen 3B (Near Cloud Quality) -->
+                    <div class="curation-engine-card" id="curation-card-local-3b" data-engine="local-slm" data-model="3b">
+                      <div>
+                        <div class="curation-card-header">
+                          <div class="curation-card-icon-title">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                              <i data-lucide="brain-circuit" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="curation-card-title">Qwen 3B (Near-Cloud)</div>
+                          </div>
+                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-3b">Near-Cloud</span>
+                        </div>
+                        <div class="curation-card-description">
+                          High reasoning capacity for complex technical terms, tool names, and protocols. Produces near-cloud quality results completely offline without API rate limits.
+                        </div>
+                      </div>
+                      <div class="curation-card-features">
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="download" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Download Size:</strong> ~2.0 GB (One-time)</span>
+                        </div>
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Hardware Demand:</strong> ~2.8 GB RAM (Medium)</span>
+                        </div>
+                        <div class="curation-card-feature-item" style="color: #a78bfa;">
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★★★½ (High)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Local Qwen 0.5B (Ultra-Lightweight) -->
+                    <div class="curation-engine-card" id="curation-card-local-0.5b" data-engine="local-slm" data-model="0.5b">
+                      <div>
+                        <div class="curation-card-header">
+                          <div class="curation-card-icon-title">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                              <i data-lucide="feather" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div class="curation-card-title">Qwen 0.5B (Ultra-Light)</div>
+                          </div>
+                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-0.5b">Micro</span>
+                        </div>
+                        <div class="curation-card-description">
+                          Smallest, ultra-fast model for basic offline index cleaning. Lowest resource demand, but basic reasoning capabilities (recommended to review final list).
+                        </div>
+                      </div>
+                      <div class="curation-card-features">
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Download Size:</strong> ~398 MB (One-time)</span>
+                        </div>
+                        <div class="curation-card-feature-item">
+                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Hardware Demand:</strong> ~800 MB RAM (Micro)</span>
+                        </div>
+                        <div class="curation-card-feature-item" style="color: var(--text-muted);">
+                          <i data-lucide="star" style="width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; margin-top: 1px;"></i>
+                          <span><strong>Curation Quality:</strong> ★★☆☆☆ (Basic)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Conditional Container: Gemini Settings -->
+                  <div id="gemini-settings-container" style="margin-top: 16px;">
+                    <!-- Gemini API Key -->
+                    <div class="form-group" id="auto-index-gemini-key-group" style="position: relative; margin-bottom: 16px;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label for="auto-index-gemini-key" style="margin: 0;">Gemini API Key</label>
+                        <button type="button" id="get-free-key-btn" style="background: none; border: none; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 4px; color: var(--color-accent); font-weight: 500; cursor: pointer; padding: 0;">
+                          <i data-lucide="help-circle" style="width: 12px; height: 12px;"></i>
+                          <span>How to Get Free Key</span>
+                        </button>
+                      </div>
+                      <div style="display: flex; gap: 8px; align-items: center;">
+                        <div style="position: relative; flex: 1;">
+                          <input type="password" id="auto-index-gemini-key" placeholder="Paste Gemini API Key to enable AI curation" style="padding-right: 40px; margin: 0;">
+                          <i id="api-key-status-icon" data-lucide="unlock" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;"></i>
+                        </div>
+                        <button type="button" id="api-key-lock-btn" class="btn btn-secondary" style="padding: 0 16px; height: 38px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; min-width: 85px;">
+                          <i data-lucide="lock" style="width: 14px; height: 14px;"></i>
+                          <span>Lock</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Gemini Model Selection -->
+                    <div class="form-group">
+                      <label for="auto-index-model-select">Gemini Model Selection</label>
+                      <select id="auto-index-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
+                        <option value="gemini-flash-latest" selected>Gemini 1.5 Flash (Default - Recommended, Fast)</option>
+                        <option value="gemini-2.0-flash">Gemini 2.0 Flash (Experimental, Ultra-Fast)</option>
+                        <option value="gemini-pro-latest">Gemini 1.5 Pro (Best Quality, Slower)</option>
+                        <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight, Faster)</option>
+                        <option value="gemini-3.5-flash">Gemini 3.5 Flash (Preview, Experimental)</option>
+                      </select>
+                      <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
+                        * Upgrade to paid billing in Google AI Studio for higher quotas, or switch models if you encounter rate limits during peak traffic.
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Conditional Container: Local SLM Info & Custom Prompt -->
+                  <div id="local-slm-info-container" class="hidden" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="padding: 14px 18px; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: var(--radius-md); background: rgba(56, 189, 248, 0.05); display: flex; align-items: center; gap: 12px;">
+                      <i data-lucide="shield-check" style="width: 24px; height: 24px; color: #38bdf8; flex-shrink: 0;"></i>
+                      <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
+                        <strong style="color: #38bdf8;">100% Offline Ready:</strong> Curation will run locally using your PC's CPU/RAM. No API key or internet connection required.
+                      </div>
+                    </div>
+
+                    <!-- Collapsible Advanced Prompt Editor -->
+                    <details style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px; font-size: 0.82rem;">
+                      <summary style="cursor: pointer; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between; user-select: none;">
+                        <span style="display: inline-flex; align-items: center; gap: 6px;">
+                          <i data-lucide="sliders" style="width: 14px; height: 14px; color: #38bdf8;"></i>
+                          Advanced Options: Customize Local System Prompt
+                        </span>
+                        <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">(Click to expand)</span>
+                      </summary>
+
+                      <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                          Customize system instructions sent to your local model. You can fine-tune inclusion/exclusion rules or add specific terms relevant to your course.
+                        </div>
+
+                        <textarea id="local-slm-custom-prompt" rows="8" style="width: 100%; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: monospace; font-size: 0.75rem; padding: 10px; line-height: 1.45; resize: vertical; outline: none;"></textarea>
+
+                        <div style="display: flex; justify-content: flex-end;">
+                          <button type="button" id="reset-local-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
+                            <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
+                            <span>Reset to Default Prompt</span>
+                          </button>
+                        </div>
+                      </div>
+                    </details>
                   </div>
                 </div>
               </div>
@@ -690,15 +875,23 @@
                   <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Automatically generate mock questions based on the PDF content.</p>
                 </div>
                 
-                <div style="background: rgba(124, 58, 237, 0.06); border: 1px solid rgba(124, 58, 237, 0.2); padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                  <div style="display: flex; flex-direction: column; gap: 2px;">
-                    <span style="font-weight: 600; color: #a78bfa; font-size: 0.9rem;">Generate Practice Quiz</span>
+                <div style="background: rgba(124, 58, 237, 0.04); border: 1px dashed rgba(124, 58, 237, 0.25); opacity: 0.75; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                  <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-weight: 600; color: #a78bfa; font-size: 0.9rem;">Generate Practice Quiz</span>
+                      <span style="font-size: 0.7rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: 10px; font-weight: 600;">Feature Coming Soon</span>
+                    </div>
                     <span style="font-size: 0.75rem; color: var(--text-muted);">Create multiple-choice questions for the quiz hub</span>
                   </div>
-                  <label class="switch-toggle">
-                    <input type="checkbox" id="auto-index-generate-quiz">
-                    <span class="slider-toggle"></span>
+                  <label class="switch-toggle" style="cursor: not-allowed;" title="Feature coming soon">
+                    <input type="checkbox" id="auto-index-generate-quiz" disabled>
+                    <span class="slider-toggle" style="cursor: not-allowed; opacity: 0.5;"></span>
                   </label>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #f87171; border-radius: 4px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 20px;">
+                  <i data-lucide="clock" style="width: 18px; height: 18px; color: #f87171; flex-shrink: 0;"></i>
+                  <span><strong>Feature Coming Soon:</strong> AI Practice Quiz generation is temporarily locked while we optimize the engine for reduced token consumption and local model support.</span>
                 </div>
 
                 <!-- Quiz parameters (Visible only when toggle checked) -->
@@ -767,10 +960,10 @@
                   </div>
                 </div>
 
-                <!-- API Free Tier Disclaimer Card -->
-                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-left: 4px solid #ef4444; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px;">
-                  <h4 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #f87171; display: flex; align-items: center; gap: 6px;">
-                    <i data-lucide="alert-circle" style="width: 16px; height: 16px;"></i>
+                <!-- API Free Tier Disclaimer Card (Shown only when Gemini Cloud AI is selected) -->
+                <div id="gemini-rate-limit-card" class="hidden" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-left: 4px solid #f59e0b; border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 20px;">
+                  <h4 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="alert-triangle" style="width: 16px; height: 16px; color: #f59e0b;"></i>
                     API Free Tier Rate Limit Advisory
                   </h4>
                   <p style="margin: 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
@@ -1122,9 +1315,8 @@
       </h3>
       <div class="print-preview-actions">
         <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; margin-right: 8px;">
-          <option value="standard">Topic Sorted Format</option>
-          <option value="topic-by-book">Topic Sorted By Book</option>
-          <option value="booklet">Chronologically Sorted Format</option>
+          <option value="standard">Standard Format (Continuous)</option>
+          <option value="booklet">Booklet Format (Per-Book Booklets + Cover)</option>
         </select>
         <button id="print-preview-confirm-btn" class="btn btn-accent" style="display: inline-flex; align-items: center; gap: 6px;">
           <i data-lucide="printer"></i>
@@ -1160,6 +1352,119 @@
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="ai-curation-cancel-btn" class="btn btn-secondary">Go Back</button>
         <button id="ai-curation-continue-btn" class="btn btn-accent">Continue</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Local SLM Model Download Confirmation Modal -->
+  <dialog id="model-download-confirm-modal" class="custom-dialog" style="max-width: 520px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary); border-bottom: none; padding-bottom: 0;">
+          <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+            <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+          </div>
+          <span id="dl-modal-title">Download Local Model</span>
+        </h3>
+        <button type="button" id="dl-modal-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2); padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 16px;">
+          <div style="font-weight: 600; color: #38bdf8; font-size: 0.92rem; margin-bottom: 4px;" id="dl-modal-model-name">Qwen 1.5B Instruct</div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;" id="dl-modal-model-desc">
+            File Size: <strong>~1.1 GB</strong> | RAM Demand: <strong>~1.5 GB RAM</strong> | Quality: <strong>Good (Recommended)</strong>
+          </div>
+        </div>
+
+        <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 12px 0;">
+          This model has not been downloaded yet. Would you like to download and cache it now? This is a <strong>one-time download</strong>; future indexings will run 100% offline instantly.
+        </p>
+
+        <!-- Progress Status Box (hidden until download starts) -->
+        <div id="dl-modal-progress-container" class="hidden" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-top: 12px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--text-primary); margin-bottom: 6px;">
+            <span id="dl-modal-status-text" style="font-weight: 600; color: #38bdf8;">Downloading model weights...</span>
+          </div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace; max-height: 90px; overflow-y: auto; white-space: pre-wrap; background: #090d16; padding: 8px; border-radius: 4px;" id="dl-modal-logs">
+            [+] Connecting to Hugging Face Hub...
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 14px;">
+        <button type="button" id="dl-modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="dl-modal-start-btn" class="btn btn-accent">Confirm & Download Model</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Gemini API Key Guide Modal -->
+  <dialog id="api-key-guide-modal" class="custom-dialog" style="max-width: 520px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary); border-bottom: none; padding-bottom: 0;">
+          <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+            <i data-lucide="key" style="width: 16px; height: 16px;"></i>
+          </div>
+          <span>How to Get a Free Gemini API Key</span>
+        </h3>
+        <button type="button" id="api-key-guide-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+        </button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+        <!-- Step 1 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">1</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Open Google AI Studio:</strong><br>
+            Open <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #38bdf8; text-decoration: underline;">Google AI Studio</a> and sign in with your Google account.
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">2</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Create your API Key:</strong><br>
+            Click the blue <strong style="color: var(--text-primary);">"Create API key"</strong> button. Select or create a project (name it anything you like, e.g. <em>"SANS Indexer"</em>).
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">3</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Copy the key:</strong><br>
+            Click the <strong style="color: var(--text-primary);">"Copy"</strong> button next to your new API key string.
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">4</div>
+          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+            <strong style="color: var(--text-primary);">Paste & Lock in App:</strong><br>
+            Paste the copied key into the <strong style="color: var(--text-primary);">Gemini API Key</strong> box in this app, then click <strong style="color: var(--text-primary);">Lock</strong>.
+          </div>
+        </div>
+
+        <!-- Tip Box -->
+        <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #fef08a; line-height: 1.45;">
+          <strong>💡 Pro Tip:</strong> Google provides generous free tier quotas! If you ever run into high traffic rate limits during peak usage, you can enable paid billing in AI Studio for higher limits across all Gemini models.
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px;">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem;">
+          <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
+          <span>Open Google AI Studio</span>
+        </a>
+        <button type="button" id="api-key-guide-close-btn" class="btn btn-accent">Got it!</button>
       </div>
     </div>
   </dialog>

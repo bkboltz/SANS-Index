@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('api', {
   onDepInstallLog: (callback) => {
     ipcRenderer.on('dep-install-log', (event, log) => callback(log));
   },
+  checkLocalModelStatus: (modelKey) => ipcRenderer.invoke('check-local-model-status', modelKey),
+  downloadLocalModel: (modelKey) => ipcRenderer.invoke('download-local-model', modelKey),
+  onModelDownloadProgress: (callback) => {
+    ipcRenderer.on('model-download-progress', (event, data) => callback(data));
+  },
   onAutoIndexProgress: (callback) => {
     ipcRenderer.on('auto-index-progress', (event, progress) => callback(progress));
   },

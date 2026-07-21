@@ -134,9 +134,33 @@ const elements = {
   autoIndexFileName: document.getElementById('auto-index-file-name'),
   autoIndexPassword: document.getElementById('auto-index-password'),
   autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
+  autoIndexCurationEngine: document.getElementById('auto-index-curation-engine'),
+  curationEngineBadge: document.getElementById('curation-engine-badge'),
+  curationCardGemini: document.getElementById('curation-card-gemini'),
+  curationCardLocal05b: document.getElementById('curation-card-local-0.5b'),
+  curationCardLocal15b: document.getElementById('curation-card-local-1.5b'),
+  curationCardLocal3b: document.getElementById('curation-card-local-3b'),
+  geminiSettingsContainer: document.getElementById('gemini-settings-container'),
+  localSlmInfoContainer: document.getElementById('local-slm-info-container'),
+  aiCurationOptionsContainer: document.getElementById('ai-curation-options-container'),
+  modelDownloadConfirmModal: document.getElementById('model-download-confirm-modal'),
+  dlModalModelName: document.getElementById('dl-modal-model-name'),
+  dlModalModelDesc: document.getElementById('dl-modal-model-desc'),
+  dlModalProgressContainer: document.getElementById('dl-modal-progress-container'),
+  dlModalStatusText: document.getElementById('dl-modal-status-text'),
+  dlModalLogs: document.getElementById('dl-modal-logs'),
+  dlModalStartBtn: document.getElementById('dl-modal-start-btn'),
+  dlModalCancelBtn: document.getElementById('dl-modal-cancel-btn'),
+  dlModalCloseX: document.getElementById('dl-modal-close-x'),
+  localSlmCustomPrompt: document.getElementById('local-slm-custom-prompt'),
+  resetLocalPromptBtn: document.getElementById('reset-local-prompt-btn'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
+  getFreeKeyBtn: document.getElementById('get-free-key-btn'),
+  apiKeyGuideModal: document.getElementById('api-key-guide-modal'),
+  apiKeyGuideCloseBtn: document.getElementById('api-key-guide-close-btn'),
+  apiKeyGuideCloseX: document.getElementById('api-key-guide-close-x'),
   autoIndexUseAi: document.getElementById('auto-index-use-ai'),
   autoIndexDepToggle: document.getElementById('auto-index-dep-toggle'),
   autoIndexDepContent: document.getElementById('auto-index-dep-content'),
@@ -3595,23 +3619,259 @@ function initAutoIndexingBindings() {
       });
     }
 
-    const validateGeminiKey = () => {
-      const keyVal = elements.autoIndexGeminiKey.value.trim();
-      const hasKey = keyVal.length > 0;
+    if (elements.getFreeKeyBtn && elements.apiKeyGuideModal) {
+      elements.getFreeKeyBtn.addEventListener('click', () => {
+        elements.apiKeyGuideModal.showModal();
+      });
+    }
+    if (elements.apiKeyGuideCloseBtn && elements.apiKeyGuideModal) {
+      elements.apiKeyGuideCloseBtn.addEventListener('click', () => {
+        elements.apiKeyGuideModal.close();
+      });
+    }
+    if (elements.apiKeyGuideCloseX && elements.apiKeyGuideModal) {
+      elements.apiKeyGuideCloseX.addEventListener('click', () => {
+        elements.apiKeyGuideModal.close();
+      });
+    }
 
-      if (hasKey) {
-        elements.autoIndexUseAi.disabled = false;
-        elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
-      } else {
-        elements.autoIndexUseAi.disabled = true;
-        elements.autoIndexUseAi.checked = false;
-        localStorage.setItem('use_gemini_ai', 'false');
-        elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
+    const updateAiOptionsVisibility = () => {
+      const isEnabled = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+      if (elements.aiCurationOptionsContainer) {
+        if (isEnabled) {
+          elements.aiCurationOptionsContainer.classList.remove('hidden');
+        } else {
+          elements.aiCurationOptionsContainer.classList.add('hidden');
+        }
       }
     };
 
+    const validateGeminiKey = () => {
+      if (elements.autoIndexUseAi) {
+        elements.autoIndexUseAi.disabled = false;
+      }
+      if (elements.autoIndexGeminiKey) {
+        elements.autoIndexGeminiKey.style.borderColor = 'var(--border-color)';
+      }
+      updateAiOptionsVisibility();
+    };
+
+    const LOCAL_SLM_METADATA = {
+      '0.5b': { name: 'Qwen 0.5B Instruct (Micro)', size: '~398 MB', ram: '~800 MB RAM', quality: 'Basic', badgeId: 'badge-model-0.5b' },
+      '1.5b': { name: 'Qwen 1.5B Instruct (Recommended)', size: '~1.1 GB', ram: '~1.5 GB RAM', quality: 'Good / High', badgeId: 'badge-model-1.5b' },
+      '3b': { name: 'Qwen 3B Instruct (Near-Cloud)', size: '~2.0 GB', ram: '~2.8 GB RAM', quality: 'Near-Cloud Quality', badgeId: 'badge-model-3b' }
+    };
+
+    const DEFAULT_LOCAL_SLM_PROMPT = `You are a strict SANS Cybersecurity Course Index Curator.
+Your sole task is to filter candidate index terms extracted from course materials and KEEP ONLY genuine technical cybersecurity concepts.
+
+### INCLUSION CRITERIA (KEEP):
+- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump, Certify.exe, Rubeus.exe, SharpHound)
+- Protocols, network standards, and acronyms (e.g., Kerberos, BGP, IPsec, TLS 1.3, DNSSEC, SNMPv3, ARP, SMBv3)
+- Operating system commands, parameters, and flags (e.g., chmod 755, netstat -an, reg add, vssadmin, ps -ef, ls -la)
+- System artifacts, registry keys, and file paths (e.g., HKLM\\Software, MFT, NTFS, SAM database, Event ID 4624, Prefetch)
+- Attack vectors, vulnerability classes, and malware terms (e.g., Pass-the-Hash, SQL Injection, XSS, Golden Ticket, Buffer Overflow)
+- Security frameworks, standards, and laws (e.g., NIST SP 800-53, ISO 27001, MITRE ATT&CK, CIS Controls, HIPAA)
+
+### EXCLUSION CRITERIA (REJECT / DROP):
+- Generic textbook headings, section titles, and page markers (e.g., Overview, Introduction, Summary, Discussion, Chapter 1, Figure 2.3, Table of Contents)
+- Action verbs, phrasal verbs, or prepositions (e.g., 'turned off', 'setting up', 'getting started', 'looking for', 'used by', 'refer to', 'based on')
+- Non-technical English words or generic meta-phrases (e.g., Following Steps, Basic Concept, Main Features, System Configuration, Important Note, Additional Information, Key Takeaway, Best Practices, Module Summary)
+- Standalone generic English words unless part of a technical phrase (e.g., reject 'system', 'process', 'method', 'data', 'user' alone; keep 'Access Control List' or 'System Call')
+
+### FEW-SHOT EXAMPLES:
+Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Turned Off", "Mimikatz", "Following Steps", "Event ID 4624", "Setting Up"]
+Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]
+
+Output ONLY a raw JSON array of strings containing the kept terms. Do NOT include any markdown code fences, preambles, or conversational commentary.`;
+
+    if (elements.localSlmCustomPrompt) {
+      const savedPrompt = localStorage.getItem('local_slm_prompt');
+      elements.localSlmCustomPrompt.value = savedPrompt !== null ? savedPrompt : DEFAULT_LOCAL_SLM_PROMPT;
+      elements.localSlmCustomPrompt.addEventListener('input', () => {
+        localStorage.setItem('local_slm_prompt', elements.localSlmCustomPrompt.value);
+      });
+    }
+
+    if (elements.resetLocalPromptBtn && elements.localSlmCustomPrompt) {
+      elements.resetLocalPromptBtn.addEventListener('click', () => {
+        elements.localSlmCustomPrompt.value = DEFAULT_LOCAL_SLM_PROMPT;
+        localStorage.removeItem('local_slm_prompt');
+      });
+    }
+
+    let selectedLocalModel = localStorage.getItem('local_slm_model') || '1.5b';
+
+    const checkModelStatusAndBadge = async (modelKey) => {
+      const meta = LOCAL_SLM_METADATA[modelKey];
+      if (!meta) return;
+      const badgeEl = document.getElementById(meta.badgeId);
+      if (window.api && window.api.checkLocalModelStatus) {
+        const status = await window.api.checkLocalModelStatus(modelKey);
+        if (badgeEl && status.downloaded) {
+          badgeEl.textContent = 'Installed (Offline)';
+          badgeEl.className = 'badge badge-success model-status-badge';
+        }
+      }
+    };
+
+    ['0.5b', '1.5b', '3b'].forEach(m => checkModelStatusAndBadge(m));
+
+    let pendingDownloadModelKey = null;
+
+    const promptModelDownloadIfNeeded = async (modelKey) => {
+      selectedLocalModel = modelKey;
+      localStorage.setItem('local_slm_model', modelKey);
+
+      if (window.api && window.api.checkLocalModelStatus) {
+        const status = await window.api.checkLocalModelStatus(modelKey);
+        if (!status.downloaded) {
+          pendingDownloadModelKey = modelKey;
+          const meta = LOCAL_SLM_METADATA[modelKey];
+          if (elements.dlModalModelName) elements.dlModalModelName.textContent = meta.name;
+          if (elements.dlModalModelDesc) {
+            elements.dlModalModelDesc.innerHTML = `File Size: <strong>${meta.size}</strong> | RAM Demand: <strong>${meta.ram}</strong> | Quality: <strong>${meta.quality}</strong>`;
+          }
+          if (elements.dlModalProgressContainer) elements.dlModalProgressContainer.classList.add('hidden');
+          if (elements.dlModalLogs) elements.dlModalLogs.textContent = '[+] Ready to download model weights...';
+          if (elements.dlModalStartBtn) {
+            elements.dlModalStartBtn.disabled = false;
+            elements.dlModalStartBtn.textContent = 'Confirm & Download Model';
+          }
+          if (elements.modelDownloadConfirmModal) elements.modelDownloadConfirmModal.showModal();
+        }
+      }
+    };
+
+    if (elements.dlModalCancelBtn && elements.modelDownloadConfirmModal) {
+      elements.dlModalCancelBtn.addEventListener('click', () => elements.modelDownloadConfirmModal.close());
+    }
+    if (elements.dlModalCloseX && elements.modelDownloadConfirmModal) {
+      elements.dlModalCloseX.addEventListener('click', () => elements.modelDownloadConfirmModal.close());
+    }
+
+    if (elements.dlModalStartBtn && elements.modelDownloadConfirmModal) {
+      elements.dlModalStartBtn.addEventListener('click', async () => {
+        if (!pendingDownloadModelKey) return;
+        elements.dlModalStartBtn.disabled = true;
+        elements.dlModalStartBtn.textContent = 'Downloading...';
+        if (elements.dlModalProgressContainer) elements.dlModalProgressContainer.classList.remove('hidden');
+
+        if (window.api && window.api.onModelDownloadProgress) {
+          window.api.onModelDownloadProgress((data) => {
+            if (elements.dlModalLogs) {
+              elements.dlModalLogs.textContent += '\n' + data.text;
+              elements.dlModalLogs.scrollTop = elements.dlModalLogs.scrollHeight;
+            }
+          });
+        }
+
+        const res = await window.api.downloadLocalModel(pendingDownloadModelKey);
+        if (res.success) {
+          if (elements.dlModalStatusText) elements.dlModalStatusText.textContent = '✅ Download Completed Successfully!';
+          if (elements.dlModalStartBtn) elements.dlModalStartBtn.textContent = 'Done!';
+          checkModelStatusAndBadge(pendingDownloadModelKey);
+          setTimeout(() => {
+            elements.modelDownloadConfirmModal.close();
+          }, 1200);
+        } else {
+          if (elements.dlModalStatusText) elements.dlModalStatusText.textContent = '❌ Download Error';
+          if (elements.dlModalStartBtn) {
+            elements.dlModalStartBtn.disabled = false;
+            elements.dlModalStartBtn.textContent = 'Retry Download';
+          }
+        }
+      });
+    }
+
+    const setCurationEngine = (engineVal, modelKey = null) => {
+      if (elements.autoIndexCurationEngine) {
+        elements.autoIndexCurationEngine.value = engineVal;
+      }
+      localStorage.setItem('curation_engine', engineVal);
+
+      if (modelKey) {
+        selectedLocalModel = modelKey;
+        localStorage.setItem('local_slm_model', modelKey);
+      } else {
+        modelKey = localStorage.getItem('local_slm_model') || '1.5b';
+      }
+
+      if (elements.curationCardGemini) elements.curationCardGemini.classList.toggle('active', engineVal === 'gemini');
+      if (elements.curationCardLocal05b) elements.curationCardLocal05b.classList.toggle('active', engineVal === 'local-slm' && modelKey === '0.5b');
+      if (elements.curationCardLocal15b) elements.curationCardLocal15b.classList.toggle('active', engineVal === 'local-slm' && modelKey === '1.5b');
+      if (elements.curationCardLocal3b) elements.curationCardLocal3b.classList.toggle('active', engineVal === 'local-slm' && modelKey === '3b');
+
+      if (elements.geminiSettingsContainer) {
+        if (engineVal === 'gemini') {
+          elements.geminiSettingsContainer.classList.remove('hidden');
+        } else {
+          elements.geminiSettingsContainer.classList.add('hidden');
+        }
+      }
+      if (elements.localSlmInfoContainer) {
+        if (engineVal === 'local-slm') {
+          elements.localSlmInfoContainer.classList.remove('hidden');
+        } else {
+          elements.localSlmInfoContainer.classList.add('hidden');
+        }
+      }
+
+      if (elements.curationEngineBadge) {
+        if (engineVal === 'local-slm') {
+          const modelName = LOCAL_SLM_METADATA[modelKey] ? LOCAL_SLM_METADATA[modelKey].name.split(' ')[1] : modelKey.toUpperCase();
+          elements.curationEngineBadge.textContent = `⚡ Local Qwen ${modelName}`;
+          elements.curationEngineBadge.className = 'badge badge-info';
+        } else {
+          elements.curationEngineBadge.textContent = 'Cloud Gemini';
+          elements.curationEngineBadge.className = 'badge badge-success';
+        }
+      }
+
+      validateGeminiKey();
+    };
+
+    if (elements.curationCardGemini) {
+      elements.curationCardGemini.addEventListener('click', () => setCurationEngine('gemini'));
+    }
+    if (elements.curationCardLocal05b) {
+      elements.curationCardLocal05b.addEventListener('click', () => {
+        setCurationEngine('local-slm', '0.5b');
+        promptModelDownloadIfNeeded('0.5b');
+      });
+    }
+    if (elements.curationCardLocal15b) {
+      elements.curationCardLocal15b.addEventListener('click', () => {
+        setCurationEngine('local-slm', '1.5b');
+        promptModelDownloadIfNeeded('1.5b');
+      });
+    }
+    if (elements.curationCardLocal3b) {
+      elements.curationCardLocal3b.addEventListener('click', () => {
+        setCurationEngine('local-slm', '3b');
+        promptModelDownloadIfNeeded('3b');
+      });
+    }
+
+    if (elements.autoIndexCurationEngine) {
+      elements.autoIndexCurationEngine.addEventListener('change', () => {
+        setCurationEngine(elements.autoIndexCurationEngine.value);
+      });
+    }
+
+    const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
+    const savedModel = localStorage.getItem('local_slm_model') || '1.5b';
+    setCurationEngine(savedEngine, savedModel);
+
     const initialKey = localStorage.getItem('gemini_api_key') || '';
     elements.autoIndexGeminiKey.value = initialKey;
+
+    // Checkbox restore
+    const savedUseAi = localStorage.getItem('use_gemini_ai') === 'true';
+    if (elements.autoIndexUseAi) {
+      elements.autoIndexUseAi.checked = savedUseAi;
+    }
+
     validateGeminiKey();
 
     // Auto-lock on startup if key is present
@@ -3623,12 +3883,6 @@ function initAutoIndexingBindings() {
       updateLockUi();
     }
 
-    // Checkbox restore
-    const savedUseAi = localStorage.getItem('use_gemini_ai') === 'true';
-    if (savedUseAi && !elements.autoIndexUseAi.disabled) {
-      elements.autoIndexUseAi.checked = true;
-    }
-
     elements.autoIndexGeminiKey.addEventListener('input', () => {
       localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
       validateGeminiKey();
@@ -3636,6 +3890,7 @@ function initAutoIndexingBindings() {
 
     elements.autoIndexUseAi.addEventListener('change', () => {
       localStorage.setItem('use_gemini_ai', elements.autoIndexUseAi.checked);
+      updateAiOptionsVisibility();
     });
 
     // Model selection persistence and sync
@@ -3886,7 +4141,10 @@ function initAutoIndexingBindings() {
     elements.practiceQuizBtn.parentNode.replaceChild(newQuizBtn, elements.practiceQuizBtn);
     elements.practiceQuizBtn = newQuizBtn;
     
-    elements.practiceQuizBtn.addEventListener('click', openQuizConfig);
+    elements.practiceQuizBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      alert("Practice Quiz - Feature Coming Soon!\n\nWe are currently optimizing the quiz engine for reduced token consumption and local AI model support.");
+    });
   }
 
   // Quiz config dialog bindings
@@ -4143,7 +4401,13 @@ async function handleAutoIndexSubmit(e) {
   const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
   const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
+  const curationEngine = elements.autoIndexCurationEngine ? elements.autoIndexCurationEngine.value : 'gemini';
+  const selectedLocalModel = localStorage.getItem('local_slm_model') || '1.5b';
+  
   const settings = {
+    curationEngine: useAi ? curationEngine : 'none',
+    localSlmModel: selectedLocalModel,
+    localSlmPrompt: elements.localSlmCustomPrompt ? elements.localSlmCustomPrompt.value.trim() : '',
     offset: parseInt(elements.autoIndexOffset.value) || 0,
     minLength: parseInt(elements.autoIndexMinLen.value) || 2,
     maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
@@ -4166,7 +4430,16 @@ async function handleAutoIndexSubmit(e) {
 
     window.api.onAutoIndexProgress((progress) => {
       // Dynamic loading warnings for AI curation/quiz step
-      if (progress.step === 'curating') {
+      if (progress.step === 'curating-slm') {
+        elements.indexingProgressStatus.innerHTML = `
+          <div style="font-size: 1.1rem; font-weight: 600; color: #38bdf8; line-height: 1.4;">
+            ⚡ Running Local 0.5B SLM Curation Engine...
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 6px;">
+            Filtering noise words & merging duplicates 100% offline
+          </div>
+        `;
+      } else if (progress.step === 'curating') {
         if (progress.isOverloaded) {
           elements.indexingProgressStatus.innerHTML = `
             <div style="font-size: 1.1rem; font-weight: 600; color: #eab308; line-height: 1.4; max-width: 550px; margin-left: auto; margin-right: auto;">
@@ -4502,16 +4775,16 @@ function initAutoIndexWizard() {
     elements.autoIndexGenerateQuiz.parentNode.replaceChild(quizToggleClone, elements.autoIndexGenerateQuiz);
     elements.autoIndexGenerateQuiz = quizToggleClone;
     
+    elements.autoIndexGenerateQuiz.checked = false;
+    elements.autoIndexGenerateQuiz.disabled = true;
+    
     elements.quizGenerationSettings = document.getElementById('quiz-generation-settings');
     elements.autoIndexQuizCount = document.getElementById('auto-index-quiz-count');
     elements.autoIndexQuizDifficulty = document.getElementById('auto-index-quiz-difficulty');
     
     const syncQuizToggle = () => {
-      if (elements.autoIndexGenerateQuiz.checked) {
-        elements.quizGenerationSettings.classList.remove('hidden');
-      } else {
-        elements.quizGenerationSettings.classList.add('hidden');
-      }
+      elements.autoIndexGenerateQuiz.checked = false;
+      if (elements.quizGenerationSettings) elements.quizGenerationSettings.classList.add('hidden');
     };
     
     elements.autoIndexGenerateQuiz.addEventListener('change', syncQuizToggle);
@@ -4531,10 +4804,11 @@ function validateWizardStep(step) {
     }
   } else if (step === 3) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-    if (useAi) {
+    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+    if (useAi && !isLocalSlm) {
       const key = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
       if (!key) {
-        alert("Please enter a Gemini API Key to use AI Curation.");
+        alert("Please enter a Gemini API Key to use Gemini Cloud AI Curation.");
         return false;
       }
     }
@@ -4622,22 +4896,34 @@ function updateWizardSummary() {
 
   if (summaryGeminiModel) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-    if (useAi && elements.autoIndexModelSelect) {
-      const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
-      summaryGeminiModel.textContent = selectedModelOpt ? selectedModelOpt.textContent.split(' ')[0] : '-';
+    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+    if (useAi) {
+      if (isLocalSlm) {
+        summaryGeminiModel.textContent = 'Qwen 0.5B (Offline)';
+      } else if (elements.autoIndexModelSelect) {
+        const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
+        summaryGeminiModel.textContent = selectedModelOpt ? selectedModelOpt.textContent.split(' ')[0] : '-';
+      } else {
+        summaryGeminiModel.textContent = 'Gemini Flash';
+      }
     } else {
-      summaryGeminiModel.textContent = '-';
+      summaryGeminiModel.textContent = 'Disabled';
     }
   }
 
   if (summaryQuizStatus) {
-    const generateQuiz = elements.autoIndexGenerateQuiz ? elements.autoIndexGenerateQuiz.checked : false;
-    if (generateQuiz) {
-      const count = elements.autoIndexQuizCount.value;
-      const difficulty = elements.autoIndexQuizDifficulty.value;
-      summaryQuizStatus.textContent = `Enabled (${count} Qs, ${difficulty})`;
+    summaryQuizStatus.textContent = 'Disabled (Coming Soon)';
+  }
+
+  // Toggle API Free Tier rate limit advisory card (only show if Gemini Cloud AI is selected)
+  const geminiRateLimitCard = document.getElementById('gemini-rate-limit-card');
+  if (geminiRateLimitCard) {
+    const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+    if (useAi && !isLocalSlm) {
+      geminiRateLimitCard.classList.remove('hidden');
     } else {
-      summaryQuizStatus.textContent = 'Disabled';
+      geminiRateLimitCard.classList.add('hidden');
     }
   }
 }
