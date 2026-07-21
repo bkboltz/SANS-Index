@@ -273,6 +273,50 @@ ipcMain.handle('print-app', async () => {
   return true;
 });
 
+// IPC Handler: Save PDF via Electron's webContents.printToPDF
+ipcMain.handle('save-pdf', async (event, options = {}) => {
+  if (!mainWindow) return { success: false, error: 'Main window not available.' };
+
+  try {
+    const defaultFilename = options.defaultName || 'SANS_Study_Index.pdf';
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save Index as PDF',
+      defaultPath: defaultFilename,
+      filters: [
+        { name: 'PDF Document (*.pdf)', extensions: ['pdf'] },
+        { name: 'All Files (*.*)', extensions: ['*'] }
+      ]
+    });
+
+    if (canceled || !filePath) {
+      return { success: false, canceled: true };
+    }
+
+    logDebug(`[PDF Exporter] Printing to PDF for: ${filePath}`);
+
+    const pdfData = await mainWindow.webContents.printToPDF({
+      pageSize: 'Letter',
+      printBackground: true,
+      margin: {
+        top: 0.5,
+        bottom: 0.5,
+        left: 0.5,
+        right: 0.5
+      },
+      preferCSSPageSize: true
+    });
+
+    fs.writeFileSync(filePath, pdfData);
+    logDebug(`[PDF Exporter] Successfully saved PDF (${pdfData.length} bytes) to ${filePath}`);
+
+    return { success: true, filePath, bytes: pdfData.length };
+  } catch (error) {
+    console.error('Failed to generate PDF:', error);
+    logDebug(`[PDF Exporter Error] ${error.message}`);
+    return { success: false, error: error.message };
+  }
+});
+
 async function checkCommand(command) {
   return new Promise((resolve) => {
     exec(command, (error) => {

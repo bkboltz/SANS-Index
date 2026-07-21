@@ -79,6 +79,7 @@ const elements = {
   printPreviewDialog: document.getElementById('print-preview-dialog'),
   printPreviewPageContainer: document.getElementById('print-preview-page-container'),
   printPreviewConfirmBtn: document.getElementById('print-preview-confirm-btn'),
+  printPreviewSavePdfBtn: document.getElementById('print-preview-save-pdf-btn'),
   printFormatSelect: document.getElementById('print-format-select'),
   printOnlyContainer: document.getElementById('print-only-container'),
   printIncludeNotes: document.getElementById('print-include-notes'),
@@ -113,8 +114,10 @@ const elements = {
   // Workspace Views & Tabs
   manualIndexView: document.getElementById('manual-index-view'),
   autoIndexView: document.getElementById('auto-index-view'),
+  notesEditorView: document.getElementById('notes-editor-view'),
   autoIndexNavBtn: document.getElementById('auto-index-nav-btn'),
   manualIndexNavBtn: document.querySelector('.workspace-tabs button[data-view-tab="manual-index"]'),
+  notesEditorNavBtn: document.getElementById('notes-editor-nav-btn'),
   
   // Dependency checks
   depPython: document.getElementById('dep-python'),
@@ -320,6 +323,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Bind Event Listeners
   initEventBindings();
+  
+  // Initialize Notes Text Editor Module
+  initNotesEditor();
   
   // Close all custom select dropdown panels when clicking outside
   document.addEventListener('click', () => {
@@ -2866,6 +2872,39 @@ function initEventBindings() {
     }, 150);
   });
 
+  if (elements.printPreviewSavePdfBtn) {
+    elements.printPreviewSavePdfBtn.addEventListener('click', async () => {
+      const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+      const courseName = activeCourse ? activeCourse.name.replace(/[^a-z0-9]/gi, '_') : 'SANS_Index';
+      const format = elements.printFormatSelect.value;
+      const defaultName = `${courseName}_${format === 'booklet' ? 'Booklet' : 'Standard'}_Index.pdf`;
+
+      const span = elements.printPreviewSavePdfBtn.querySelector('span');
+      const originalText = span ? span.textContent : 'Save as PDF';
+      
+      try {
+        if (span) span.textContent = 'Generating PDF...';
+        elements.printPreviewSavePdfBtn.disabled = true;
+
+        const result = await window.api.savePdf({ defaultName });
+
+        if (span) span.textContent = originalText;
+        elements.printPreviewSavePdfBtn.disabled = false;
+
+        if (result.success) {
+          alert(`PDF successfully generated and saved to:\n\n${result.filePath}`);
+        } else if (!result.canceled && result.error) {
+          alert(`Failed to save PDF: ${result.error}`);
+        }
+      } catch (err) {
+        if (span) span.textContent = originalText;
+        elements.printPreviewSavePdfBtn.disabled = false;
+        console.error('Save PDF Error:', err);
+        alert(`Error saving PDF: ${err.message}`);
+      }
+    });
+  }
+
   elements.printFormatSelect.addEventListener('change', renderPrintPreview);
 
   // Include Notes checkbox — persist and re-render preview when toggled
@@ -3972,10 +4011,20 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       if (targetTab === 'manual-index') {
         elements.manualIndexView.classList.remove('hidden');
         elements.autoIndexView.classList.add('hidden');
+        if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
       } else if (targetTab === 'auto-index') {
         elements.manualIndexView.classList.add('hidden');
         elements.autoIndexView.classList.remove('hidden');
+        if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
         runDependencyCheck();
+      } else if (targetTab === 'notes-editor') {
+        elements.manualIndexView.classList.add('hidden');
+        elements.autoIndexView.classList.add('hidden');
+        if (!elements.notesEditorView) elements.notesEditorView = document.getElementById('notes-editor-view');
+        if (elements.notesEditorView) elements.notesEditorView.classList.remove('hidden');
+        if (typeof initNotesEditor === 'function') initNotesEditor();
+        if (window.lucide) lucide.createIcons();
+        if (typeof updateNotesStats === 'function') updateNotesStats();
       }
     });
   });
@@ -5254,9 +5303,15 @@ function exitQuizMode() {
   if (targetTab === 'manual-index') {
     elements.manualIndexView.classList.remove('hidden');
     elements.autoIndexView.classList.add('hidden');
+    if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
+  } else if (targetTab === 'notes-editor') {
+    elements.manualIndexView.classList.add('hidden');
+    elements.autoIndexView.classList.add('hidden');
+    if (elements.notesEditorView) elements.notesEditorView.classList.remove('hidden');
   } else {
     elements.manualIndexView.classList.add('hidden');
     elements.autoIndexView.classList.remove('hidden');
+    if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
   }
 }
 
@@ -5282,4 +5337,391 @@ function retryQuizSession() {
   }
 
   displayQuizQuestion();
+}
+
+// ==========================================================================
+// NOTES TEXT EDITOR MODULE (FULL WORD-LIKE EDITOR)
+// ==========================================================================
+
+let notesSaveTimeout = null;
+let currentNotesZoom = 100;
+let notesEditorInitialized = false;
+
+function initNotesEditor() {
+  if (notesEditorInitialized) return;
+
+  if (!elements.notesEditorView) {
+    elements.notesEditorView = document.getElementById('notes-editor-view');
+  }
+  const container = elements.notesEditorView;
+  if (!container) return;
+
+  notesEditorInitialized = true;
+
+  const docTitleInput = document.getElementById('notes-doc-title');
+  const docHeaderTitle = document.getElementById('page-header-doc-title');
+  const editor = document.getElementById('notes-content-editor');
+  const themeToggleBtn = document.getElementById('notes-theme-toggle-btn');
+  const printBtn = document.getElementById('notes-print-btn');
+  const pagesWrapper = document.getElementById('notes-pages-wrapper');
+  
+  // Toolbar Selects & Inputs
+  const fontSelect = document.getElementById('tb-font-family');
+  const sizeSelect = document.getElementById('tb-font-size');
+  const headingSelect = document.getElementById('tb-heading-select');
+  const textColorInput = document.getElementById('tb-text-color');
+  const bgColorInput = document.getElementById('tb-bg-color');
+  
+  // Insert buttons
+  const insertTableBtn = document.getElementById('tb-insert-table-btn');
+  const insertPageBreakBtn = document.getElementById('tb-insert-page-break-btn');
+  const insertLinkBtn = document.getElementById('tb-insert-link-btn');
+
+  // Zoom controls
+  const zoomInBtn = document.getElementById('zoom-in-btn');
+  const zoomOutBtn = document.getElementById('zoom-out-btn');
+  const zoomLevelText = document.getElementById('zoom-level-text');
+
+  // 1. Load persisted theme preference
+  const savedTheme = localStorage.getItem('sans_notes_theme') || 'dark';
+  setNotesEditorTheme(savedTheme);
+
+  // 2. Load persisted note title & content
+  const savedTitle = localStorage.getItem('sans_notes_title');
+  if (savedTitle && docTitleInput) {
+    docTitleInput.value = savedTitle;
+    if (docHeaderTitle) docHeaderTitle.textContent = savedTitle;
+  }
+
+  const savedContent = localStorage.getItem('sans_notes_content');
+  if (savedContent && editor) {
+    editor.innerHTML = savedContent;
+  }
+
+  // 3. Document Title Change Listener
+  if (docTitleInput) {
+    docTitleInput.addEventListener('input', () => {
+      const val = docTitleInput.value.trim() || 'Untitled Notes';
+      if (docHeaderTitle) docHeaderTitle.textContent = val;
+      triggerNotesAutoSave();
+    });
+  }
+
+  // 4. Editor Content Input & Keyboard Shortcuts
+  if (editor) {
+    editor.addEventListener('input', () => {
+      triggerNotesAutoSave();
+      updateNotesStats();
+    });
+
+    editor.addEventListener('keyup', updateToolbarActiveStates);
+    editor.addEventListener('mouseup', updateToolbarActiveStates);
+    
+    // Tab key support in editor (insert 4 spaces or indent)
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        document.execCommand(e.shiftKey ? 'outdent' : 'indent', false, null);
+      }
+    });
+  }
+
+  // 5. Toolbar Buttons (command execution)
+  const tbButtons = container.querySelectorAll('.tb-btn[data-command]');
+  tbButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const command = btn.getAttribute('data-command');
+      if (command) {
+        document.execCommand(command, false, null);
+        updateToolbarActiveStates();
+        triggerNotesAutoSave();
+        if (editor) editor.focus();
+      }
+    });
+  });
+
+  // 6. Font Family Change
+  if (fontSelect) {
+    fontSelect.addEventListener('change', () => {
+      document.execCommand('fontName', false, fontSelect.value);
+      if (editor) editor.focus();
+      triggerNotesAutoSave();
+    });
+  }
+
+  // 7. Font Size Change
+  if (sizeSelect) {
+    sizeSelect.addEventListener('change', () => {
+      document.execCommand('fontSize', false, sizeSelect.value);
+      if (editor) editor.focus();
+      triggerNotesAutoSave();
+    });
+  }
+
+  // 8. Format / Heading Change
+  if (headingSelect) {
+    headingSelect.addEventListener('change', () => {
+      const tag = headingSelect.value;
+      document.execCommand('formatBlock', false, tag);
+      if (editor) editor.focus();
+      triggerNotesAutoSave();
+    });
+  }
+
+  // 9. Text & Background Color Pickers
+  if (textColorInput) {
+    textColorInput.addEventListener('input', () => {
+      document.execCommand('foreColor', false, textColorInput.value);
+      triggerNotesAutoSave();
+    });
+  }
+
+  if (bgColorInput) {
+    bgColorInput.addEventListener('input', () => {
+      document.execCommand('hiliteColor', false, bgColorInput.value) ||
+      document.execCommand('backColor', false, bgColorInput.value);
+      triggerNotesAutoSave();
+    });
+  }
+
+  // 10. Insert Table
+  if (insertTableBtn) {
+    insertTableBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tableHTML = `
+        <table style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Header 1</th>
+              <th style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Header 2</th>
+              <th style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Header 3</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Data 1</td>
+              <td style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Data 2</td>
+              <td style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Data 3</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Data 4</td>
+              <td style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Data 5</td>
+              <td style="border: 1px solid rgba(148,163,184,0.4); padding: 8px 12px;">Data 6</td>
+            </tr>
+          </tbody>
+        </table>
+        <p><br></p>
+      `;
+      document.execCommand('insertHTML', false, tableHTML);
+      triggerNotesAutoSave();
+    });
+  }
+
+  // 11. Insert Page Break
+  if (insertPageBreakBtn) {
+    insertPageBreakBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const breakHTML = `<div class="page-break-divider" contenteditable="false">✂ --- PAGE BREAK ---</div><p><br></p>`;
+      document.execCommand('insertHTML', false, breakHTML);
+      updateNotesStats();
+      triggerNotesAutoSave();
+    });
+  }
+
+  // 12. Insert Link
+  if (insertLinkBtn) {
+    insertLinkBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = prompt('Enter link URL (e.g. https://sans.org):');
+      if (url) {
+        document.execCommand('createLink', false, url);
+        triggerNotesAutoSave();
+      }
+    });
+  }
+
+  // 13. Theme Toggle Button
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const editorContainer = container.querySelector('.notes-editor-container');
+      const isDark = editorContainer.classList.contains('notes-theme-dark');
+      setNotesEditorTheme(isDark ? 'light' : 'dark');
+    });
+  }
+
+  // 14. Zoom Controls
+  if (zoomInBtn && zoomOutBtn && pagesWrapper && zoomLevelText) {
+    zoomInBtn.addEventListener('click', () => {
+      if (currentNotesZoom < 150) {
+        currentNotesZoom += 10;
+        pagesWrapper.style.transform = `scale(${currentNotesZoom / 100})`;
+        zoomLevelText.textContent = `${currentNotesZoom}%`;
+      }
+    });
+    zoomOutBtn.addEventListener('click', () => {
+      if (currentNotesZoom > 70) {
+        currentNotesZoom -= 10;
+        pagesWrapper.style.transform = `scale(${currentNotesZoom / 100})`;
+        zoomLevelText.textContent = `${currentNotesZoom}%`;
+      }
+    });
+  }
+
+  // 15. Print / PDF Button
+  if (printBtn) {
+    printBtn.addEventListener('click', () => {
+      printNotesEditorContent();
+    });
+  }
+
+  // Initial Stats Calculation
+  updateNotesStats();
+}
+
+// Set Theme function
+function setNotesEditorTheme(theme) {
+  const container = document.querySelector('.notes-editor-container');
+  const themeText = document.getElementById('notes-theme-text');
+  const iconSun = document.getElementById('notes-theme-icon-sun');
+  const iconMoon = document.getElementById('notes-theme-icon-moon');
+
+  if (!container) return;
+
+  if (theme === 'light') {
+    container.classList.remove('notes-theme-dark');
+    container.classList.add('notes-theme-light');
+    if (themeText) themeText.textContent = 'Light Mode';
+    if (iconSun) iconSun.classList.remove('hidden');
+    if (iconMoon) iconMoon.classList.add('hidden');
+  } else {
+    container.classList.remove('notes-theme-light');
+    container.classList.add('notes-theme-dark');
+    if (themeText) themeText.textContent = 'Dark Mode';
+    if (iconSun) iconSun.classList.add('hidden');
+    if (iconMoon) iconMoon.classList.remove('hidden');
+  }
+
+  localStorage.setItem('sans_notes_theme', theme);
+  if (window.lucide) lucide.createIcons();
+}
+
+// Update Active Toolbar States based on Selection
+function updateToolbarActiveStates() {
+  const container = elements.notesEditorView;
+  if (!container) return;
+
+  const commands = ['bold', 'italic', 'underline', 'strikeThrough', 'subscript', 'superscript', 'justifyLeft', 'justifyCenter', 'justifyRight', 'justifyFull', 'insertUnorderedList', 'insertOrderedList'];
+  
+  commands.forEach(cmd => {
+    const btn = container.querySelector(`.tb-btn[data-command="${cmd}"]`);
+    if (btn) {
+      try {
+        if (document.queryCommandState(cmd)) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      } catch (err) {
+        // Ignore unsupported state queries
+      }
+    }
+  });
+}
+
+// Update Word Count, Char Count, Page Calculation
+function updateNotesStats() {
+  const editor = document.getElementById('notes-content-editor');
+  const wordCountEl = document.getElementById('notes-word-count');
+  const charCountEl = document.getElementById('notes-char-count');
+  const pageBadgeEl = document.getElementById('notes-page-count-badge');
+
+  if (!editor) return;
+
+  const text = editor.innerText || editor.textContent || '';
+  const cleanText = text.trim();
+  
+  const words = cleanText ? cleanText.split(/\s+/).filter(Boolean).length : 0;
+  const chars = text.length;
+
+  if (wordCountEl) wordCountEl.textContent = `${words.toLocaleString()} words`;
+  if (charCountEl) charCountEl.textContent = `${chars.toLocaleString()} characters`;
+
+  // Page break divider count + height based estimation
+  const pageBreaks = editor.querySelectorAll('.page-break-divider').length;
+  const editorHeight = editor.scrollHeight || 0;
+  const estPagesByHeight = Math.max(1, Math.ceil(editorHeight / 850));
+  const totalPages = Math.max(estPagesByHeight, pageBreaks + 1);
+
+  if (pageBadgeEl) {
+    const pageSpan = pageBadgeEl.querySelector('span');
+    if (pageSpan) pageSpan.textContent = `Page 1 of ${totalPages}`;
+  }
+}
+
+// Trigger Auto-Save to localStorage
+function triggerNotesAutoSave() {
+  const statusBadge = document.getElementById('notes-save-status');
+  if (statusBadge) {
+    statusBadge.style.opacity = '0.5';
+    statusBadge.querySelector('span').textContent = 'Saving...';
+  }
+
+  if (notesSaveTimeout) clearTimeout(notesSaveTimeout);
+
+  notesSaveTimeout = setTimeout(() => {
+    const docTitleInput = document.getElementById('notes-doc-title');
+    const editor = document.getElementById('notes-content-editor');
+
+    if (docTitleInput) {
+      localStorage.setItem('sans_notes_title', docTitleInput.value);
+    }
+    if (editor) {
+      localStorage.setItem('sans_notes_content', editor.innerHTML);
+    }
+
+    if (statusBadge) {
+      statusBadge.style.opacity = '1';
+      statusBadge.querySelector('span').textContent = 'Saved';
+    }
+  }, 500);
+}
+
+// Print Notes Content
+function printNotesEditorContent() {
+  const docTitle = document.getElementById('notes-doc-title')?.value || 'SANS Notes';
+  const editorHTML = document.getElementById('notes-content-editor')?.innerHTML || '';
+
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${docTitle}</title>
+      <style>
+        body { font-family: 'Inter', Arial, sans-serif; padding: 40px; color: #0f172a; line-height: 1.6; }
+        h1, h2, h3 { color: #0f172a; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        table th, table td { border: 1px solid #cbd5e1; padding: 8px 12px; }
+        table th { background: #f1f5f9; }
+        blockquote { border-left: 4px solid #0d9488; padding: 8px 16px; background: #f0fdf4; margin: 16px 0; }
+        pre { background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 4px; font-family: monospace; }
+        .page-break-divider { page-break-after: always; display: none; }
+        @media print {
+          body { padding: 0; }
+        }
+      </style>
+    </head>
+    <body>
+      <h1 style="border-bottom: 2px solid #0d9488; padding-bottom: 8px; margin-bottom: 24px;">${docTitle}</h1>
+      <div>${editorHTML}</div>
+      <script>
+        window.onload = function() { window.print(); window.close(); }
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
