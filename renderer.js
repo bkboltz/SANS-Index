@@ -3424,10 +3424,6 @@ function generateBookletPrintHTML(activeEntries) {
 
   return html;
 }
-  });
-
-  return html;
-}
 
 function generateTopicByBookPrintHTML(activeEntries) {
   const includeNotes = elements.printIncludeNotes.checked;
