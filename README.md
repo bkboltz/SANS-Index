@@ -40,3 +40,6 @@ To create a standalone double-clickable executable (no Node.js installation requ
 ## Data Portability & Storage
 * **Local Storage:** All your data is saved in `sans_index.json` directly inside the application folder.
 * **Easy Portability:** If you move the folder to a flash drive or another drive, the database and backups travel with the application.
+
+## Credits
+* **Auto-Indexer Python Engine:** Auto-indexing algorithms and Python backend scripts written by [sketch-turner](https://github.com/sketch-turner).
