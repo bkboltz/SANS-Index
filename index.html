@@ -326,10 +326,23 @@
             </div>
           </div>
 
+          <!-- Multi-Delete Action Bar -->
+          <div id="multi-delete-bar" class="no-print" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 10px 16px; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 0.88rem;">
+              <i data-lucide="info" style="color: var(--danger); width: 16px; height: 16px;"></i>
+              <span id="multi-delete-count-text">0 items selected</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="cancel-selection-btn" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">Clear Selection</button>
+              <button type="button" id="delete-selected-btn" class="btn btn-sm" style="background-color: var(--danger); color: white; padding: 4px 10px; font-size: 0.78rem; font-weight: 600;">Delete Selected Items</button>
+            </div>
+          </div>
+
           <div id="index-table-container">
             <table class="index-table">
               <thead>
                 <tr>
+                  <th class="col-select no-print" style="text-align: center; width: 4%;"><input type="checkbox" id="select-all-entries-checkbox"></th>
                   <th class="col-book sortable" data-sort="book">Book <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                   <th class="col-pages sortable" data-sort="pages">Pages <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                   <th class="col-topic sortable sorted-asc" data-sort="topic">Topic <i class="sort-icon" data-lucide="chevron-up"></i></th>

@@ -89,6 +89,12 @@ const elements = {
   deleteConfirmOkBtn: document.getElementById('delete-confirm-ok-btn'),
   deleteConfirmCancelBtn: document.getElementById('delete-confirm-cancel-btn'),
   deleteConfirmDontShowAgain: document.getElementById('delete-confirm-dont-show-again'),
+  // Multi-delete controls
+  selectAllEntriesCheckbox: document.getElementById('select-all-entries-checkbox'),
+  multiDeleteBar: document.getElementById('multi-delete-bar'),
+  multiDeleteCountText: document.getElementById('multi-delete-count-text'),
+  cancelSelectionBtn: document.getElementById('cancel-selection-btn'),
+  deleteSelectedBtn: document.getElementById('delete-selected-btn'),
 
   // Sidebar To-Do
   todoInput: document.getElementById('todo-input'),
@@ -278,6 +284,8 @@ let courseAutocompleteIndex = -1;
 let bannerTimeoutId = null;
 let promptedCourses = new Set();
 let pendingDeleteEntryId = null;
+let selectedEntryIds = new Set();
+let pendingDeleteEntryIds = null;
 
 // Global temporary variables for generated quizzes
 let lastGeneratedQuiz = null;
@@ -862,11 +870,12 @@ function renderEntries() {
   if (activeEntries.length === 0) {
     elements.indexTableBody.innerHTML = `
       <tr>
-        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 32px 0;">
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px 0;">
           No index entries found. Add your first topic above!
         </td>
       </tr>
     `;
+    updateMultiDeleteBarState(activeEntries);
     return;
   }
   
@@ -891,6 +900,9 @@ function renderEntries() {
       ).join('');
       
       tr.innerHTML = `
+        <td class="col-select no-print" style="text-align: center;">
+          <input type="checkbox" class="select-entry-checkbox" data-id="${entry.id}" ${selectedEntryIds.has(entry.id) ? 'checked' : ''}>
+        </td>
         <td class="col-book">
           <select class="inline-edit-input inline-book-select" style="background-color: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; width: 100%;">
             ${bookOptionsHtml}
@@ -964,6 +976,9 @@ function renderEntries() {
       }
       
       tr.innerHTML = `
+        <td class="col-select no-print" style="text-align: center;">
+          <input type="checkbox" class="select-entry-checkbox" data-id="${entry.id}" ${selectedEntryIds.has(entry.id) ? 'checked' : ''}>
+        </td>
         <td class="col-book">
           <div class="book-badge-container">
             <button class="star-toggle-btn no-print" data-id="${entry.id}" title="${entry.starred ? 'Unstar Entry' : 'Star Entry'}">
@@ -1025,6 +1040,19 @@ function renderEntries() {
     btn.addEventListener('click', () => {
       editEntryId = null;
       renderEntries();
+    });
+  });
+
+  // Bind select checkbox change events
+  elements.indexTableBody.querySelectorAll('.select-entry-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const entryId = cb.getAttribute('data-id');
+      if (cb.checked) {
+        selectedEntryIds.add(entryId);
+      } else {
+        selectedEntryIds.delete(entryId);
+      }
+      updateMultiDeleteBarState(activeEntries);
     });
   });
 
@@ -1099,6 +1127,51 @@ function renderEntries() {
     nameAttr: 'data-lucide',
     nodeList: elements.indexTableBody.querySelectorAll('[data-lucide]')
   });
+
+  updateMultiDeleteBarState(activeEntries);
+}
+
+function updateMultiDeleteBarState(activeEntries) {
+  if (!activeEntries) {
+    let currentActive = state.entries.filter(entry => entry && entry.courseId === state.currentCourseId);
+    const selectedBookFilter = elements.filterBookSelect.value;
+    if (selectedBookFilter !== 'all') {
+      currentActive = currentActive.filter(entry => entry.bookId === selectedBookFilter);
+    }
+    const query = elements.tableSearchInput.value.toLowerCase().trim();
+    if (query) {
+      currentActive = currentActive.filter(entry => {
+        const book = state.books.find(b => b && b.id === entry.bookId);
+        const bookName = book ? book.name.toLowerCase() : '';
+        return (
+          entry.topic.toLowerCase().includes(query) ||
+          (entry.notes && entry.notes.toLowerCase().includes(query)) ||
+          isPageMatch(entry.pages, query) ||
+          bookName.includes(query)
+        );
+      });
+    }
+    activeEntries = currentActive;
+  }
+
+  const visibleCheckedCount = activeEntries.filter(e => selectedEntryIds.has(e.id)).length;
+  const allChecked = activeEntries.length > 0 && visibleCheckedCount === activeEntries.length;
+  const someChecked = visibleCheckedCount > 0 && visibleCheckedCount < activeEntries.length;
+  
+  if (elements.selectAllEntriesCheckbox) {
+    elements.selectAllEntriesCheckbox.checked = allChecked;
+    elements.selectAllEntriesCheckbox.indeterminate = someChecked;
+    elements.selectAllEntriesCheckbox.disabled = activeEntries.length === 0;
+  }
+  
+  if (elements.multiDeleteBar && elements.multiDeleteCountText) {
+    if (selectedEntryIds.size > 0) {
+      elements.multiDeleteBar.style.display = 'flex';
+      elements.multiDeleteCountText.textContent = `${selectedEntryIds.size} item${selectedEntryIds.size === 1 ? '' : 's'} selected`;
+    } else {
+      elements.multiDeleteBar.style.display = 'none';
+    }
+  }
 }
 
 function toggleStarEntry(entryId) {
@@ -1661,6 +1734,7 @@ function deleteCourse() {
       state.currentCourseId = null;
     }
     
+    selectedEntryIds.clear();
     saveState();
     renderAll();
     checkExamDateAlerts();
@@ -2271,10 +2345,23 @@ function deleteEntry(entryId) {
   } else {
     // Show confirmation dialog
     pendingDeleteEntryId = entryId;
-    if (elements.deleteConfirmDontShowAgain) {
-      elements.deleteConfirmDontShowAgain.checked = false;
-    }
+    pendingDeleteEntryIds = null;
+    
+    // Reset Dialog UI to Single Delete Mode
     if (elements.deleteConfirmDialog) {
+      const dialogTitle = elements.deleteConfirmDialog.querySelector('h3');
+      const dialogText = elements.deleteConfirmDialog.querySelector('p');
+      if (dialogTitle) dialogTitle.textContent = 'Delete Entry?';
+      if (dialogText) dialogText.textContent = 'This action cannot be undone. The index entry will be permanently removed.';
+      
+      const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
+      if (checkboxWrapper) {
+        checkboxWrapper.style.display = 'flex';
+      }
+      if (elements.deleteConfirmDontShowAgain) {
+        elements.deleteConfirmDontShowAgain.checked = false;
+      }
+      
       lucide.createIcons({
         attrs: { class: 'lucide-icon' },
         nameAttr: 'data-lucide',
@@ -2287,6 +2374,7 @@ function deleteEntry(entryId) {
 
 function performDeleteEntry(entryId) {
   state.entries = state.entries.filter(e => e && e.id !== entryId);
+  selectedEntryIds.delete(entryId);
   
   saveState();
   renderEntries();
@@ -2296,6 +2384,55 @@ function performDeleteEntry(entryId) {
   triggerStatPulse(elements.statTotalEntries.closest('.stat-card'));
   
   if (editEntryId === entryId) {
+    endEditEntry();
+  }
+}
+
+function deleteSelectedEntries() {
+  const count = selectedEntryIds.size;
+  if (count === 0) return;
+  
+  pendingDeleteEntryId = null;
+  pendingDeleteEntryIds = Array.from(selectedEntryIds);
+  
+  // Set Dialog UI to Multi Delete Mode
+  if (elements.deleteConfirmDialog) {
+    const dialogTitle = elements.deleteConfirmDialog.querySelector('h3');
+    const dialogText = elements.deleteConfirmDialog.querySelector('p');
+    if (dialogTitle) dialogTitle.textContent = `Delete ${count} Entries?`;
+    if (dialogText) dialogText.textContent = `Are you sure you want to delete these ${count} selected index entries? This action cannot be undone.`;
+    
+    const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
+    if (checkboxWrapper) {
+      checkboxWrapper.style.display = 'none';
+    }
+    if (elements.deleteConfirmDontShowAgain) {
+      elements.deleteConfirmDontShowAgain.checked = false;
+    }
+    
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.deleteConfirmDialog.querySelectorAll('[data-lucide]')
+    });
+    elements.deleteConfirmDialog.showModal();
+  }
+}
+
+function performDeleteEntries(entryIds) {
+  const idsSet = new Set(entryIds);
+  state.entries = state.entries.filter(e => e && !idsSet.has(e.id));
+  
+  selectedEntryIds.clear();
+  
+  saveState();
+  renderEntries();
+  renderStats();
+  
+  // Trigger pulses
+  triggerStatPulse(elements.statTotalEntries.closest('.stat-card'));
+  
+  if (editEntryId && idsSet.has(editEntryId)) {
     endEditEntry();
   }
 }
@@ -2623,10 +2760,58 @@ function initEventBindings() {
   // Course Switch
   elements.courseSelect.addEventListener('change', (e) => {
     state.currentCourseId = e.target.value;
+    selectedEntryIds.clear();
     endEditEntry();
     renderAll();
     checkExamDateAlerts();
   });
+
+  // Master selection checkbox
+  if (elements.selectAllEntriesCheckbox) {
+    elements.selectAllEntriesCheckbox.addEventListener('change', () => {
+      let activeEntries = state.entries.filter(entry => entry && entry.courseId === state.currentCourseId);
+      const selectedBookFilter = elements.filterBookSelect.value;
+      if (selectedBookFilter !== 'all') {
+        activeEntries = activeEntries.filter(entry => entry.bookId === selectedBookFilter);
+      }
+      const query = elements.tableSearchInput.value.toLowerCase().trim();
+      if (query) {
+        activeEntries = activeEntries.filter(entry => {
+          const book = state.books.find(b => b && b.id === entry.bookId);
+          const bookName = book ? book.name.toLowerCase() : '';
+          return (
+            entry.topic.toLowerCase().includes(query) ||
+            (entry.notes && entry.notes.toLowerCase().includes(query)) ||
+            isPageMatch(entry.pages, query) ||
+            bookName.includes(query)
+          );
+        });
+      }
+
+      if (elements.selectAllEntriesCheckbox.checked) {
+        activeEntries.forEach(entry => selectedEntryIds.add(entry.id));
+      } else {
+        activeEntries.forEach(entry => selectedEntryIds.delete(entry.id));
+      }
+      
+      renderEntries();
+    });
+  }
+
+  // Clear Selection
+  if (elements.cancelSelectionBtn) {
+    elements.cancelSelectionBtn.addEventListener('click', () => {
+      selectedEntryIds.clear();
+      renderEntries();
+    });
+  }
+
+  // Delete Selected Items
+  if (elements.deleteSelectedBtn) {
+    elements.deleteSelectedBtn.addEventListener('click', () => {
+      deleteSelectedEntries();
+    });
+  }
   
   // Add To-Do Item
   const handleAddTodo = () => {
@@ -2910,18 +3095,20 @@ function initEventBindings() {
     });
   }
 
-  // Delete Confirmation Dialog wiring
+  // Delete Confirmation Dialog — wiring
   if (elements.deleteConfirmDialog) {
     // Cancel button closes the dialog without deleting
     elements.deleteConfirmCancelBtn.addEventListener('click', () => {
       pendingDeleteEntryId = null;
+      pendingDeleteEntryIds = null;
       elements.deleteConfirmDontShowAgain.checked = false;
       elements.deleteConfirmDialog.close();
     });
 
     // Confirm button performs the actual deletion
     elements.deleteConfirmOkBtn.addEventListener('click', () => {
-      if (elements.deleteConfirmDontShowAgain.checked) {
+      // Only set skip warning if it was a single entry deletion
+      if (!pendingDeleteEntryIds && elements.deleteConfirmDontShowAgain.checked) {
         if (elements.settingsConfirmDelete) {
           elements.settingsConfirmDelete.checked = false;
         }
@@ -2931,11 +3118,13 @@ function initEventBindings() {
       if (pendingDeleteEntryId) {
         performDeleteEntry(pendingDeleteEntryId);
         pendingDeleteEntryId = null;
+      } else if (pendingDeleteEntryIds) {
+        performDeleteEntries(pendingDeleteEntryIds);
+        pendingDeleteEntryIds = null;
       }
       elements.deleteConfirmDontShowAgain.checked = false;
     });
   }
-
   // Close button on floating exam date notification banner
   const closeBannerBtn = elements.examNotificationBanner.querySelector('.close-banner-btn');
   if (closeBannerBtn) {
@@ -3235,6 +3424,10 @@ function generateBookletPrintHTML(activeEntries) {
 
   return html;
 }
+  });
+
+  return html;
+}
 
 function generateTopicByBookPrintHTML(activeEntries) {
   const includeNotes = elements.printIncludeNotes.checked;
@@ -3319,7 +3512,7 @@ function generateTopicByBookPrintHTML(activeEntries) {
 
   return html;
 }
-  
+
   // Import/Export dialog binds
   elements.exportJsonBtn.addEventListener('click', exportToJSON);
   elements.exportCsvBtn.addEventListener('click', exportToCSV);
