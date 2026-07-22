@@ -868,6 +868,17 @@ th.sortable:hover .sort-icon {
 }
 
 /* Column Dimensions */
+.col-select {
+  width: 4%;
+  text-align: center;
+}
+.col-select input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-light);
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+}
 .col-book {
   width: 14%;
 }
