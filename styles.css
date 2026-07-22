@@ -892,6 +892,55 @@ th.sortable:hover .sort-icon {
   word-break: break-word;
 }
 
+/* References column for combined print output */
+.col-references {
+  width: 28%;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  vertical-align: top;
+}
+
+/* Grid layout inside references cell for tab-aligned book/page display */
+.ref-grid {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1px 6px;
+  align-items: baseline;
+}
+
+.ref-grid-book {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ref-grid-pages {
+  font-weight: 500;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Book section header divider for booklet print format */
+.print-book-section-header {
+  margin-top: 28px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.print-book-section-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  padding-bottom: 5px;
+  border-bottom: 2px solid currentColor;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* Page Badge Pill */
 .page-badge {
   display: inline-block;
@@ -1200,15 +1249,18 @@ input[type="color"]::-webkit-color-swatch {
     overflow-wrap: break-word !important;
   }
   .print-only .col-topic {
-    width: 34% !important;
     font-weight: 700 !important;
     color: #000000 !important;
-    word-break: break-word !important;
+    vertical-align: top !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
   }
   .print-only .col-notes {
-    width: 34% !important;
     color: #333333 !important;
     word-break: break-word !important;
+  }
+  .print-only .col-references {
+    vertical-align: top !important;
   }
 
   /* Make sure book labels are clean and visible on print */
@@ -3732,6 +3784,95 @@ tr.auto-row:hover {
 }
 .zoom-btn:hover {
   color: var(--accent-light);
+}
+
+/* References column in print preview */
+.print-preview-page-container .col-references {
+  vertical-align: top !important;
+  font-family: var(--font-mono) !important;
+  white-space: normal !important;
+}
+
+.print-preview-page-container .ref-grid {
+  display: grid !important;
+  grid-template-columns: 140px 1fr !important;
+  gap: 2px 8px !important;
+  align-items: baseline !important;
+}
+
+.print-preview-page-container .ref-grid-book {
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.print-preview-page-container .ref-grid-pages {
+  font-weight: 500 !important;
+  white-space: normal !important;
+}
+
+/* Print preview col-topic vertical alignment for combined rows */
+.print-preview-page-container .col-topic {
+  vertical-align: top !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+}
+
+.print-preview-page-container .col-notes {
+  vertical-align: top !important;
+}
+
+/* Book section header in print preview */
+.print-preview-page-container .print-book-section-header {
+  margin-top: 28px !important;
+  margin-bottom: 10px !important;
+  padding-bottom: 6px !important;
+}
+
+.print-preview-page-container .print-book-section-header h3 {
+  font-size: 11pt !important;
+  font-weight: 700 !important;
+  margin: 0 !important;
+  padding-bottom: 5px !important;
+  border-bottom: 2px solid currentColor !important;
+}
+
+/* Print media: new column styles */
+@media print {
+  .print-only .col-references {
+    width: 30% !important;
+    vertical-align: top !important;
+  }
+  .print-only .ref-grid {
+    display: grid !important;
+    grid-template-columns: 140px 1fr !important;
+    gap: 2px 8px !important;
+  }
+  .print-only .ref-grid-book {
+    font-weight: 700 !important;
+  }
+  .print-only .ref-grid-pages {
+    font-weight: 500 !important;
+  }
+  .print-only .col-topic {
+    vertical-align: top !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+  }
+  .print-only .col-notes {
+    vertical-align: top !important;
+  }
+  .print-only .print-book-section-header {
+    margin-top: 16px !important;
+    margin-bottom: 8px !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+  .print-only .print-book-section-header h3 {
+    font-size: 11pt !important;
+    font-weight: 700 !important;
+  }
 }
 
 
