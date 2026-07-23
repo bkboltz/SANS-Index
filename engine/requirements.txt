@@ -11,3 +11,4 @@ nltk
 tqdm
 transformers
 huggingface_hub
+typing-extensions
