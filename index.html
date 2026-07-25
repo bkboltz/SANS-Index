@@ -1518,13 +1518,14 @@
       <p class="dialog-text">Importing data will merge or replace your current index. Select a JSON backup or a CSV file formatted with Topic, Notes, Pages, and Book.</p>
       
       <div class="import-tabs">
-        <label class="import-tab-btn active" data-tab="tab-json">JSON Backup</label>
+        <label class="import-tab-btn active" data-tab="tab-json">JSON Format</label>
         <label class="import-tab-btn" data-tab="tab-csv">CSV Format</label>
+        <label class="import-tab-btn" data-tab="tab-pdf-index">📄 PDF Index</label>
       </div>
 
       <div id="tab-json" class="import-tab-content">
         <div class="form-group">
-          <label for="import-json-file">Select JSON Backup File</label>
+          <label for="import-json-file">Select JSON File</label>
           <input type="file" id="import-json-file" accept=".json">
         </div>
       </div>
@@ -1539,9 +1540,183 @@
         </div>
       </div>
 
+      <div id="tab-pdf-index" class="import-tab-content hidden">
+        <div style="font-size: 0.83rem; color: var(--text-secondary); background: rgba(14,165,233,0.07); border: 1px solid rgba(14,165,233,0.2); border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; line-height: 1.55;">
+          <strong style="color: #38bdf8;">PDF Index Import</strong><br>
+          Select a PDF index file to parse and merge into your project. Choose Fast Local import for standard SANS PDFs, or AI-Powered for non-standard formats.<br>
+          A review table will appear before anything is saved.
+        </div>
+
+        <!-- Mode Selection Radio Buttons -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="margin-bottom: 6px; font-weight: 600; display: block;">Parser Mode</label>
+          <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(15, 23, 42, 0.4); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.83rem; cursor: pointer;">
+              <input type="radio" name="pdf-parse-mode" value="sans-fast" checked style="margin-top: 2px;">
+              <div>
+                <strong style="color: var(--text-primary);">Standard SANS Index (Fast & Local)</strong>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">Instant local extraction using native PDF layout shading. No API key needed. 100% accurate for official SANS course index PDFs.</div>
+                <div style="font-size: 0.75rem; color: #38bdf8; font-weight: 600; margin-top: 4px;">Recommended for: Index given to students by SANS for your course</div>
+              </div>
+            </label>
+
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.83rem; cursor: pointer;">
+              <input type="radio" name="pdf-parse-mode" value="ai-generic" style="margin-top: 2px;">
+              <div>
+                <strong style="color: var(--text-primary);">Generic PDF Layout (AI-Powered with Gemini)</strong>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">Uses Gemini AI to process non-standard or custom PDF index layouts. Requires a Gemini API key.</div>
+                <div style="font-size: 0.75rem; color: #38bdf8; font-weight: 600; margin-top: 4px;">Recommended for: All other types of indices acquired through other means</div>
+              </div>
+            </label>
+
+            <!-- Warning Box for AI Mode -->
+            <div id="pdf-ai-warning-box" style="display: none; margin-top: 4px; padding: 10px 12px; border-radius: 6px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.77rem; color: #fbbf24; line-height: 1.45;">
+              <strong style="display: block; margin-bottom: 3px; color: #f59e0b; font-size: 0.8rem;">⚠️ AI Mode Warning & Usage Notice:</strong>
+              <div style="margin-bottom: 3px;">• <strong>Uses API Key:</strong> Consumes your personal Gemini API key quota per page chunk.</div>
+              <div>• <strong>Accuracy Limitation:</strong> Generic PDFs lack standard SANS background row shading, so Gemini relies on LLM reasoning and may occasionally misread complex layout boundaries or miss terms.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>PDF Index File</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span id="pdf-index-file-display" style="flex: 1; font-size: 0.83rem; color: var(--text-muted); padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-app); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">No file selected</span>
+            <button type="button" id="pdf-index-browse-btn" class="btn btn-secondary" style="white-space: nowrap;">Browse PDF</button>
+          </div>
+        </div>
+
+        <div id="pdf-index-key-row" class="form-group" style="display:none;">
+          <label for="pdf-index-gemini-key">Gemini API Key</label>
+          <input type="password" id="pdf-index-gemini-key" placeholder="Enter Gemini API key..." style="width:100%;">
+          <div style="font-size: 0.77rem; color: var(--text-muted); margin-top: 4px;">A key is required for AI parsing. <a href="https://aistudio.google.com/app/apikey" style="color: #38bdf8;" target="_blank">Get a free key</a></div>
+        </div>
+      </div>
+
       <div class="dialog-actions">
         <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
         <button type="button" id="confirm-import-btn" class="btn btn-accent">Process Import</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- PDF Index Review Section (shown after AI parsing, before committing) -->
+  <dialog id="pdf-index-review-dialog" class="custom-dialog" style="max-width: 900px; width: 95vw; max-height: 90vh;">
+    <div class="dialog-content" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <div>
+          <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">📋 Import Review</h3>
+          <span id="pdf-review-summary-text" style="font-size: 0.82rem; color: var(--text-muted);">Loading...</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="pdf-review-select-all-btn" class="btn btn-sm btn-secondary">Select All</button>
+          <button id="pdf-review-deselect-all-btn" class="btn btn-sm btn-secondary">Deselect All</button>
+          <button type="button" id="pdf-review-close-x-btn" class="btn btn-sm btn-secondary close-dialog-btn" style="padding: 2px 8px; font-size: 1.1rem; line-height: 1; border-radius: 4px;" title="Close Window">&times;</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <!-- Stats Badges: Total (White), New (Green), Merge (Blue), Capped (Orange), Duplicate (Red), Selected (Gray) -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; font-size: 0.8rem; align-items: center;">
+          <span id="pdf-review-stat-total" style="padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.12); color: #ffffff; font-weight: 600;">0 Total</span>
+          <span id="pdf-review-stat-new" style="padding: 3px 10px; border-radius: 12px; background: rgba(16,185,129,0.15); color: #10b981; font-weight: 600;">0 New</span>
+          <span id="pdf-review-stat-merge" style="padding: 3px 10px; border-radius: 12px; background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 600;">0 Merge</span>
+          <span id="pdf-review-stat-capped" style="padding: 3px 10px; border-radius: 12px; background: rgba(245,158,11,0.15); color: #fbbf24; font-weight: 600;">0 Capped</span>
+          <span id="pdf-review-stat-duplicate" style="padding: 3px 10px; border-radius: 12px; background: rgba(239,68,68,0.15); color: #ef4444; font-weight: 600;">0 Duplicate</span>
+          <span id="pdf-review-stat-selected" style="padding: 3px 10px; border-radius: 12px; background: rgba(148,163,184,0.12); color: #94a3b8; font-weight: 600;">0 Selected</span>
+        </div>
+
+        <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+          <!-- Filter Multi-Select Dropdown (positioned with left: 0 to prevent left cutoff) -->
+          <div style="position: relative;">
+            <button type="button" id="pdf-review-filter-dropdown-btn" class="btn btn-sm btn-secondary" style="display: flex; align-items: center; gap: 6px;">
+              <span>Filter View</span>
+              <span style="font-size: 0.7rem;">▼</span>
+            </button>
+            <div id="pdf-review-filter-menu" class="dropdown-popover" style="display: none; position: absolute; left: 0; top: 100%; margin-top: 4px; background: var(--bg-card, #1e293b); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 14px; box-shadow: 0 10px 20px -3px rgba(0,0,0,0.6); z-index: 1000; min-width: 160px; width: max-content;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Show Entries:</div>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; margin-bottom: 6px; cursor: pointer; user-select: none;">
+                <input type="checkbox" class="pdf-filter-cb" value="NEW" checked> 🟢 New
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; margin-bottom: 6px; cursor: pointer; user-select: none;">
+                <input type="checkbox" class="pdf-filter-cb" value="MERGE" checked> 🔵 Merge
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; margin-bottom: 6px; cursor: pointer; user-select: none;">
+                <input type="checkbox" class="pdf-filter-cb" value="CAPPED"> 🟡 Capped
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; cursor: pointer; user-select: none;">
+                <input type="checkbox" class="pdf-filter-cb" value="DUPLICATE"> 🔴 Duplicate
+              </label>
+            </div>
+          </div>
+
+          <!-- Bypass Reference Caps Toggle Switch & Info Tooltip -->
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--text-primary); user-select: none;">
+              <input type="checkbox" id="pdf-review-bypass-cap-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+              <span>Bypass Reference Caps (Merge All)</span>
+            </label>
+            <div class="info-tooltip-wrapper" style="position: relative; display: inline-flex; align-items: center;">
+              <span class="info-tooltip-icon" style="width: 18px; height: 18px; border-radius: 50%; background: var(--bg-tertiary, #334155); color: var(--text-muted, #94a3b8); font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: justify; justify-content: center; cursor: help; border: 1px solid var(--border-color);" title="Hover for details">?</span>
+              <div class="info-tooltip-popover" style="display: none; position: absolute; bottom: 125%; right: 0; transform: translateX(10%); width: 280px; padding: 10px 12px; background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.7); font-size: 0.78rem; line-height: 1.4; color: #e2e8f0; z-index: 1100; pointer-events: none;">
+                <div style="font-weight: 700; color: #60a5fa; margin-bottom: 4px;">ℹ️ Bypass Reference Caps</div>
+                <div style="margin-bottom: 6px;"><strong>What it does:</strong> Disables both the 7-existing reference cap and 8-reference limit, merging <em>all</em> page references from the imported PDF regardless of count.</div>
+                <div><strong>Why 8 is Default:</strong> By default, references are capped at 8 max per entry so your index stays concise and easy to navigate during open-book exams, preventing single terms from becoming cluttered with dozens of page references.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pdf-review-table-wrapper" style="flex: 1; overflow-y: auto; min-height: 0; max-height: 55vh; border: 1px solid var(--border-color); border-radius: 6px;">
+        <table class="index-table" style="width: 100%;">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;"><input type="checkbox" id="pdf-review-header-checkbox" checked></th>
+              <th style="width: 220px;">Topic</th>
+              <th style="width: 60px;">Book</th>
+              <th style="width: 130px;">Pages (from PDF)</th>
+              <th style="width: 130px;">Existing Pages</th>
+              <th style="width: 90px;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="pdf-review-table-body">
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+        <button type="button" id="pdf-review-cancel-btn" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="pdf-review-import-btn" class="btn btn-accent">
+          <i data-lucide="plus-circle" style="width:15px;height:15px;"></i>
+          <span>Import Selected</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- PDF Index AI Parsing Loading Dialog -->
+  <dialog id="pdf-index-loading-dialog" class="custom-dialog" style="max-width: 480px; text-align: center; padding: 32px 24px;">
+    <div class="dialog-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+      <div class="spinner-container" style="margin-bottom: 16px;">
+        <div class="spinner"></div>
+      </div>
+      <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: #38bdf8; line-height: 1.4;">
+        Parsing PDF Index with Gemini AI...
+      </h3>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 8px 0 0 0; line-height: 1.45; max-width: 400px;">
+        Extracting topics, book numbers, and page references across all books. This usually takes 15–30 seconds.
+      </p>
+
+      <!-- Fun Facts Display during loading -->
+      <div style="margin-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px; width: 100%; text-align: center;">
+        <p style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-accent); font-weight: 600; margin: 0 0 6px 0;">
+          <i data-lucide="sparkles" style="width: 12px; height: 12px; vertical-align: middle; margin-right: 4px;"></i>
+          Did You Know?
+        </p>
+        <p id="pdf-fun-fact-text" style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45; min-height: 38px; font-style: italic; margin: 0;">
+          SANS textbooks have dense technical content that the Indexer parses and maps across all books.
+        </p>
       </div>
     </div>
   </dialog>

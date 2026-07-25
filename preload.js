@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('api', {
   },
   checkLocalModelStatus: (modelKey) => ipcRenderer.invoke('check-local-model-status', modelKey),
   downloadLocalModel: (modelKey) => ipcRenderer.invoke('download-local-model', modelKey),
+  parsePdfIndex: (args) => ipcRenderer.invoke('parse-pdf-index', args),
+  onPdfImportProgress: (callback) => {
+    ipcRenderer.on('pdf-import-progress', (event, progress) => callback(progress));
+  },
   onModelDownloadProgress: (callback) => {
     ipcRenderer.on('model-download-progress', (event, data) => callback(data));
   },
