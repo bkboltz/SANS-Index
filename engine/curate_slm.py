@@ -45,6 +45,7 @@ def ensure_slm_dependencies():
         'nltk': 'nltk',
         'wordfreq': 'wordfreq',
         'pdfminer': 'pdfminer.six',
+        'typing_extensions': 'typing-extensions',
         'transformers': 'transformers',
         'torch': 'torch',
         'huggingface_hub': 'huggingface_hub'
