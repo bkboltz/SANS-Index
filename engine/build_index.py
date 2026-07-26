@@ -1,6 +1,7 @@
 from collections import defaultdict
 import argparse
 import re
+import os
 from io import BytesIO
 
 import sys
@@ -1004,20 +1005,82 @@ class Tokenizer:
 
         self._process_page(b)
 
-    def tokenize(self, data:bytes, exclude_words: list = []):
+    def apply_page_exclusions(self, page_texts):
+        """
+        Applies Front-Matter & Back-Matter Page Exclusion Rules:
+        - Lab Workbooks: Keep pages starting from the first Lab Banner.
+        - Regular Textbooks: Ignore front matter up to & including the 1st Module Objectives page. Ignore last page.
+        """
+        if len(page_texts) <= 1:
+            return page_texts
+
+        cover_text = " ".join(page_texts[:2]).lower()
+        base_name = os.path.basename(getattr(self, 'filename', '') or "").lower()
+
+        # SANS Cover Conventions:
+        # - Lab Workbooks: Cover title reads "Workbook Sections [x]-[x]" or filename contains "workbook"
+        is_lab_workbook = bool(
+            re.search(r'\bworkbook\s+sections?\b', cover_text, re.IGNORECASE) or
+            re.search(r'\b(lab\s*workbook|exercise\s*workbook|hands-on\s*labs?)\b', cover_text, re.IGNORECASE) or
+            re.search(r'\b(workbook|lab_workbook|lab-workbook)\b', base_name, re.IGNORECASE)
+        )
+
+        if is_lab_workbook:
+            # Lab Workbook Rule: Ignore everything up until the first lab banner in the book
+            lab_banner_regex = re.compile(r'\b(lab\s*\d|exercise\s*\d|lab\s*banner|hands-on\s*lab)\b', re.IGNORECASE)
+            first_lab_idx = -1
+            for i in range(min(len(page_texts), 25)):
+                if lab_banner_regex.search(page_texts[i]):
+                    first_lab_idx = i
+                    break
+            if first_lab_idx > 0:
+                for k in range(first_lab_idx):
+                    page_texts[k] = ""
+        else:
+            # Regular Textbook Rule: Ignore front matter up to & including the 1st "Module Objectives" page. Ignore last page.
+            # Matches "Module Objectives", "Module 1 Objectives", "Course Objectives", "Module 1 Overview", "Course Overview", etc.
+            obj_regex = re.compile(r'\b(module\s*(?:\d+)?\s*objectives?|course\s+objectives?|module\s*(?:\d+)?\s*overview|course\s+overview|course\s+agenda)\b', re.IGNORECASE)
+            first_obj_idx = -1
+            for i in range(min(len(page_texts), 15)):
+                if obj_regex.search(page_texts[i]):
+                    first_obj_idx = i
+                    break
+
+            if first_obj_idx >= 0:
+                for k in range(first_obj_idx + 1):
+                    page_texts[k] = ""
+            else:
+                default_skip = min(5, len(page_texts) - 1)
+                for k in range(default_skip):
+                    page_texts[k] = ""
+
+            # Clear very last page (SANS contact / feedback page) for regular books
+            if len(page_texts) > 1:
+                page_texts[-1] = ""
+
+        return page_texts
+
+    def tokenize(self, data:bytes, exclude_words: list = [], filename: str = ""):
         """
         Tokenize input data according to the configured document mode.
 
         Args:
             data (bytes): Raw document data to tokenize.
             exclude_words (list): List of case-insensitive words to strip from the text.
+            filename (str): Name of the file being tokenized.
         """
+        self.filename = filename
         # TXT
         if self.mode == 0: 
             text = data.decode("utf-8", errors="ignore")
             for w in exclude_words:
                 pattern = re.compile(re.escape(w), re.IGNORECASE)
                 text = pattern.sub(" ", text)
+            
+            page_texts = text.split('\x0c')
+            page_texts = self.apply_page_exclusions(page_texts)
+            text = '\x0c'.join(page_texts)
+
             for b in text.encode("utf-8", errors="ignore"):
                 self._process_byte(b)
 
@@ -1027,6 +1090,11 @@ class Tokenizer:
             for w in exclude_words:
                 pattern = re.compile(re.escape(w), re.IGNORECASE)
                 text = pattern.sub(" ", text)
+
+            page_texts = text.split('\x0c')
+            page_texts = self.apply_page_exclusions(page_texts)
+            text = '\x0c'.join(page_texts)
+
             for b in text.encode("utf-8", errors="ignore"):
                 self._process_byte(b)
 
@@ -1201,7 +1269,7 @@ def main():
     # tokenize
     print_status(verbose, f"    [+] Tokenizing")
     tokenizer = Tokenizer(page_offset=offset, filter=word_filter, mode=filetype)
-    tokenizer.tokenize(data, exclude_words=exclude_words)
+    tokenizer.tokenize(data, exclude_words=exclude_words, filename=input_file)
     print_status(verbose, f"        Words      : {len(tokenizer.words)}")
     print_status(verbose, f"        Phrases    : {len(tokenizer.phrases)}" + '\n')
 

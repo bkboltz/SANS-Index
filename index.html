@@ -175,10 +175,6 @@
           <div id="quiz-new-questions-toast" class="bounce-tag hidden">
             New questions added!
           </div>
-          <label id="print-include-notes-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-right: 10px;" title="Include the Notes/Reference Details column in the printed index">
-            <input type="checkbox" id="print-include-notes" checked>
-            <span>Include Notes</span>
-          </label>
           <button id="print-index-btn" class="btn btn-primary">
             <i data-lucide="printer"></i>
             <span>Print Index</span>
@@ -191,6 +187,10 @@
         <button class="tab-btn active" data-view-tab="manual-index">
           <i data-lucide="edit-3"></i>
           <span>My Index</span>
+        </button>
+        <button class="tab-btn" data-view-tab="my-acronyms" id="my-acronyms-nav-btn">
+          <i data-lucide="book-type"></i>
+          <span>My Acronyms</span>
         </button>
         <button class="tab-btn" data-view-tab="auto-index" id="auto-index-nav-btn">
           <i data-lucide="cpu"></i>
@@ -299,6 +299,13 @@
             <i data-lucide="search" class="search-icon"></i>
             <input type="text" id="table-search-input" placeholder="Search by topic, notes, or pages...">
           </div>
+
+          <!-- Middle-positioned Teal AI Combine Button -->
+          <button type="button" id="combine-same-items-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Use AI to find and combine identical topics across your index">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+            <span>Combine same items using AI</span>
+          </button>
+
           <div class="filters-wrapper">
             <select id="filter-book-select">
               <option value="all">All Books</option>
@@ -358,6 +365,135 @@
         </section>
       </div> <!-- Closes #shared-table-container -->
       </div> <!-- Closes #manual-index-view -->
+
+      <!-- My Acronyms Workspace View -->
+      <div id="my-acronyms-view" class="workspace-view hidden no-print">
+
+        <!-- Stats Bar for Acronyms -->
+        <section class="stats-bar no-print no-print-in-quiz">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-total-acronyms">0</div>
+            <div class="stat-label">Total Acronym Entries</div>
+          </div>
+          <div class="stat-card" id="stat-card-acronym-exam">
+            <div class="stat-value" id="stat-acronym-book-count">0</div>
+            <div class="stat-label">Indexed Books</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-last-acronym">-</div>
+            <div class="stat-label">Last Added Acronym</div>
+          </div>
+        </section>
+
+        <!-- Sticky Fast Entry Section (Hidden in Quiz mode) -->
+        <section class="entry-form-container no-print no-print-in-quiz">
+          <h2 class="form-title">
+            <i data-lucide="sparkles" class="title-icon"></i>
+            <span id="acronym-form-action-title">Add Acronym Entry</span>
+          </h2>
+          <form id="acronym-form" autocomplete="off">
+            <input type="hidden" id="acronym-id-input">
+            
+            <div class="form-grid">
+              <!-- Acronym Code -->
+              <div class="form-group flex-1">
+                <label for="acronym-code-input">Acronym</label>
+                <input type="text" id="acronym-code-input" placeholder="e.g., ADFS, CSRF, SMB" required>
+              </div>
+
+              <!-- Full Term / Definition -->
+              <div class="form-group flex-3">
+                <div class="notes-label-container">
+                  <label for="acronym-term-input">Full Term / Definition</label>
+                  <div class="formatting-toolbar">
+                    <button type="button" class="format-btn acronym-format-btn" data-format="bold" title="Bold (Ctrl+B)" tabindex="-1">
+                      <i data-lucide="bold"></i>
+                    </button>
+                    <button type="button" class="format-btn acronym-format-btn" data-format="italic" title="Italic (Ctrl+I)" tabindex="-1">
+                      <i data-lucide="italic"></i>
+                    </button>
+                    <button type="button" class="format-btn acronym-format-btn" data-format="underline" title="Underline (Ctrl+U)" tabindex="-1">
+                      <i data-lucide="underline"></i>
+                    </button>
+                    <button type="button" class="format-btn acronym-format-btn" data-format="bullet" title="Bullet List" tabindex="-1">
+                      <i data-lucide="list"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="acronym-term-input" contenteditable="true" class="notes-textarea-replacement" data-placeholder="e.g., Active Directory Federation Services"></div>
+              </div>
+              
+              <!-- Submit/Reset button -->
+              <div class="form-actions-row">
+                <button type="submit" id="save-acronym-btn" class="btn btn-accent">
+                  <i data-lucide="save"></i>
+                  <span>Save</span>
+                </button>
+                <button type="button" id="cancel-edit-acronym-btn" class="btn btn-secondary hidden">
+                  <span>Cancel</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Shared Search & Table container -->
+        <div id="acronym-shared-table-container">
+          <section class="table-controls-container no-print">
+            <div class="search-wrapper">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="acronym-search-input" placeholder="Search by acronym or term...">
+            </div>
+
+            <!-- Parse Index for Acronyms Teal Button -->
+            <button type="button" id="parse-index-acronyms-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Extract acronyms automatically from your course index topics">
+              <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+              <span>Parse Index for Acronyms</span>
+            </button>
+
+            <div class="filters-wrapper">
+              <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;" title="Require confirmation before deleting an acronym">
+                <input type="checkbox" id="acronyms-confirm-delete" checked>
+                <span>Confirm Deletion</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="table-wrapper">
+            <!-- Multi-Delete Action Bar for Acronyms -->
+            <div id="acronyms-multi-delete-bar" class="no-print" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 10px 16px; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-md);">
+              <div style="display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 0.88rem;">
+                <i data-lucide="info" style="color: var(--danger); width: 16px; height: 16px;"></i>
+                <span id="acronyms-multi-delete-count-text">0 items selected</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" title="Search course index topics matching selected acronyms (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')" style="background-color: #2dd4bf; color: #0f172a; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                  <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+                  <span>Apply Acronym Definitions To Index</span>
+                </button>
+                <button type="button" id="acronyms-cancel-selection-btn" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">Clear Selection</button>
+                <button type="button" id="acronyms-delete-selected-btn" class="btn btn-sm" style="background-color: var(--danger); color: white; padding: 4px 10px; font-size: 0.78rem; font-weight: 600;">Delete Selected Items</button>
+              </div>
+            </div>
+
+            <div id="acronyms-table-container">
+              <table class="index-table" id="acronyms-table">
+                <thead>
+                  <tr>
+                    <th class="col-select no-print" style="text-align: center; width: 4%;"><input type="checkbox" id="select-all-acronyms-checkbox"></th>
+                    <th class="col-topic sortable sorted-asc" data-acronym-sort="acronym" style="width: 25%;">Acronym <i class="sort-icon" data-lucide="chevron-up"></i></th>
+                    <th class="col-notes sortable" data-acronym-sort="term" style="width: 61%;">Full Term / Definition <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                    <th class="col-actions no-print" style="width: 10%;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="acronyms-table-body">
+                  <!-- Rendered by JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
 
       <!-- Auto-Indexing Workspace View -->
       <div id="auto-index-view" class="workspace-view hidden no-print">
@@ -1708,6 +1844,135 @@
     </div>
   </dialog>
 
+  <!-- Combine Same Items Setup / Warning Dialog -->
+  <dialog id="combine-same-items-setup-dialog" class="custom-dialog" style="max-width: 560px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+        <i data-lucide="sparkles" style="width: 22px; height: 22px; color: var(--color-accent);"></i>
+        <h3 style="margin: 0; font-size: 1.15rem;">Combine Same Items Using AI</h3>
+      </div>
+      
+      <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
+        <p style="margin: 0 0 10px 0;">This tool analyzes your project's index entries using Gemini AI to identify terms that represent the <strong>exact same concept or tool</strong> (e.g. <code>Active Directory</code> & <code>AD</code>, or <code>Resource-Based Constrained Delegation (RBCD)</code> & <code>RBCD</code>) and standardizes them.</p>
+        <ul style="margin: 0 0 12px 18px; padding: 0; display: flex; flex-direction: column; gap: 4px;">
+          <li>Standardizes names into long-form format with parenthetical acronyms: <code>Long-Form Title (ACRONYM)</code>.</li>
+          <li>Merges page references for entries in the same book.</li>
+          <li>Standardizes topic names across different books so term names remain 100% consistent.</li>
+        </ul>
+      </div>
+
+      <div style="padding: 10px 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 0.78rem; color: #fbbf24; margin-bottom: 16px; line-height: 1.45;">
+        <strong>⚠️ Usage & Quota Notice:</strong> This analysis uses your personal Gemini API key. You will be able to review, check, or uncheck all proposed combinations before any permanent changes are saved.
+      </div>
+
+      <div id="combine-ai-key-row" class="form-group" style="display: none; margin-bottom: 16px;">
+        <label for="combine-ai-gemini-key">Gemini API Key Required</label>
+        <input type="password" id="combine-ai-gemini-key" placeholder="Enter Gemini API key..." style="width:100%;">
+        <div style="font-size: 0.77rem; color: var(--text-muted); margin-top: 4px;">A free Gemini key is required to run AI consolidation. <a href="https://aistudio.google.com/app/apikey" style="color: #38bdf8;" target="_blank">Get a key</a></div>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="start-combine-ai-btn" class="btn btn-accent">
+          <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+          <span>Start AI Analysis</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Same Items Review Section -->
+  <dialog id="same-items-review-dialog" class="custom-dialog" style="max-width: 900px; width: 95vw; max-height: 90vh;">
+    <div class="dialog-content" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+        <div>
+          <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">✨ Same Items Consolidation Review</h3>
+          <span id="same-items-review-summary-text" style="font-size: 0.82rem; color: var(--text-muted);">Review proposed term consolidations</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="same-items-select-all-btn" class="btn btn-sm btn-secondary">Select All</button>
+          <button id="same-items-deselect-all-btn" class="btn btn-sm btn-secondary">Deselect All</button>
+          <button id="same-items-toggle-collapse-btn" class="btn btn-sm btn-secondary">Collapse All</button>
+          <button type="button" id="same-items-close-x-btn" class="btn btn-sm btn-secondary close-dialog-btn" style="padding: 2px 8px; font-size: 1.1rem; line-height: 1; border-radius: 4px;" title="Close Window">&times;</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; align-items: center;">
+        <span id="same-items-stat-total" style="padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.12); color: #ffffff; font-weight: 600;">0 Groups</span>
+        <span id="same-items-stat-merge" style="padding: 3px 10px; border-radius: 12px; background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 600;">0 Total Items</span>
+        <span id="same-items-stat-selected" style="padding: 3px 10px; border-radius: 12px; background: rgba(20,184,166,0.15); color: #2dd4bf; font-weight: 600;">0 Groups Selected</span>
+      </div>
+
+      <div class="pdf-review-table-wrapper" style="flex: 1; overflow-y: auto; min-height: 0; max-height: 60vh; border: 1px solid var(--border-color); border-radius: 6px;">
+        <table class="index-table same-items-review-table" style="width: 100%; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; z-index: 20; background: #0f172a;">
+            <tr>
+              <th style="width: 40px; text-align: center;"><input type="checkbox" id="same-items-header-checkbox" checked title="Select/Deselect All Groups"></th>
+              <th style="width: 150px;">Status</th>
+              <th style="width: 220px;">Original Topic Name</th>
+              <th style="width: 140px;">Book</th>
+              <th style="width: 130px;">Current Pages</th>
+              <th>Resulting Pages</th>
+            </tr>
+          </thead>
+          <tbody id="same-items-table-body">
+            <!-- Group Header Rows & Member Rows populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+        <button type="button" id="same-items-cancel-btn" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="same-items-accept-btn" class="btn btn-accent">
+          <i data-lucide="check-circle" style="width:15px;height:15px;"></i>
+          <span>Accept Combination</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Same Items Double Confirmation Dialog -->
+  <dialog id="same-items-confirm-dialog" class="custom-dialog" style="max-width: 480px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #f59e0b;">
+        <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+        <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">Confirm Permanent Changes</h3>
+      </div>
+      
+      <p id="same-items-confirm-msg" style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+        Are you sure you want to permanently consolidate and update the selected index items? This action cannot be undone.
+      </p>
+
+      <div class="dialog-actions">
+        <button type="button" id="same-items-confirm-cancel-btn" class="btn btn-secondary">Go Back</button>
+        <button type="button" id="same-items-confirm-ok-btn" class="btn btn-accent" style="background: #f59e0b; border-color: #d97706; color: #000; font-weight: 700;">
+          <span>Confirm & Apply Changes</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Import Final Double Confirmation Dialog -->
+  <dialog id="import-confirm-dialog" class="custom-dialog" style="max-width: 480px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #10b981;">
+        <i data-lucide="help-circle" style="width: 24px; height: 24px;"></i>
+        <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">Confirm Index Import</h3>
+      </div>
+      
+      <p id="import-confirm-msg" style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+        Are you sure you want to import the selected entries into your project index?
+      </p>
+
+      <div class="dialog-actions">
+        <button type="button" id="import-confirm-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="import-confirm-ok-btn" class="btn btn-accent">
+          <span>Confirm Import</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- PDF Index AI Parsing Loading Dialog -->
   <dialog id="pdf-index-loading-dialog" class="custom-dialog" style="max-width: 480px; text-align: center; padding: 32px 24px;">
     <div class="dialog-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
@@ -1718,7 +1983,7 @@
         Parsing PDF Index with Gemini AI...
       </h3>
       <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 8px 0 0 0; line-height: 1.45; max-width: 400px;">
-        Extracting topics, book numbers, and page references across all books. This usually takes 15–30 seconds.
+        Extracting topics, book numbers, and page references across all books. This can take a few minutes.
       </p>
 
       <!-- Fun Facts Display during loading -->
@@ -1736,26 +2001,56 @@
 
   <!-- Print Preview Modal -->
   <dialog id="print-preview-dialog" class="print-preview-modal no-print">
-    <div class="print-preview-modal-header">
-      <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="printer"></i>
-        <span>Print Preview</span>
-      </h3>
-      <div class="print-preview-actions">
-        <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; margin-right: 8px;">
-          <option value="standard">Topic Sorted Format</option>
-          <option value="topic-by-book">Topic Sorted By Book</option>
-          <option value="booklet">Chronologically Sorted Format</option>
-        </select>
-        <button id="print-preview-save-pdf-btn" class="btn btn-secondary">
-          <i data-lucide="file-down"></i>
-          <span>Save as PDF</span>
-        </button>
-        <button id="print-preview-confirm-btn" class="btn btn-accent">
+    <div class="print-preview-modal-header" style="display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--border-color); padding: 16px 24px; background-color: var(--bg-card);">
+      <!-- Row 1: Title & Main Action Buttons (Save as PDF, Print, Close) -->
+      <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
           <i data-lucide="printer"></i>
-          <span>Print</span>
-        </button>
-        <button type="button" class="btn btn-secondary close-dialog-btn">Close</button>
+          <span>Print Preview</span>
+        </h3>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="print-preview-save-pdf-btn" class="btn btn-secondary btn-sm">
+            <i data-lucide="file-down"></i>
+            <span>Save as PDF</span>
+          </button>
+          <button id="print-preview-confirm-btn" class="btn btn-accent btn-sm">
+            <i data-lucide="printer"></i>
+            <span>Print</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm close-dialog-btn">Close</button>
+        </div>
+      </div>
+
+      <!-- Row 2: Format & Column Dropdowns + Checkboxes Line Underneath -->
+      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.15); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Format:</label>
+          <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.82rem; cursor: pointer; outline: none;">
+            <option value="standard">Topic Sorted Format</option>
+            <option value="topic-by-book">Topic Sorted By Book</option>
+            <option value="booklet">Chronologically Sorted Format</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Columns:</label>
+          <select id="print-columns-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.82rem; cursor: pointer; outline: none; min-width: 110px;">
+            <option value="1">1 Column</option>
+            <option value="2">2 Columns</option>
+          </select>
+        </div>
+
+        <div style="height: 16px; width: 1px; background: var(--border-color); margin: 0 4px;"></div>
+
+        <label id="print-include-notes-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Notes/Reference Details column in printed index">
+          <input type="checkbox" id="print-include-notes" checked>
+          <span>Include notes column</span>
+        </label>
+
+        <label id="print-include-acronyms-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Acronyms List at the end of printed document">
+          <input type="checkbox" id="print-include-acronyms" checked>
+          <span>Include Acronyms</span>
+        </label>
       </div>
     </div>
     <div class="print-preview-modal-body">
@@ -1977,6 +2272,84 @@
           <button type="submit" class="btn btn-accent" id="quiz-config-start-btn">Start Practice Quiz</button>
         </div>
       </form>
+    </div>
+  </dialog>
+
+  <!-- Add / Edit Acronym Modal -->
+  <dialog id="add-acronym-dialog" class="custom-dialog" style="max-width: 480px;">
+    <div class="dialog-content">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 id="add-acronym-modal-title" style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">Add New Acronym</h3>
+        <button type="button" class="close-dialog-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">&times;</button>
+      </div>
+
+      <form id="acronym-form" autocomplete="off">
+        <input type="hidden" id="acronym-id-input">
+        
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label for="acronym-code-input" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-secondary);">Acronym</label>
+          <input type="text" id="acronym-code-input" placeholder="e.g. ADFS, CSRF, SMB" required style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-size: 0.9rem;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label for="acronym-term-input" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-secondary);">Full Term / Definition</label>
+          <input type="text" id="acronym-term-input" placeholder="e.g. Active Directory Federation Services" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-size: 0.9rem;">
+        </div>
+
+        <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+          <button type="submit" id="save-acronym-btn" class="btn btn-accent">Save Acronym</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Parse Index Acronym Review Dialog -->
+  <dialog id="acronym-review-dialog" class="custom-dialog" style="max-width: 820px; width: 90vw;">
+    <div class="dialog-content" style="display: flex; flex-direction: column; max-height: 75vh;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #2dd4bf; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="sparkles"></i>
+          <span>Parsed Acronyms Review</span>
+        </h3>
+        <button type="button" class="close-dialog-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">&times;</button>
+      </div>
+
+      <p style="margin: 0 0 14px 0; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45;">
+        The parser extracted the following candidate acronyms from your course index topics. Review, edit, or deselect items before adding them to your acronym list. Rows with empty terms will be skipped.
+      </p>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 6px 12px; background: rgba(30, 41, 59, 0.5); border-radius: var(--radius-sm);">
+        <span id="acronym-review-count" style="font-size: 0.8rem; color: var(--text-primary); font-weight: 500;">0 candidate acronyms found</span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="acronym-review-select-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Select All</button>
+          <button type="button" id="acronym-review-deselect-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Deselect All</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Review Table -->
+      <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 16px; max-height: 380px;">
+        <table class="index-table" style="width: 100%; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; background: var(--bg-sidebar); z-index: 10;">
+            <tr>
+              <th style="width: 5%; text-align: center;"><input type="checkbox" id="acronym-review-header-checkbox" checked></th>
+              <th style="width: 18%;">Acronym</th>
+              <th style="width: 45%;">Associated Term / Definition</th>
+              <th style="width: 32%;">Source Index Entry</th>
+            </tr>
+          </thead>
+          <tbody id="acronym-review-table-body">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="confirm-acronym-review-btn" class="btn btn-accent">
+          <span>Add Selected Acronyms</span>
+        </button>
+      </div>
     </div>
   </dialog>
 

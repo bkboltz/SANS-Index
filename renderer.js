@@ -81,8 +81,10 @@ const elements = {
   printPreviewConfirmBtn: document.getElementById('print-preview-confirm-btn'),
   printPreviewSavePdfBtn: document.getElementById('print-preview-save-pdf-btn'),
   printFormatSelect: document.getElementById('print-format-select'),
+  printColumnsSelect: document.getElementById('print-columns-select'),
   printOnlyContainer: document.getElementById('print-only-container'),
   printIncludeNotes: document.getElementById('print-include-notes'),
+  printIncludeAcronyms: document.getElementById('print-include-acronyms'),
 
   // Delete confirmation dialog
   deleteConfirmDialog: document.getElementById('delete-confirm-dialog'),
@@ -95,6 +97,39 @@ const elements = {
   multiDeleteCountText: document.getElementById('multi-delete-count-text'),
   cancelSelectionBtn: document.getElementById('cancel-selection-btn'),
   deleteSelectedBtn: document.getElementById('delete-selected-btn'),
+
+  // Acronyms Elements
+  myAcronymsNavBtn: document.getElementById('my-acronyms-nav-btn'),
+  myAcronymsView: document.getElementById('my-acronyms-view'),
+  statTotalAcronyms: document.getElementById('stat-total-acronyms'),
+  statAcronymBookCount: document.getElementById('stat-acronym-book-count'),
+  statLastAcronym: document.getElementById('stat-last-acronym'),
+  acronymSearchInput: document.getElementById('acronym-search-input'),
+  parseIndexAcronymsBtn: document.getElementById('parse-index-acronyms-btn'),
+  openAddAcronymModalBtn: document.getElementById('open-add-acronym-modal-btn'),
+  acronymsConfirmDelete: document.getElementById('acronyms-confirm-delete'),
+  acronymsMultiDeleteBar: document.getElementById('acronyms-multi-delete-bar'),
+  acronymsMultiDeleteCountText: document.getElementById('acronyms-multi-delete-count-text'),
+  acronymsApplyDefinitionsBtn: document.getElementById('acronyms-apply-definitions-btn'),
+  acronymsCancelSelectionBtn: document.getElementById('acronyms-cancel-selection-btn'),
+  acronymsDeleteSelectedBtn: document.getElementById('acronyms-delete-selected-btn'),
+  selectAllAcronymsCheckbox: document.getElementById('select-all-acronyms-checkbox'),
+  acronymsTableBody: document.getElementById('acronyms-table-body'),
+  addAcronymDialog: document.getElementById('add-acronym-dialog'),
+  addAcronymModalTitle: document.getElementById('add-acronym-modal-title'),
+  acronymForm: document.getElementById('acronym-form'),
+  acronymIdInput: document.getElementById('acronym-id-input'),
+  acronymCodeInput: document.getElementById('acronym-code-input'),
+  acronymTermInput: document.getElementById('acronym-term-input'),
+  saveAcronymBtn: document.getElementById('save-acronym-btn'),
+  cancelEditAcronymBtn: document.getElementById('cancel-edit-acronym-btn'),
+  acronymReviewDialog: document.getElementById('acronym-review-dialog'),
+  acronymReviewCount: document.getElementById('acronym-review-count'),
+  acronymReviewSelectAllBtn: document.getElementById('acronym-review-select-all-btn'),
+  acronymReviewDeselectAllBtn: document.getElementById('acronym-review-deselect-all-btn'),
+  acronymReviewHeaderCheckbox: document.getElementById('acronym-review-header-checkbox'),
+  acronymReviewTableBody: document.getElementById('acronym-review-table-body'),
+  confirmAcronymReviewBtn: document.getElementById('confirm-acronym-review-btn'),
 
   // Sidebar To-Do
   todoInput: document.getElementById('todo-input'),
@@ -239,6 +274,34 @@ const elements = {
   pdfIndexLoadingDialog: document.getElementById('pdf-index-loading-dialog'),
   pdfFunFactText: document.getElementById('pdf-fun-fact-text'),
 
+  // AI Same Items & Double Confirmation elements
+  combineSameItemsBtn: document.getElementById('combine-same-items-btn'),
+  combineSameItemsSetupDialog: document.getElementById('combine-same-items-setup-dialog'),
+  combineAiKeyRow: document.getElementById('combine-ai-key-row'),
+  combineAiGeminiKey: document.getElementById('combine-ai-gemini-key'),
+  startCombineAiBtn: document.getElementById('start-combine-ai-btn'),
+  sameItemsReviewDialog: document.getElementById('same-items-review-dialog'),
+  sameItemsSummaryText: document.getElementById('same-items-review-summary-text'),
+  sameItemsTableBody: document.getElementById('same-items-table-body'),
+  sameItemsHeaderCheckbox: document.getElementById('same-items-header-checkbox'),
+  sameItemsSelectAllBtn: document.getElementById('same-items-select-all-btn'),
+  sameItemsDeselectAllBtn: document.getElementById('same-items-deselect-all-btn'),
+  sameItemsToggleCollapseBtn: document.getElementById('same-items-toggle-collapse-btn'),
+  sameItemsAcceptBtn: document.getElementById('same-items-accept-btn'),
+  sameItemsCancelBtn: document.getElementById('same-items-cancel-btn'),
+  sameItemsStatTotal: document.getElementById('same-items-stat-total'),
+  sameItemsStatMerge: document.getElementById('same-items-stat-merge'),
+  sameItemsStatRename: document.getElementById('same-items-stat-rename'),
+  sameItemsStatSelected: document.getElementById('same-items-stat-selected'),
+  sameItemsConfirmDialog: document.getElementById('same-items-confirm-dialog'),
+  sameItemsConfirmMsg: document.getElementById('same-items-confirm-msg'),
+  sameItemsConfirmOkBtn: document.getElementById('same-items-confirm-ok-btn'),
+  sameItemsConfirmCancelBtn: document.getElementById('same-items-confirm-cancel-btn'),
+  importConfirmDialog: document.getElementById('import-confirm-dialog'),
+  importConfirmMsg: document.getElementById('import-confirm-msg'),
+  importConfirmOkBtn: document.getElementById('import-confirm-ok-btn'),
+  importConfirmCancelBtn: document.getElementById('import-confirm-cancel-btn'),
+
   // Practice Quiz Hub & Setup elements
   practiceQuizBtn: document.getElementById('practice-quiz-btn'),
   quizConfigDialog: document.getElementById('quiz-config-dialog'),
@@ -295,6 +358,7 @@ let state = {
   courses: [],
   books: [],
   entries: [],
+  acronyms: [],
   todos: [],
   quizzes: [],
   currentCourseId: null
@@ -311,6 +375,14 @@ let promptedCourses = new Set();
 let pendingDeleteEntryId = null;
 let selectedEntryIds = new Set();
 let pendingDeleteEntryIds = null;
+
+// Acronym runtime helpers
+let editAcronymId = null;
+let acronymSortField = 'acronym';
+let acronymSortAsc = true;
+let selectedAcronymIds = new Set();
+let pendingDeleteAcronymIds = null;
+let pendingAcronymCandidates = [];
 
 // Global temporary variables for generated quizzes
 let lastGeneratedQuiz = null;
@@ -329,6 +401,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.courses = loadedData.courses || [];
     state.books = loadedData.books || [];
     state.entries = loadedData.entries || [];
+    state.acronyms = loadedData.acronyms || [];
     state.todos = loadedData.todos || [];
     state.quizzes = loadedData.quizzes || [];
     
@@ -393,6 +466,7 @@ function renderAll() {
   renderCourses();
   renderBooks();
   renderEntries();
+  renderAcronyms();
   renderStats();
   renderTodos();
 }
@@ -1287,10 +1361,11 @@ function renderStats() {
     elements.statLastAdded.title = "";
   }
 
-  // Update Countdown vs. Indexed Books stats card
+  // Update Countdown vs. Indexed Books stats cards
   const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
-  const statCard = elements.statBookCount.closest('.stat-card');
-  const statLabel = statCard.querySelector('.stat-label');
+  const statCardIndex = elements.statBookCount ? elements.statBookCount.closest('.stat-card') : null;
+  const statCardAcronym = elements.statAcronymBookCount ? elements.statAcronymBookCount.closest('.stat-card') : null;
+  const statCards = [statCardIndex, statCardAcronym].filter(Boolean);
   
   if (activeCourse && activeCourse.testDate) {
     const examDate = new Date(activeCourse.testDate + 'T00:00:00');
@@ -1299,29 +1374,36 @@ function renderStats() {
     const diffTime = examDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) {
-      elements.statBookCount.textContent = "Passed";
-      statLabel.innerHTML = `Exam Date (${activeCourse.testDate}) <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
-    } else {
-      elements.statBookCount.textContent = diffDays;
-      statLabel.innerHTML = `${diffDays === 1 ? "Day Until Exam" : "Days Until Exam"} <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
-    }
-    statCard.style.cursor = 'pointer';
-    statCard.title = `Projected exam date: ${activeCourse.testDate}. Click to modify or remove.`;
+    statCards.forEach(statCard => {
+      const valEl = statCard.querySelector('.stat-value');
+      const statLabel = statCard.querySelector('.stat-label');
+      if (diffDays < 0) {
+        valEl.textContent = "Passed";
+        statLabel.innerHTML = `Exam Date (${activeCourse.testDate}) <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
+      } else {
+        valEl.textContent = diffDays;
+        statLabel.innerHTML = `${diffDays === 1 ? "Day Until Exam" : "Days Until Exam"} <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
+      }
+      statCard.style.cursor = 'pointer';
+      statCard.title = `Projected exam date: ${activeCourse.testDate}. Click to modify or remove.`;
+    });
   } else {
     // Default back to Indexed Books
     const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
-    elements.statBookCount.textContent = activeBooks.length;
-    
-    if (activeCourse && activeCourse.dismissExamAlert) {
-      statLabel.textContent = "Indexed Books";
-      statCard.style.cursor = "default";
-      statCard.title = "";
-    } else {
-      statLabel.innerHTML = `Indexed Books <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Configure Date</span>`;
-      statCard.style.cursor = 'pointer';
-      statCard.title = "No exam date configured. Click to set countdown date!";
-    }
+    statCards.forEach(statCard => {
+      const valEl = statCard.querySelector('.stat-value');
+      const statLabel = statCard.querySelector('.stat-label');
+      valEl.textContent = activeBooks.length;
+      if (activeCourse && activeCourse.dismissExamAlert) {
+        statLabel.textContent = "Indexed Books";
+        statCard.style.cursor = "default";
+        statCard.title = "";
+      } else {
+        statLabel.innerHTML = `Indexed Books <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Configure Date</span>`;
+        statCard.style.cursor = 'pointer';
+        statCard.title = "No exam date configured. Click to set countdown date!";
+      }
+    });
   }
 }
 
@@ -2986,7 +3068,7 @@ async function initiatePdfIndexParse() {
     const titleEl = elements.pdfIndexLoadingDialog.querySelector('h3');
     const subtextEl = elements.pdfIndexLoadingDialog.querySelector('p');
     if (titleEl) titleEl.textContent = parseMode === 'sans-fast' ? 'Parsing SANS PDF Index (Local)...' : 'Parsing PDF Index with Gemini AI...';
-    if (subtextEl) subtextEl.textContent = parseMode === 'sans-fast' ? 'Extracting index terms and pages locally. Please wait...' : 'Extracting topics, book numbers, and page references across all books. Please wait...';
+    if (subtextEl) subtextEl.textContent = parseMode === 'sans-fast' ? 'Extracting index terms and pages locally. Please wait...' : 'Extracting topics, book numbers, and page references across all books. This can take a few minutes.';
     elements.pdfIndexLoadingDialog.showModal();
     if (window.lucide) lucide.createIcons();
   }
@@ -3077,27 +3159,26 @@ function buildPdfReviewData(rawEntries, bypassCap = false) {
     if (!matchedBook) {
       action = 'NO_BOOK'; // book number doesn't match any configured book
     } else if (existingEntry) {
-      if (bypassCap) {
-        const result = mergePageStrings(existingEntry.pages, pages);
-        if (!result.wasChanged) {
-          action = 'DUPLICATE';
-        } else {
+      const existingFormatted = compressPageList(existingEntry.pages).trim().toLowerCase();
+      const importedFormatted = compressPageList(pages).trim().toLowerCase();
+
+      if (existingFormatted === importedFormatted) {
+        // Exact same references -> DUPLICATE
+        action = 'DUPLICATE';
+      } else if (!bypassCap && countPageTokens(existingEntry.pages) >= 7) {
+        // References differ and existing entry already reached 7+ reference cap -> CAPPED
+        action = 'CAPPED';
+      } else {
+        const result = bypassCap
+          ? mergePageStrings(existingEntry.pages, pages)
+          : mergePageStringsWithCap(existingEntry.pages, pages, 8);
+
+        if (result.wasChanged) {
           action = 'MERGE';
           mergedPages = result.merged;
-        }
-      } else {
-        const result = mergePageStringsWithCap(existingEntry.pages, pages, 8);
-        if (!result.wasChanged) {
-          // Duplicate takes precedence over Capped: existing entry already covers all imported pages
-          action = 'DUPLICATE';
         } else {
-          const existingTokenCount = countPageTokens(existingEntry.pages);
-          if (existingTokenCount >= 7) {
-            action = 'CAPPED'; // Existing entry ALREADY has 7+ references and imported new page references
-          } else {
-            action = 'MERGE';
-            mergedPages = result.merged;
-          }
+          // Imported references are already fully covered by existing entry
+          action = 'DUPLICATE';
         }
       }
     } else {
@@ -3200,6 +3281,26 @@ function updatePdfReviewStats(entries) {
 
 async function handlePdfIndexImportSelected() {
   const checkboxes = elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox');
+  let selectedCount = 0;
+  checkboxes.forEach(cb => { if (cb.checked) selectedCount++; });
+
+  if (selectedCount === 0) {
+    alert("Please select at least one entry to import.");
+    return;
+  }
+
+  if (elements.importConfirmMsg) {
+    elements.importConfirmMsg.textContent = `Are you sure you want to import the ${selectedCount} selected entries into your project index?`;
+  }
+  if (elements.importConfirmDialog) {
+    elements.importConfirmDialog.showModal();
+  }
+}
+
+async function commitImportSelectedEntries() {
+  if (elements.importConfirmDialog) elements.importConfirmDialog.close();
+
+  const checkboxes = elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox');
   let countNew = 0, countMerge = 0, countSkipped = 0;
 
   checkboxes.forEach((cb) => {
@@ -3226,7 +3327,6 @@ async function handlePdfIndexImportSelected() {
       existingEntry.pages = mergedPages;
       countMerge++;
     } else if (action === 'CAPPED' || action === 'DUPLICATE') {
-      // User force-selected a capped/duplicate item
       if (existingEntry) {
         const result = pdfIndexBypassCap
           ? mergePageStrings(existingEntry.pages, pages)
@@ -3250,7 +3350,421 @@ async function handlePdfIndexImportSelected() {
   await saveState();
   renderAll();
   closePdfIndexReviewDialog();
-  showToast(`PDF import complete: ${countNew} new, ${countMerge} merged, ${countSkipped} skipped.`, 3000);
+  showToast(`Import complete: ${countNew} new, ${countMerge} merged, ${countSkipped} skipped.`, 3000);
+}
+
+// ==========================================================================
+// AI SAME ITEMS CONSOLIDATION LOGIC (Option 1: Single-Pass Full Context)
+// ==========================================================================
+let sameItemsProposals = [];
+
+function openCombineSameItemsSetupDialog() {
+  const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+  if (courseEntries.length === 0) {
+    alert("No index entries found in current course to combine.");
+    return;
+  }
+
+  // Automatically sort main index table by Topic (ascending)
+  sortField = 'topic';
+  sortAsc = true;
+  if (elements.tableHeaders) {
+    elements.tableHeaders.forEach(h => {
+      h.classList.remove('sorted-asc', 'sorted-desc');
+      const icon = h.querySelector('.sort-icon');
+      if (icon) icon.setAttribute('data-lucide', 'chevrons-up-down');
+    });
+    const topicTh = document.querySelector('.index-table th[data-sort="topic"]');
+    if (topicTh) {
+      topicTh.classList.add('sorted-asc');
+      const activeIcon = topicTh.querySelector('.sort-icon');
+      if (activeIcon) activeIcon.setAttribute('data-lucide', 'chevron-up');
+    }
+  }
+  lucide.createIcons();
+  renderAll();
+
+  const storedKey = localStorage.getItem('gemini_api_key') || '';
+  if (!storedKey && elements.combineAiKeyRow) {
+    elements.combineAiKeyRow.style.display = 'block';
+  } else if (elements.combineAiKeyRow) {
+    elements.combineAiKeyRow.style.display = 'none';
+  }
+
+  if (elements.combineSameItemsSetupDialog) {
+    elements.combineSameItemsSetupDialog.showModal();
+  }
+}
+
+async function startCombineSameItemsAI() {
+  const storedKey = localStorage.getItem('gemini_api_key') || '';
+  let apiKey = storedKey;
+
+  if (elements.combineAiGeminiKey && elements.combineAiGeminiKey.value.trim()) {
+    apiKey = elements.combineAiGeminiKey.value.trim();
+    localStorage.setItem('gemini_api_key', apiKey);
+  }
+
+  if (!apiKey) {
+    alert("Please enter a valid Gemini API Key to run AI consolidation.");
+    return;
+  }
+
+  if (elements.combineSameItemsSetupDialog) {
+    elements.combineSameItemsSetupDialog.close();
+  }
+
+  if (elements.pdfIndexLoadingDialog) {
+    const titleEl = elements.pdfIndexLoadingDialog.querySelector('h3');
+    const subtextEl = elements.pdfIndexLoadingDialog.querySelector('p');
+    if (titleEl) titleEl.textContent = 'Combining Same Items with Gemini AI...';
+    if (subtextEl) subtextEl.textContent = 'Analyzing topics across your index to group equivalent terms. This can take a few minutes.';
+    elements.pdfIndexLoadingDialog.showModal();
+  }
+  startFunFactsRotation();
+
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+
+  const mappedEntries = courseEntries.map(e => {
+    const matchedBook = activeBooks.find(b => b.id === e.bookId);
+    let bookNum = 1;
+    if (matchedBook) {
+      const m = matchedBook.name.match(/(\d+)/);
+      if (m) bookNum = parseInt(m[1], 10);
+    }
+    return {
+      id: e.id,
+      topic: e.topic,
+      bookNum,
+      pages: e.pages
+    };
+  });
+
+  try {
+    const result = await window.api.combineSameItems({
+      entries: mappedEntries,
+      geminiApiKey: apiKey,
+      geminiModel: 'gemini-flash-latest'
+    });
+
+    if (elements.pdfIndexLoadingDialog) {
+      elements.pdfIndexLoadingDialog.close();
+    }
+    stopFunFactsRotation();
+
+    if (!result.success) {
+      alert(`AI consolidation failed: ${result.error}`);
+      return;
+    }
+
+    if (!result.proposals || result.proposals.length === 0) {
+      alert('AI analysis finished: No identical or duplicate topics were found to combine.');
+      return;
+    }
+
+    sameItemsProposals = result.proposals;
+    sameItemsGroups = buildSameItemsGroups(sameItemsProposals);
+
+    if (sameItemsGroups.length === 0) {
+      alert('AI analysis finished: No identical or duplicate topics were found to combine.');
+      return;
+    }
+
+    renderSameItemsReviewGroups(sameItemsGroups);
+    if (elements.sameItemsReviewDialog) {
+      elements.sameItemsReviewDialog.showModal();
+      lucide.createIcons();
+    }
+
+  } catch (err) {
+    if (elements.pdfIndexLoadingDialog) {
+      elements.pdfIndexLoadingDialog.close();
+    }
+    stopFunFactsRotation();
+    alert(`Error during AI consolidation: ${err.message}`);
+  }
+}
+
+let sameItemsGroups = [];
+
+function buildSameItemsGroups(proposals) {
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+
+  // Group proposals by proposedTopic (case-insensitive)
+  const groupMap = new Map();
+
+  proposals.forEach(p => {
+    if (!p || !p.proposedTopic) return;
+    const key = p.proposedTopic.trim().toLowerCase();
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        proposedTopic: p.proposedTopic.trim(),
+        targetTopicsSet: new Set(),
+        originalTopicsSet: new Set()
+      });
+    }
+    const g = groupMap.get(key);
+    if (p.originalTopic) g.originalTopicsSet.add(p.originalTopic.trim().toLowerCase());
+    if (p.targetTopic) g.targetTopicsSet.add(p.targetTopic.trim().toLowerCase());
+  });
+
+  const resultGroups = [];
+
+  groupMap.forEach((gData, key) => {
+    const proposedLower = key;
+    const targetTopics = Array.from(gData.targetTopicsSet);
+    const originalTopics = Array.from(gData.originalTopicsSet);
+
+    // Find ALL entries in current course that match proposedTopic, targetTopic, OR originalTopic!
+    const memberEntries = courseEntries.filter(e => {
+      if (!e || !e.topic) return false;
+      const tLower = e.topic.trim().toLowerCase();
+      return tLower === proposedLower || targetTopics.includes(tLower) || originalTopics.includes(tLower);
+    });
+
+    // Consolidation requires at least 2 items to combine. Ignore lone 1-item groups!
+    if (memberEntries.length < 2) return;
+
+    // Build details for each member entry
+    const items = memberEntries.map(entry => {
+      const bookObj = activeBooks.find(b => b.id === entry.bookId);
+      const bNumMatch = bookObj ? bookObj.name.match(/(\d+)/) : null;
+      const bookNum = bNumMatch ? parseInt(bNumMatch[1], 10) : (entry.bookId || 1);
+      const isAlreadyProposed = entry.topic.trim().toLowerCase() === proposedLower;
+
+      return {
+        entryId: entry.id,
+        bookId: entry.bookId,
+        bookName: `Book ${bookNum}`,
+        originalTopic: entry.topic,
+        pages: entry.pages,
+        isAlreadyProposed
+      };
+    });
+
+    // Calculate resulting pages per book if this group is accepted!
+    const bookPagesMap = new Map();
+    items.forEach(it => {
+      if (!bookPagesMap.has(it.bookId)) {
+        bookPagesMap.set(it.bookId, it.pages);
+      } else {
+        const merged = mergePageStrings(bookPagesMap.get(it.bookId), it.pages);
+        bookPagesMap.set(it.bookId, merged.merged);
+      }
+    });
+
+    items.forEach(it => {
+      it.resultingPages = bookPagesMap.get(it.bookId);
+      if (it.isAlreadyProposed) {
+        it.statusLabel = 'Existing (No Change)';
+        it.statusColor = '#94a3b8';
+      } else if (items.filter(x => x.bookId === it.bookId).length > 1) {
+        it.statusLabel = '🔵 Merge Pages';
+        it.statusColor = '#60a5fa';
+      } else {
+        it.statusLabel = '🟢 Rename';
+        it.statusColor = '#10b981';
+      }
+    });
+
+    resultGroups.push({
+      groupIdx: resultGroups.length,
+      proposedTopic: gData.proposedTopic,
+      items: items,
+      checked: true,
+      collapsed: false // Open by default
+    });
+  });
+
+  return resultGroups;
+}
+
+function renderSameItemsReviewGroups(groups) {
+  const tbody = elements.sameItemsTableBody;
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  groups.forEach((g, gIdx) => {
+    // 1. Group Header Row
+    const headerTr = document.createElement('tr');
+    headerTr.className = 'same-items-group-header-row';
+    headerTr.style.background = '#1e293b';
+    headerTr.style.borderTop = '2px solid var(--border-color)';
+    headerTr.style.borderBottom = '1px solid var(--border-color)';
+    headerTr.style.cursor = 'pointer';
+
+    headerTr.innerHTML = `
+      <td style="text-align: center; padding: 10px 8px; vertical-align: middle;">
+        <input type="checkbox" class="same-items-group-checkbox" data-group-idx="${gIdx}" ${g.checked ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer; accent-color: #14b8a6;">
+      </td>
+      <td colspan="4" style="padding: 8px 12px; vertical-align: middle;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+          <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}" class="group-collapse-icon" style="width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0;"></i>
+          <input type="text" class="same-items-group-topic-input" data-group-idx="${gIdx}" value="${escapeHtml(g.proposedTopic)}" style="font-size: 0.92rem; font-weight: 700; color: #2dd4bf; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(45, 212, 191, 0.4); border-radius: 4px; padding: 4px 10px; width: 100%; max-width: 500px;" title="Click to edit the combined group name">
+        </div>
+      </td>
+      <td style="text-align: right; padding: 10px 12px; vertical-align: middle;">
+        <span style="font-size: 0.76rem; padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.08); color: #94a3b8; font-weight: 600;">${g.items.length} items in group</span>
+      </td>
+    `;
+    tbody.appendChild(headerTr);
+
+    // 2. Group Member Rows
+    g.items.forEach(it => {
+      const itemTr = document.createElement('tr');
+      itemTr.className = `same-items-group-member-row group-row-${gIdx}`;
+      itemTr.style.background = 'rgba(15, 23, 42, 0.35)';
+      itemTr.style.display = g.collapsed ? 'none' : 'table-row';
+
+      itemTr.innerHTML = `
+        <td></td>
+        <td style="font-size:0.78rem;"><span style="font-weight:600; color:${it.statusColor};">${it.statusLabel}</span></td>
+        <td style="font-weight:${it.isAlreadyProposed ? '400' : '600'}; color:${it.isAlreadyProposed ? 'var(--text-muted)' : 'var(--text-primary)'};">${escapeHtml(it.originalTopic)}</td>
+        <td style="color:var(--text-muted);">${escapeHtml(it.bookName)}</td>
+        <td><code>${escapeHtml(it.pages)}</code></td>
+        <td style="color:#38bdf8; font-weight:600;"><code>${escapeHtml(it.resultingPages)}</code></td>
+      `;
+      tbody.appendChild(itemTr);
+    });
+
+    // Header click to collapse/expand
+    headerTr.addEventListener('click', (e) => {
+      if (e.target.classList.contains('same-items-group-checkbox') || e.target.classList.contains('same-items-group-topic-input')) return;
+      g.collapsed = !g.collapsed;
+      const icon = headerTr.querySelector('.group-collapse-icon');
+      if (icon) icon.setAttribute('data-lucide', g.collapsed ? 'chevron-right' : 'chevron-down');
+      tbody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
+        r.style.display = g.collapsed ? 'none' : 'table-row';
+      });
+      lucide.createIcons();
+      updateCollapseAllButtonText();
+    });
+
+    const topicInput = headerTr.querySelector('.same-items-group-topic-input');
+    if (topicInput) {
+      topicInput.addEventListener('click', (e) => e.stopPropagation());
+      topicInput.addEventListener('input', (e) => {
+        g.proposedTopic = e.target.value;
+      });
+    }
+  });
+
+  if (elements.sameItemsHeaderCheckbox) {
+    elements.sameItemsHeaderCheckbox.checked = true;
+    elements.sameItemsHeaderCheckbox.onchange = () => {
+      const isChecked = elements.sameItemsHeaderCheckbox.checked;
+      sameItemsGroups.forEach(g => { g.checked = isChecked; });
+      tbody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = isChecked; });
+      updateSameItemsGroupStats();
+    };
+  }
+
+  tbody.querySelectorAll('.same-items-group-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(e.target.getAttribute('data-group-idx'), 10);
+      if (sameItemsGroups[idx]) {
+        sameItemsGroups[idx].checked = e.target.checked;
+      }
+      updateSameItemsGroupStats();
+    });
+  });
+
+  lucide.createIcons();
+  updateSameItemsGroupStats();
+  updateCollapseAllButtonText();
+}
+
+function updateCollapseAllButtonText() {
+  if (!elements.sameItemsToggleCollapseBtn) return;
+  const anyOpen = sameItemsGroups.some(g => !g.collapsed);
+  elements.sameItemsToggleCollapseBtn.textContent = anyOpen ? 'Collapse All' : 'Expand All';
+}
+
+function updateSameItemsGroupStats() {
+  const totalGroups = sameItemsGroups.length;
+  let totalItems = 0;
+  let selectedGroups = 0;
+
+  sameItemsGroups.forEach(g => {
+    totalItems += g.items.length;
+    if (g.checked) selectedGroups++;
+  });
+
+  if (elements.sameItemsStatTotal) elements.sameItemsStatTotal.textContent = `${totalGroups} Groups`;
+  if (elements.sameItemsStatMerge) elements.sameItemsStatMerge.textContent = `${totalItems} Total Items`;
+  if (elements.sameItemsStatSelected) elements.sameItemsStatSelected.textContent = `${selectedGroups} Groups Selected`;
+}
+
+function handleAcceptSameItems() {
+  const selectedGroups = sameItemsGroups.filter(g => g.checked);
+
+  if (selectedGroups.length === 0) {
+    alert("Please select at least one group to combine.");
+    return;
+  }
+
+  let totalSelectedItems = 0;
+  selectedGroups.forEach(g => { totalSelectedItems += g.items.length; });
+
+  if (elements.sameItemsConfirmMsg) {
+    elements.sameItemsConfirmMsg.textContent = `Are you sure you want to permanently consolidate ${totalSelectedItems} items across the ${selectedGroups.length} selected group(s)? This action cannot be undone.`;
+  }
+  if (elements.sameItemsConfirmDialog) {
+    elements.sameItemsConfirmDialog.showModal();
+  }
+}
+
+function applySameItemsConsolidation() {
+  if (elements.sameItemsConfirmDialog) elements.sameItemsConfirmDialog.close();
+  if (elements.sameItemsReviewDialog) elements.sameItemsReviewDialog.close();
+
+  let updatedCount = 0;
+
+  sameItemsGroups.forEach(g => {
+    if (!g.checked) return;
+    const proposed = g.proposedTopic;
+
+    g.items.forEach(it => {
+      const entry = state.entries.find(e => e.id === it.entryId);
+      if (entry && entry.topic !== proposed) {
+        entry.topic = proposed;
+        updatedCount++;
+      }
+    });
+  });
+
+  const deduplicated = [];
+  const map = new Map();
+
+  state.entries.forEach(entry => {
+    if (entry.courseId !== state.currentCourseId) {
+      deduplicated.push(entry);
+      return;
+    }
+
+    const key = `${entry.bookId}_${entry.topic.toLowerCase()}`;
+    if (map.has(key)) {
+      const existing = map.get(key);
+      const merged = mergePageStrings(existing.pages, entry.pages);
+      existing.pages = merged.merged;
+    } else {
+      map.set(key, entry);
+      deduplicated.push(entry);
+    }
+  });
+
+  state.entries = deduplicated;
+  saveState();
+  renderAll();
+
+  if (typeof showToast === 'function') {
+    showToast(`Successfully consolidated ${updatedCount} index entries across ${sameItemsGroups.filter(g => g.checked).length} groups!`);
+  } else {
+    alert(`Successfully consolidated ${updatedCount} index entries across ${sameItemsGroups.filter(g => g.checked).length} groups!`);
+  }
 }
 
 function closePdfIndexReviewDialog(e) {
@@ -3279,8 +3793,73 @@ function closePdfIndexReviewDialog(e) {
   if (elements.pdfIndexKeyRow) elements.pdfIndexKeyRow.style.display = 'none';
 }
 
-// Initialize PDF index import event bindings (called from initEventBindings)
+// Initialize PDF index import & AI consolidation event bindings (called from initEventBindings)
 function initPdfIndexImportBindings() {
+  if (elements.combineSameItemsBtn) {
+    elements.combineSameItemsBtn.addEventListener('click', openCombineSameItemsSetupDialog);
+  }
+  if (elements.startCombineAiBtn) {
+    elements.startCombineAiBtn.addEventListener('click', startCombineSameItemsAI);
+  }
+  if (elements.sameItemsSelectAllBtn) {
+    elements.sameItemsSelectAllBtn.addEventListener('click', () => {
+      sameItemsGroups.forEach(g => { g.checked = true; });
+      if (elements.sameItemsHeaderCheckbox) elements.sameItemsHeaderCheckbox.checked = true;
+      if (elements.sameItemsTableBody) {
+        elements.sameItemsTableBody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = true; });
+      }
+      updateSameItemsGroupStats();
+    });
+  }
+  if (elements.sameItemsDeselectAllBtn) {
+    elements.sameItemsDeselectAllBtn.addEventListener('click', () => {
+      sameItemsGroups.forEach(g => { g.checked = false; });
+      if (elements.sameItemsHeaderCheckbox) elements.sameItemsHeaderCheckbox.checked = false;
+      if (elements.sameItemsTableBody) {
+        elements.sameItemsTableBody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = false; });
+      }
+      updateSameItemsGroupStats();
+    });
+  }
+  if (elements.sameItemsToggleCollapseBtn) {
+    elements.sameItemsToggleCollapseBtn.addEventListener('click', () => {
+      const anyOpen = sameItemsGroups.some(g => !g.collapsed);
+      const shouldCollapse = anyOpen;
+      sameItemsGroups.forEach(g => { g.collapsed = shouldCollapse; });
+      if (elements.sameItemsTableBody) {
+        sameItemsGroups.forEach((g, gIdx) => {
+          elements.sameItemsTableBody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
+            r.style.display = shouldCollapse ? 'none' : 'table-row';
+          });
+        });
+        elements.sameItemsTableBody.querySelectorAll('.group-collapse-icon').forEach(icon => {
+          icon.setAttribute('data-lucide', shouldCollapse ? 'chevron-right' : 'chevron-down');
+        });
+      }
+      lucide.createIcons();
+      updateCollapseAllButtonText();
+    });
+  }
+  if (elements.sameItemsAcceptBtn) {
+    elements.sameItemsAcceptBtn.addEventListener('click', handleAcceptSameItems);
+  }
+  if (elements.sameItemsConfirmOkBtn) {
+    elements.sameItemsConfirmOkBtn.addEventListener('click', applySameItemsConsolidation);
+  }
+  if (elements.sameItemsConfirmCancelBtn) {
+    elements.sameItemsConfirmCancelBtn.addEventListener('click', () => {
+      if (elements.sameItemsConfirmDialog) elements.sameItemsConfirmDialog.close();
+    });
+  }
+  if (elements.importConfirmOkBtn) {
+    elements.importConfirmOkBtn.addEventListener('click', commitImportSelectedEntries);
+  }
+  if (elements.importConfirmCancelBtn) {
+    elements.importConfirmCancelBtn.addEventListener('click', () => {
+      if (elements.importConfirmDialog) elements.importConfirmDialog.close();
+    });
+  }
+
   // Browse button
   if (elements.pdfIndexBrowseBtn) {
     elements.pdfIndexBrowseBtn.addEventListener('click', async () => {
@@ -3771,11 +4350,28 @@ function initEventBindings() {
 
   elements.printFormatSelect.addEventListener('change', renderPrintPreview);
 
+  if (elements.printColumnsSelect) {
+    elements.printColumnsSelect.value = localStorage.getItem('print_columns_count') || '1';
+    elements.printColumnsSelect.addEventListener('change', () => {
+      localStorage.setItem('print_columns_count', elements.printColumnsSelect.value);
+      renderPrintPreview();
+    });
+  }
+
   // Include Notes checkbox — persist and re-render preview when toggled
   if (elements.printIncludeNotes) {
     elements.printIncludeNotes.checked = localStorage.getItem('print_include_notes') !== 'false';
     elements.printIncludeNotes.addEventListener('change', () => {
       localStorage.setItem('print_include_notes', elements.printIncludeNotes.checked);
+      renderPrintPreview();
+    });
+  }
+
+  // Include Acronyms checkbox — persist and re-render preview when toggled
+  if (elements.printIncludeAcronyms) {
+    elements.printIncludeAcronyms.checked = localStorage.getItem('print_include_acronyms') !== 'false';
+    elements.printIncludeAcronyms.addEventListener('change', () => {
+      localStorage.setItem('print_include_acronyms', elements.printIncludeAcronyms.checked);
       renderPrintPreview();
     });
   }
@@ -3794,16 +4390,21 @@ function initEventBindings() {
     elements.deleteConfirmCancelBtn.addEventListener('click', () => {
       pendingDeleteEntryId = null;
       pendingDeleteEntryIds = null;
+      pendingDeleteAcronymId = null;
+      pendingDeleteAcronymIds = null;
       elements.deleteConfirmDontShowAgain.checked = false;
       elements.deleteConfirmDialog.close();
     });
 
     // Confirm button performs the actual deletion
     elements.deleteConfirmOkBtn.addEventListener('click', () => {
-      // Only set skip warning if it was a single entry deletion
-      if (!pendingDeleteEntryIds && elements.deleteConfirmDontShowAgain.checked) {
+      // Only set skip warning if it was a single item deletion
+      if (!pendingDeleteEntryIds && !pendingDeleteAcronymIds && elements.deleteConfirmDontShowAgain.checked) {
         if (elements.settingsConfirmDelete) {
           elements.settingsConfirmDelete.checked = false;
+        }
+        if (elements.acronymsConfirmDelete) {
+          elements.acronymsConfirmDelete.checked = false;
         }
         localStorage.setItem('confirm_delete', 'false');
       }
@@ -3814,6 +4415,12 @@ function initEventBindings() {
       } else if (pendingDeleteEntryIds) {
         performDeleteEntries(pendingDeleteEntryIds);
         pendingDeleteEntryIds = null;
+      } else if (pendingDeleteAcronymId) {
+        performDeleteAcronym(pendingDeleteAcronymId);
+        pendingDeleteAcronymId = null;
+      } else if (pendingDeleteAcronymIds) {
+        performDeleteAcronyms(pendingDeleteAcronymIds);
+        pendingDeleteAcronymIds = null;
       }
       elements.deleteConfirmDontShowAgain.checked = false;
     });
@@ -3866,6 +4473,16 @@ function initEventBindings() {
       openTestDateDialog();
     });
   }
+  const statCardAcronymExam = document.getElementById('stat-card-acronym-exam');
+  if (statCardAcronymExam) {
+    statCardAcronymExam.addEventListener('click', () => {
+      const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+      if (activeCourse && activeCourse.dismissExamAlert && !activeCourse.testDate) {
+        return;
+      }
+      openTestDateDialog();
+    });
+  }
 
   // Exam Date Dialog bindings
   if (elements.testDateDialogForm) {
@@ -3900,27 +4517,371 @@ function initEventBindings() {
 function openPrintPreview() {
   elements.printFormatSelect.value = 'standard';
   syncCustomSelect(elements.printFormatSelect);
+  if (elements.printColumnsSelect) {
+    elements.printColumnsSelect.value = localStorage.getItem('print_columns_count') || '1';
+  }
   renderPrintPreview();
   elements.printPreviewDialog.showModal();
 }
 
 function renderPrintPreview() {
   const format = elements.printFormatSelect.value;
+  const cols = elements.printColumnsSelect ? elements.printColumnsSelect.value : (localStorage.getItem('print_columns_count') || '1');
+  const includeNotes = elements.printIncludeNotes ? elements.printIncludeNotes.checked : true;
   const activeEntries = state.entries.filter(entry => entry && entry.courseId === state.currentCourseId);
+  const activeAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym && a.term);
+  const includeAcronyms = elements.printIncludeAcronyms && elements.printIncludeAcronyms.checked && activeAcronyms.length > 0;
   
-  let generatedHtml = '';
+  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
+  const courseTitle = activeCourse ? activeCourse.name : (elements.currentCourseTitle ? elements.currentCourseTitle.textContent : 'SANS Course Index');
+  const dateString = new Date().toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' });
+
+  // 1. Group / format index data as objects with line counts for height balancing
+  let groupedItems = [];
+  let tableHeaderHtml = '';
+
+  const topicW = includeNotes ? '25%' : '40%';
+  const refsW  = includeNotes ? '35%' : '60%';
+  const notesW = '40%';
+  const topicWordWrap = 'overflow-wrap: break-word; word-break: normal;';
+
+  const notesHeaderCell = includeNotes ? `<th class="col-notes" style="width: ${notesW};">Notes / Reference Details</th>` : '';
+
   if (format === 'booklet') {
-    generatedHtml = generateBookletPrintHTML(activeEntries);
-  } else if (format === 'topic-by-book') {
-    generatedHtml = generateTopicByBookPrintHTML(activeEntries);
+    // Chronologically sorted
+    const sortedBooklet = [...activeEntries].sort((a, b) => {
+      const bookA = state.books.find(bk => bk.id === a.bookId);
+      const bookB = state.books.find(bk => bk.id === b.bookId);
+      const orderA = bookA ? state.books.indexOf(bookA) : 999;
+      const orderB = bookB ? state.books.indexOf(bookB) : 999;
+      if (orderA !== orderB) return orderA - orderB;
+      const pA = parseInt((a.pages || '').split(',')[0], 10) || 0;
+      const pB = parseInt((b.pages || '').split(',')[0], 10) || 0;
+      return pA - pB;
+    });
+
+    groupedItems = sortedBooklet.map(entry => {
+      const book = state.books.find(b => b && b.id === entry.bookId);
+      const bookName = book ? book.name : 'Unknown Book';
+      const bookNameShort = bookName.includes(':') ? bookName.split(':')[0].trim() : bookName;
+      const bookColor = book ? book.color : '#4b5563';
+      const notesCell = includeNotes ? `<td class="col-notes">${entry.notes ? formatNoteMarkup(entry.notes) : ''}</td>` : '';
+      const html = `
+        <tr class="${entry.starred ? 'starred-row' : ''}">
+          <td class="col-book"><span style="color: ${bookColor}; font-weight: 700;">${escapeHtml(bookNameShort)}</span></td>
+          <td class="col-pages">${escapeHtml(entry.pages)}</td>
+          <td class="col-topic" style="font-weight: 700; ${topicWordWrap}">${escapeHtml(entry.topic)}</td>
+          ${notesCell}
+        </tr>
+      `;
+      return { lineCount: 1, html };
+    });
+
+    tableHeaderHtml = `
+      <thead>
+        <tr>
+          <th class="col-book" style="width: 15%;">Book</th>
+          <th class="col-pages" style="width: 15%;">Pages</th>
+          <th class="col-topic" style="width: ${includeNotes ? '30%' : '70%'};">Topic</th>
+          ${notesHeaderCell}
+        </tr>
+      </thead>
+    `;
   } else {
-    generatedHtml = generateStandardPrintHTML(activeEntries);
+    // Topic Sorted Format (Standard or Topic-by-Book)
+    const sorted = [...activeEntries].sort((a, b) =>
+      a.topic.localeCompare(b.topic, undefined, { sensitivity: 'base', numeric: true })
+    );
+
+    const topicMap = new Map();
+    sorted.forEach(entry => {
+      const key = entry.topic.trim().toLowerCase();
+      if (!topicMap.has(key)) {
+        topicMap.set(key, { topic: entry.topic, entries: [], notes: [] });
+      }
+      const group = topicMap.get(key);
+      group.entries.push(entry);
+      if (entry.notes && entry.notes.trim()) {
+        group.notes.push(entry.notes.trim());
+      }
+    });
+
+    const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+    const bookOrderMap = new Map(activeBooks.map((b, i) => [b.id, i]));
+
+    groupedItems = [...topicMap.values()].map(group => {
+      const booksSorted = [...group.entries].sort((a, b) => {
+        const ai = bookOrderMap.has(a.bookId) ? bookOrderMap.get(a.bookId) : 999;
+        const bi = bookOrderMap.has(b.bookId) ? bookOrderMap.get(b.bookId) : 999;
+        return ai - bi;
+      });
+
+      const refLines = booksSorted.map(entry => {
+        const book = state.books.find(b => b && b.id === entry.bookId);
+        const bookNameFull = book ? book.name : 'Unknown';
+        const bookNameShort = bookNameFull.includes(':') ? bookNameFull.split(':')[0].trim() : bookNameFull;
+        const bookColor = book ? book.color : '#4b5563';
+        const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ');
+        return `<div style="line-height: 1.35;"><span style="color: ${bookColor}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span> ${escapeHtml(normalizedPages)}</div>`;
+      }).join('');
+
+      const refsHtml = `<div>${refLines}</div>`;
+      const uniqueNotes = [...new Set(group.notes)];
+      const combinedNotes = uniqueNotes.map(n => formatNoteMarkup(n)).join('<hr style="border:none; border-top: 1px solid #e2e8f0; margin: 4px 0;">');
+      const isStarred = group.entries.some(e => e.starred);
+
+      const notesCell = includeNotes ? `<td class="col-notes">${combinedNotes}</td>` : '';
+      const lineCount = Math.max(1, booksSorted.length);
+
+      const html = `
+        <tr class="${isStarred ? 'starred-row' : ''}">
+          <td class="col-topic" style="font-weight: 700; ${topicWordWrap}">${escapeHtml(group.topic)}</td>
+          <td class="col-references">${refsHtml}</td>
+          ${notesCell}
+        </tr>
+      `;
+      return { lineCount, html };
+    });
+
+    tableHeaderHtml = `
+      <thead>
+        <tr>
+          <th class="col-topic" style="width: ${topicW};">Topic</th>
+          <th class="col-references" style="width: ${refsW};">References</th>
+          ${notesHeaderCell}
+        </tr>
+      </thead>
+    `;
   }
+
+  // 2. Off-screen DOM Measurement Pass for 100% Pixel-Accurate Row Heights
+  let measureContainer = document.getElementById('print-measure-container');
+  if (!measureContainer) {
+    measureContainer = document.createElement('div');
+    measureContainer.id = 'print-measure-container';
+    document.body.appendChild(measureContainer);
+  }
+
+  const baseRowHeight = cols === '2' ? 15.5 : 17.5;
+  if (cols === '2') {
+    measureContainer.innerHTML = `
+      <div class="print-preview-2col-grid" style="width: 576pt !important; gap: 4pt !important;">
+        <div class="print-preview-2col-col" style="width: 286pt !important; box-sizing: border-box !important;">
+          <table class="index-table print-2col-table" style="table-layout: fixed; width: 286pt !important;">
+            ${tableHeaderHtml}
+            <tbody id="print-measure-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } else {
+    measureContainer.innerHTML = `
+      <div class="print-preview-page-container">
+        <table class="index-table" style="table-layout: fixed; width: 576pt !important;">
+          ${tableHeaderHtml}
+          <tbody id="print-measure-tbody"></tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const tbody = document.getElementById('print-measure-tbody');
+
+  // Measure exact rendered pixel height of every entry row in Chromium's engine
+  groupedItems.forEach(item => {
+    tbody.innerHTML = item.html;
+    const tr = tbody.firstElementChild;
+    const pxHeight = tr ? tr.getBoundingClientRect().height : baseRowHeight;
+    item.pixelHeight = pxHeight;
+    item.exactLines = Math.max(1, Math.round(pxHeight / baseRowHeight));
+  });
+
+  measureContainer.innerHTML = ''; // Clean up off-screen DOM
+
+  // Sequential Left-First, Right-Second Page Sheet & Column Building Algorithm
+  const maxColumnHeight = cols === '2' ? 903 : 950;
+  const indexPageSheets = [];
+
+  let itemIdx = 0;
+  while (itemIdx < groupedItems.length) {
+    // 1. Fill Left Column (Column 1) sequentially up to maxColumnHeight
+    const col1Items = [];
+    let col1Height = 0;
+    while (itemIdx < groupedItems.length) {
+      const item = groupedItems[itemIdx];
+      const px = item.pixelHeight || baseRowHeight;
+      if (col1Items.length > 0 && (col1Height + px > maxColumnHeight)) {
+        break; // Column 1 is full!
+      }
+      col1Items.push(item);
+      col1Height += px;
+      itemIdx++;
+    }
+
+    // 2. Fill Right Column (Column 2) sequentially up to maxColumnHeight (in 2-column mode)
+    const col2Items = [];
+    let col2Height = 0;
+    if (cols === '2') {
+      while (itemIdx < groupedItems.length) {
+        const item = groupedItems[itemIdx];
+        const px = item.pixelHeight || baseRowHeight;
+        if (col2Items.length > 0 && (col2Height + px > maxColumnHeight)) {
+          break; // Column 2 is full!
+        }
+        col2Items.push(item);
+        col2Height += px;
+        itemIdx++;
+      }
+    }
+
+    // 3. Save completed Page Sheet
+    indexPageSheets.push({ col1Items, col2Items });
+  }
+
+  if (indexPageSheets.length === 0) {
+    indexPageSheets.push({ col1Items: [], col2Items: [] });
+  }
+
+  // Acronym pagination — 64 items per page (32 per column in 2-column mode)
+  const sortedAcronyms = includeAcronyms
+    ? [...activeAcronyms].sort((a, b) => String(a.acronym || '').localeCompare(String(b.acronym || ''), undefined, { sensitivity: 'base', numeric: true }))
+    : [];
+  const acronymsPerPage = 64; // 32 per column
+  const totalAcronymPages = includeAcronyms ? Math.max(1, Math.ceil(sortedAcronyms.length / acronymsPerPage)) : 0;
+
+  const grandTotalPages = totalIndexPages + totalAcronymPages;
+
+  let pagesHtml = '';
+
+  // 3. Render Index Page Sheets
+  for (let p = 1; p <= totalIndexPages; p++) {
+    const sheetData = indexPageSheets[p - 1] || { col1Items: [], col2Items: [] };
+    const headerHtml = `
+      <div class="print-header">
+        <h1>${escapeHtml(courseTitle)}</h1>
+        <div class="print-meta">
+          <span>SANS Exam Index</span>
+          <span>Date: ${dateString}</span>
+          <span>Total Topics: ${groupedItems.length}</span>
+          <span style="font-weight: 700; color: #000000;">Page ${p} of ${grandTotalPages}</span>
+        </div>
+      </div>
+    `;
+
+    let bodyHtml = '';
+    if (cols === '2') {
+      const col1Rows = sheetData.col1Items.map(i => i.html).join('');
+      const col2Rows = sheetData.col2Items.map(i => i.html).join('');
+
+      bodyHtml = `
+        <div class="print-preview-2col-grid">
+          <div class="print-preview-2col-col">
+            <table class="index-table print-2col-table" style="table-layout: fixed; width: 100%;">
+              ${tableHeaderHtml}
+              <tbody>${col1Rows}</tbody>
+            </table>
+          </div>
+          <div class="print-preview-2col-col">
+            ${col2Rows.length > 0 ? `
+              <table class="index-table print-2col-table" style="table-layout: fixed; width: 100%;">
+                ${tableHeaderHtml}
+                <tbody>${col2Rows}</tbody>
+              </table>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    } else {
+      const pageRows = sheetData.col1Items.map(i => i.html).join('');
+      bodyHtml = `
+        <table class="index-table" style="table-layout: fixed; width: 100%;">
+          ${tableHeaderHtml}
+          <tbody>${pageRows}</tbody>
+        </table>
+      `;
+    }
+
+    pagesHtml += `
+      <div class="print-preview-page-sheet">
+        ${headerHtml}
+        ${bodyHtml}
+      </div>
+    `;
+  }
+
+  // 4. Render Acronym Page Sheets
+  for (let ap = 1; ap <= totalAcronymPages; ap++) {
+    const pageAcronyms = sortedAcronyms.slice((ap - 1) * acronymsPerPage, ap * acronymsPerPage);
+    const pageNum = totalIndexPages + ap;
+    const headerHtml = `
+      <div class="print-header">
+        <h1>${escapeHtml(courseTitle)}</h1>
+        <div class="print-meta">
+          <span>Course Acronyms & Definitions</span>
+          <span>Date: ${dateString}</span>
+          <span>Total Acronyms: ${sortedAcronyms.length}</span>
+          <span style="font-weight: 700; color: #000000;">Page ${pageNum} of ${grandTotalPages}</span>
+        </div>
+      </div>
+    `;
+
+    const mid = Math.ceil(pageAcronyms.length / 2);
+    const col1Items = pageAcronyms.slice(0, mid);
+    const col2Items = pageAcronyms.slice(mid);
+
+    const makeAcRows = (items) => items.map(ac => `
+      <tr>
+        <td class="col-acronym-code">${escapeHtml(String(ac.acronym || ''))}</td>
+        <td>${ac.term ? formatNoteMarkup(String(ac.term)) : ''}</td>
+      </tr>
+    `).join('');
+
+    const acronymHeaderHtml = `
+      <thead>
+        <tr>
+          <th style="width: 30%;">Acronym</th>
+          <th style="width: 70%;">Definition</th>
+        </tr>
+      </thead>
+    `;
+
+    const table1Html = `
+      <table class="print-acronyms-table">
+        ${acronymHeaderHtml}
+        <tbody>${makeAcRows(col1Items)}</tbody>
+      </table>
+    `;
+
+    const table2Html = col2Items.length > 0 ? `
+      <table class="print-acronyms-table">
+        ${acronymHeaderHtml}
+        <tbody>${makeAcRows(col2Items)}</tbody>
+      </table>
+    ` : '';
+
+    const bodyHtml = `
+      <div class="print-preview-2col-grid">
+        <div class="print-preview-2col-col">${table1Html}</div>
+        <div class="print-preview-2col-col">${table2Html}</div>
+      </div>
+    `;
+
+    pagesHtml += `
+      <div class="print-preview-page-sheet">
+        ${headerHtml}
+        ${bodyHtml}
+      </div>
+    `;
+  }
+
+  elements.printPreviewPageContainer.innerHTML = pagesHtml;
+  elements.printOnlyContainer.innerHTML = pagesHtml;
+
+  // Always ensure container does NOT have CSS multi-column class overriding physical page sheets
+  elements.printPreviewPageContainer.classList.remove('print-columns-2');
+  elements.printOnlyContainer.classList.remove('print-columns-2');
   
-  elements.printPreviewPageContainer.innerHTML = generatedHtml;
-  elements.printOnlyContainer.innerHTML = generatedHtml;
-  
-  // Re-render Lucide icons in the preview container (for book badge dots, etc.)
+  // Re-render Lucide icons in preview container
   lucide.createIcons({
     attrs: { class: 'lucide-icon' },
     nameAttr: 'data-lucide',
@@ -3975,9 +4936,9 @@ function generateStandardPrintHTML(activeEntries) {
       const bookNameFull = book ? book.name : 'Unknown';
       const bookNameShort = bookNameFull.includes(':') ? bookNameFull.split(':')[0].trim() : bookNameFull;
       const bookColor = book ? book.color : '#4b5563';
-      // Normalize pages: single space after each comma
-      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ');
-      return `<div style="line-height: 1.65;"><span style="color: ${bookColor}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span>&nbsp;&nbsp;${escapeHtml(normalizedPages)}</div>`;
+      // Normalize pages: single space after each comma and no extra spaces
+      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ');
+      return `<div style="line-height: 1.35;"><span style="color: ${bookColor}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span> ${escapeHtml(normalizedPages)}</div>`;
     }).join('');
 
     const refsHtml = `<div>${refLines}</div>`;
@@ -4090,10 +5051,10 @@ function generateBookletPrintHTML(activeEntries) {
       const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
       const rowClass = entry.starred ? 'starred-row' : '';
 
-      // References cell: single book entry — inline format "Book X:  pages"
-      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ');
+      // References cell: single book entry — inline format "Book X: pages"
+      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ');
       const bookNameShort = book.name.includes(':') ? book.name.split(':')[0].trim() : book.name;
-      const refsHtml = `<div><span style="color: ${book.color}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span>&nbsp;&nbsp;${escapeHtml(normalizedPages)}</div>`;
+      const refsHtml = `<div><span style="color: ${book.color}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span> ${escapeHtml(normalizedPages)}</div>`;
 
       const notesCell = includeNotes
         ? `<td class="col-notes">${formattedNotes}</td>`
@@ -4175,9 +5136,9 @@ function generateTopicByBookPrintHTML(activeEntries) {
     sortedBookEntries.forEach(entry => {
       const formattedNotes = entry.notes ? formatNoteMarkup(entry.notes) : '';
       const rowClass = entry.starred ? 'starred-row' : '';
-      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ');
+      const normalizedPages = entry.pages.replace(/\s*,\s*/g, ', ').replace(/\s+/g, ' ');
       const bookNameShort = book.name.includes(':') ? book.name.split(':')[0].trim() : book.name;
-      const refsHtml = `<div><span style="color: ${book.color}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span>&nbsp;&nbsp;${escapeHtml(normalizedPages)}</div>`;
+      const refsHtml = `<div><span style="color: ${book.color}; font-weight: 700;">${escapeHtml(bookNameShort)}:</span> ${escapeHtml(normalizedPages)}</div>`;
 
       const notesCell = includeNotes
         ? `<td class="col-notes">${formattedNotes}</td>`
@@ -4881,14 +5842,24 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
         elements.manualIndexView.classList.remove('hidden');
         elements.autoIndexView.classList.add('hidden');
         if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
+        if (elements.myAcronymsView) elements.myAcronymsView.classList.add('hidden');
+      } else if (targetTab === 'my-acronyms') {
+        elements.manualIndexView.classList.add('hidden');
+        elements.autoIndexView.classList.add('hidden');
+        if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
+        if (!elements.myAcronymsView) elements.myAcronymsView = document.getElementById('my-acronyms-view');
+        if (elements.myAcronymsView) elements.myAcronymsView.classList.remove('hidden');
+        renderAcronyms();
       } else if (targetTab === 'auto-index') {
         elements.manualIndexView.classList.add('hidden');
         elements.autoIndexView.classList.remove('hidden');
         if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
+        if (elements.myAcronymsView) elements.myAcronymsView.classList.add('hidden');
         runDependencyCheck();
       } else if (targetTab === 'notes-editor') {
         elements.manualIndexView.classList.add('hidden');
         elements.autoIndexView.classList.add('hidden');
+        if (elements.myAcronymsView) elements.myAcronymsView.classList.add('hidden');
         if (!elements.notesEditorView) elements.notesEditorView = document.getElementById('notes-editor-view');
         if (elements.notesEditorView) elements.notesEditorView.classList.remove('hidden');
         if (typeof initNotesEditor === 'function') initNotesEditor();
@@ -6594,3 +7565,687 @@ function printNotesEditorContent() {
   `);
   printWindow.document.close();
 }
+
+// ==========================================================================
+// MY ACRONYMS WORKSPACE & AUTOMATED PARSER
+// ==========================================================================
+
+function renderAcronyms() {
+  if (!elements.acronymsTableBody) return;
+
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId);
+  const query = elements.acronymSearchInput ? elements.acronymSearchInput.value.trim().toLowerCase() : '';
+
+  // Filter
+  let filtered = courseAcronyms.filter(a => {
+    if (!query) return true;
+    return (a.acronym && a.acronym.toLowerCase().includes(query)) ||
+           (a.term && a.term.toLowerCase().includes(query));
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    let valA = (a[acronymSortField] || '').toString();
+    let valB = (b[acronymSortField] || '').toString();
+    const comp = valA.localeCompare(valB, undefined, { sensitivity: 'base', numeric: true });
+    return acronymSortAsc ? comp : -comp;
+  });
+
+  // Render Table Rows
+  if (filtered.length === 0) {
+    elements.acronymsTableBody.innerHTML = `
+      <tr>
+        <td colspan="4" class="empty-state" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
+          <i data-lucide="book-type" style="width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5;"></i>
+          <p style="margin: 0; font-size: 0.9rem;">No acronyms found ${query ? 'matching search' : 'for this course'}.</p>
+          <p style="margin: 4px 0 0 0; font-size: 0.78rem; opacity: 0.75;">Click "Parse Index for Acronyms" or "+ Add Acronym" to get started.</p>
+        </td>
+      </tr>
+    `;
+  } else {
+    elements.acronymsTableBody.innerHTML = filtered.map(ac => {
+      const isSelected = selectedAcronymIds.has(ac.id);
+      const isEditing = editAcronymId === ac.id;
+
+      if (isEditing) {
+        return `
+          <tr style="background: rgba(20, 184, 166, 0.08); border-left: 3px solid var(--color-accent);">
+            <td class="col-select no-print"></td>
+            <td class="col-topic"><input type="text" class="inline-edit-input inline-acronym-code" value="${escapeHtml(ac.acronym)}" style="width: 100%; font-weight: 700;"></td>
+            <td class="col-notes"><input type="text" class="inline-edit-input inline-acronym-term" value="${escapeHtml(ac.term)}" style="width: 100%;"></td>
+            <td class="col-actions no-print">
+              <button type="button" class="btn btn-xs btn-accent save-inline-acronym" data-id="${ac.id}">Save</button>
+              <button type="button" class="btn btn-xs btn-secondary cancel-inline-acronym">Cancel</button>
+            </td>
+          </tr>
+        `;
+      }
+
+      return `
+        <tr class="${isSelected ? 'selected-row' : ''}">
+          <td class="col-select no-print" style="text-align: center;">
+            <input type="checkbox" class="select-acronym-checkbox" data-id="${ac.id}" ${isSelected ? 'checked' : ''}>
+          </td>
+          <td class="col-topic">
+            ${highlightText(ac.acronym, query)}
+          </td>
+          <td class="col-notes">
+            ${ac.term ? highlightText(formatNoteMarkup(ac.term), query) : ''}
+          </td>
+          <td class="col-actions no-print">
+            <button class="icon-btn-small edit-acronym-btn" data-id="${ac.id}" title="Edit Acronym">
+              <i data-lucide="edit-3"></i>
+            </button>
+            <button class="icon-btn-small danger delete-acronym-btn" data-id="${ac.id}" title="Delete Acronym">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Update Stats
+  if (elements.statTotalAcronyms) elements.statTotalAcronyms.textContent = (state.acronyms || []).length;
+  if (elements.statAcronymsCourse) elements.statAcronymsCourse.textContent = courseAcronyms.length;
+  if (elements.statLastAcronym) {
+    const last = courseAcronyms[courseAcronyms.length - 1];
+    elements.statLastAcronym.textContent = last ? last.acronym : '-';
+  }
+
+  // Re-bind Lucide icons & events
+  if (window.lucide) lucide.createIcons();
+  bindAcronymTableEvents(filtered);
+  updateAcronymMultiDeleteBarState(filtered);
+}
+
+function bindAcronymTableEvents(filteredAcronyms) {
+  if (!elements.acronymsTableBody) return;
+
+  // Row selection checkboxes
+  elements.acronymsTableBody.querySelectorAll('.select-acronym-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.getAttribute('data-id');
+      if (cb.checked) selectedAcronymIds.add(id);
+      else selectedAcronymIds.delete(id);
+      updateAcronymMultiDeleteBarState(filteredAcronyms);
+    });
+  });
+
+  // Edit acronym button
+  elements.acronymsTableBody.querySelectorAll('.edit-acronym-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editAcronymId = btn.getAttribute('data-id');
+      renderAcronyms();
+    });
+  });
+
+  // Save inline edit button
+  elements.acronymsTableBody.querySelectorAll('.save-inline-acronym').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const row = btn.closest('tr');
+      const acCode = row.querySelector('.inline-acronym-code').value.trim();
+      const acTerm = row.querySelector('.inline-acronym-term').value.trim();
+
+      if (!acCode) {
+        alert("Acronym code cannot be empty.");
+        return;
+      }
+
+      const item = state.acronyms.find(a => a.id === id);
+      if (item) {
+        item.acronym = acCode;
+        item.term = acTerm;
+        saveState();
+      }
+      editAcronymId = null;
+      renderAcronyms();
+    });
+  });
+
+  // Cancel inline edit button
+  elements.acronymsTableBody.querySelectorAll('.cancel-inline-acronym').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editAcronymId = null;
+      renderAcronyms();
+    });
+  });
+
+  // Delete acronym button
+  elements.acronymsTableBody.querySelectorAll('.delete-acronym-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      deleteAcronym(id);
+    });
+  });
+}
+
+function updateAcronymMultiDeleteBarState(activeAcronyms = []) {
+  if (!elements.acronymsMultiDeleteBar) return;
+
+  const activeIds = new Set(activeAcronyms.map(a => a.id));
+  const validSelected = Array.from(selectedAcronymIds).filter(id => activeIds.has(id));
+
+  if (validSelected.length > 0) {
+    elements.acronymsMultiDeleteBar.style.display = 'flex';
+    if (elements.acronymsMultiDeleteCountText) {
+      elements.acronymsMultiDeleteCountText.textContent = `${validSelected.length} acronym${validSelected.length > 1 ? 's' : ''} selected`;
+    }
+    if (elements.selectAllAcronymsCheckbox) {
+      elements.selectAllAcronymsCheckbox.checked = validSelected.length === activeAcronyms.length && activeAcronyms.length > 0;
+    }
+  } else {
+    elements.acronymsMultiDeleteBar.style.display = 'none';
+    if (elements.selectAllAcronymsCheckbox) {
+      elements.selectAllAcronymsCheckbox.checked = false;
+    }
+  }
+}
+
+function deleteAcronym(acronymId) {
+  const item = state.acronyms.find(a => a.id === acronymId);
+  if (!item) return;
+
+  const confirmNeeded = elements.acronymsConfirmDelete ? elements.acronymsConfirmDelete.checked : true;
+  if (!confirmNeeded) {
+    performDeleteAcronym(acronymId);
+    return;
+  }
+
+  // Show confirmation dialog (same modal as Index workspace)
+  pendingDeleteAcronymId = acronymId;
+  pendingDeleteAcronymIds = null;
+  pendingDeleteEntryId = null;
+  pendingDeleteEntryIds = null;
+
+  if (elements.deleteConfirmDialog) {
+    const dialogTitle = elements.deleteConfirmDialog.querySelector('h3');
+    const dialogText = elements.deleteConfirmDialog.querySelector('p');
+    if (dialogTitle) dialogTitle.textContent = 'Delete Acronym?';
+    if (dialogText) dialogText.textContent = `This action cannot be undone. The acronym "${item.acronym}" will be permanently removed.`;
+
+    const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
+    if (checkboxWrapper) {
+      checkboxWrapper.style.display = 'flex';
+    }
+    if (elements.deleteConfirmDontShowAgain) {
+      elements.deleteConfirmDontShowAgain.checked = false;
+    }
+
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.deleteConfirmDialog.querySelectorAll('[data-lucide]')
+    });
+    elements.deleteConfirmDialog.showModal();
+  }
+}
+
+function performDeleteAcronym(acronymId) {
+  state.acronyms = state.acronyms.filter(a => a && a.id !== acronymId);
+  selectedAcronymIds.delete(acronymId);
+  saveState();
+  renderAcronyms();
+}
+
+function deleteSelectedAcronyms() {
+  const count = selectedAcronymIds.size;
+  if (count === 0) return;
+
+  const confirmNeeded = elements.acronymsConfirmDelete ? elements.acronymsConfirmDelete.checked : true;
+  if (!confirmNeeded) {
+    performDeleteAcronyms(Array.from(selectedAcronymIds));
+    return;
+  }
+
+  pendingDeleteAcronymId = null;
+  pendingDeleteAcronymIds = Array.from(selectedAcronymIds);
+  pendingDeleteEntryId = null;
+  pendingDeleteEntryIds = null;
+
+  if (elements.deleteConfirmDialog) {
+    const dialogTitle = elements.deleteConfirmDialog.querySelector('h3');
+    const dialogText = elements.deleteConfirmDialog.querySelector('p');
+    if (dialogTitle) dialogTitle.textContent = `Delete ${count} Acronyms?`;
+    if (dialogText) dialogText.textContent = `Are you sure you want to delete these ${count} selected acronyms? This action cannot be undone.`;
+
+    const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
+    if (checkboxWrapper) {
+      checkboxWrapper.style.display = 'none';
+    }
+    if (elements.deleteConfirmDontShowAgain) {
+      elements.deleteConfirmDontShowAgain.checked = false;
+    }
+
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.deleteConfirmDialog.querySelectorAll('[data-lucide]')
+    });
+    elements.deleteConfirmDialog.showModal();
+  }
+}
+
+function performDeleteAcronyms(acronymIds) {
+  const idsSet = new Set(acronymIds);
+  state.acronyms = state.acronyms.filter(a => a && !idsSet.has(a.id));
+  selectedAcronymIds.clear();
+  saveState();
+  renderAcronyms();
+}
+
+function applyAcronymDefinitionsToIndex() {
+  const count = selectedAcronymIds.size;
+  if (count === 0) return;
+
+  const selectedAcronyms = state.acronyms.filter(a => a && selectedAcronymIds.has(a.id) && a.courseId === state.currentCourseId);
+  const acronymsWithTerms = selectedAcronyms.filter(a => a.term && a.term.trim().length > 0);
+
+  if (acronymsWithTerms.length === 0) {
+    alert("None of the selected acronyms have associated full terms/definitions to apply.");
+    return;
+  }
+
+  // Create lookup map of normalized acronym code -> full term
+  const acronymMap = new Map();
+  acronymsWithTerms.forEach(a => {
+    acronymMap.set(a.acronym.trim().toUpperCase(), { code: a.acronym.trim(), term: a.term.trim() });
+  });
+
+  let updatedCount = 0;
+  const activeEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+
+  activeEntries.forEach(entry => {
+    if (!entry.topic) return;
+    const cleanTopic = entry.topic.trim();
+    const upperTopic = cleanTopic.toUpperCase();
+
+    if (acronymMap.has(upperTopic)) {
+      const match = acronymMap.get(upperTopic);
+      const newTopic = `${match.term} (${match.code})`;
+      if (entry.topic !== newTopic) {
+        entry.topic = newTopic;
+        updatedCount++;
+      }
+    }
+  });
+
+  if (updatedCount > 0) {
+    saveState();
+    renderEntries();
+    renderStats();
+    alert(`Successfully applied acronym definitions! Renamed ${updatedCount} index topic(s) to include full terms.`);
+  } else {
+    alert("No matching index topics found for the selected acronyms.");
+  }
+}
+
+// --------------------------------------------------------------------------
+// AUTOMATED INDEX ACRONYM PARSER
+// --------------------------------------------------------------------------
+function parseIndexForAcronyms() {
+  const activeEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+  if (activeEntries.length === 0) {
+    alert("No index entries found for this course to parse.");
+    return;
+  }
+
+  const existingAcronyms = new Set(
+    (state.acronyms || [])
+      .filter(a => a && a.courseId === state.currentCourseId)
+      .map(a => a.acronym.trim().toUpperCase())
+  );
+
+  const candidateMap = new Map(); // acronym Upper -> { acronym, term, sourceTopic }
+
+  activeEntries.forEach(entry => {
+    if (!entry.topic) return;
+    const topic = entry.topic.trim();
+    const book = state.books.find(b => b && b.id === entry.bookId);
+    const bookName = book ? book.name : '';
+    const bookShort = bookName ? (bookName.includes(':') ? bookName.split(':')[0].trim() : bookName) : '';
+    const pageRef = entry.pages ? ` (p. ${entry.pages})` : '';
+    const fullSourceEntry = bookShort ? `${topic} — ${bookShort}${pageRef}` : `${topic}${pageRef}`;
+
+    // 1. Parenthetical Match: "Access Control Entry (ACE)" or "ACE (Access Control Entry)"
+    const pMatch1 = topic.match(/^(.+?)\s*\(([^)]+)\)$/);
+    const pMatch2 = topic.match(/^\(([^)]+)\)\s*(.+)$/);
+
+    if (pMatch1) {
+      const part1 = pMatch1[1].trim();
+      const part2 = pMatch1[2].trim();
+
+      // If part2 is uppercase acronym 2-6 chars
+      if (/^[A-Z0-9]{2,6}$/.test(part2)) {
+        const ac = part2.toUpperCase();
+        if (!existingAcronyms.has(ac)) {
+          candidateMap.set(ac, { acronym: part2, term: part1, sourceTopic: fullSourceEntry });
+        }
+      }
+      // If part1 is uppercase acronym 2-6 chars
+      else if (/^[A-Z0-9]{2,6}$/.test(part1)) {
+        const ac = part1.toUpperCase();
+        if (!existingAcronyms.has(ac)) {
+          candidateMap.set(ac, { acronym: part1, term: part2, sourceTopic: fullSourceEntry });
+        }
+      }
+    } else if (pMatch2) {
+      const part1 = pMatch2[1].trim();
+      const part2 = pMatch2[2].trim();
+      if (/^[A-Z0-9]{2,6}$/.test(part1)) {
+        const ac = part1.toUpperCase();
+        if (!existingAcronyms.has(ac)) {
+          candidateMap.set(ac, { acronym: part1, term: part2, sourceTopic: fullSourceEntry });
+        }
+      }
+    } else {
+      // 2. Standalone Uppercase Acronym Check (e.g. "ADFS", "CSRF", "SMB")
+      if (/^[A-Z0-9]{2,6}$/.test(topic)) {
+        const ac = topic.toUpperCase();
+        if (!existingAcronyms.has(ac) && !candidateMap.has(ac)) {
+          candidateMap.set(ac, { acronym: topic, term: '', sourceTopic: fullSourceEntry });
+        }
+      }
+    }
+  });
+
+  pendingAcronymCandidates = Array.from(candidateMap.values()).sort((a, b) =>
+    a.acronym.localeCompare(b.acronym, undefined, { sensitivity: 'base', numeric: true })
+  );
+
+  if (pendingAcronymCandidates.length === 0) {
+    alert("No new candidate acronyms found in your current index topics.");
+    return;
+  }
+
+  // Render Review Modal
+  renderAcronymReviewModal();
+  if (elements.acronymReviewDialog) elements.acronymReviewDialog.showModal();
+}
+
+function renderAcronymReviewModal() {
+  if (!elements.acronymReviewTableBody) return;
+
+  if (elements.acronymReviewCount) {
+    elements.acronymReviewCount.textContent = `${pendingAcronymCandidates.length} candidate acronym(s) found`;
+  }
+
+  elements.acronymReviewTableBody.innerHTML = pendingAcronymCandidates.map((cand, idx) => {
+    const isChecked = cand.term && cand.term.trim().length > 0 ? 'checked' : '';
+    return `
+      <tr>
+        <td style="text-align: center; width: 5%;">
+          <input type="checkbox" class="acronym-review-row-checkbox" data-idx="${idx}" ${isChecked}>
+        </td>
+        <td style="width: 18%;">
+          <input type="text" class="acronym-review-code-input" data-idx="${idx}" value="${escapeHtml(cand.acronym)}" style="width: 100%; font-weight: 700; padding: 4px 8px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px;">
+        </td>
+        <td style="width: 45%;">
+          <input type="text" class="acronym-review-term-input" data-idx="${idx}" value="${escapeHtml(cand.term)}" placeholder="(Leave blank to skip auto-import)" style="width: 100%; padding: 4px 8px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px;">
+        </td>
+        <td style="width: 32%; font-size: 0.8rem; color: var(--text-secondary); vertical-align: middle; word-break: break-word;">
+          ${escapeHtml(cand.sourceTopic || '')}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function confirmAcronymReview() {
+  if (!elements.acronymReviewTableBody) return;
+
+  const rows = elements.acronymReviewTableBody.querySelectorAll('tr');
+  let selectedCount = 0;
+  let emptyTermCount = 0;
+  let validToImport = [];
+
+  rows.forEach(row => {
+    const cb = row.querySelector('.acronym-review-row-checkbox');
+    const codeInput = row.querySelector('.acronym-review-code-input');
+    const termInput = row.querySelector('.acronym-review-term-input');
+
+    if (cb && cb.checked && codeInput && termInput) {
+      selectedCount++;
+      const acCode = codeInput.value.trim();
+      const acTerm = termInput.value.trim();
+
+      if (acCode && acTerm) {
+        validToImport.push({ acCode, acTerm });
+      } else if (acCode && !acTerm) {
+        emptyTermCount++;
+      }
+    }
+  });
+
+  if (selectedCount === 0) {
+    alert("Please select at least one acronym row to import.");
+    return;
+  }
+
+  // Warning prompt if any selected items lack a definition
+  if (emptyTermCount > 0) {
+    const warningMsg = `${emptyTermCount} selected item(s) do not have a definition and will NOT be added.\n\nDo you want to proceed with importing the ${validToImport.length} valid acronym(s)?`;
+    if (!confirm(warningMsg)) {
+      return; // User cancelled to edit/fill in definitions
+    }
+  }
+
+  if (validToImport.length === 0) {
+    alert("No acronyms were added because none of the selected items contain a definition.");
+    return;
+  }
+
+  validToImport.forEach(item => {
+    state.acronyms.push({
+      id: `acronym-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      courseId: state.currentCourseId,
+      acronym: item.acCode,
+      term: item.acTerm,
+      createdAt: new Date().toISOString()
+    });
+  });
+
+  saveState();
+  if (elements.acronymReviewDialog) elements.acronymReviewDialog.close();
+  renderAcronyms();
+  showToast(`Added ${validToImport.length} acronym(s) to your course acronym list.`);
+}
+
+// --------------------------------------------------------------------------
+// MANUAL ACRONYM FORM CRUD
+// --------------------------------------------------------------------------
+function openAddAcronymModal(acronymToEdit = null) {
+  editAcronymId = acronymToEdit ? acronymToEdit.id : null;
+  if (elements.acronymIdInput) elements.acronymIdInput.value = editAcronymId || '';
+
+  const titleEl = document.getElementById('acronym-form-action-title');
+
+  if (acronymToEdit) {
+    if (titleEl) titleEl.textContent = 'Edit Acronym Entry';
+    if (elements.acronymCodeInput) elements.acronymCodeInput.value = acronymToEdit.acronym;
+    if (elements.acronymTermInput) elements.acronymTermInput.innerHTML = acronymToEdit.term || '';
+    if (elements.cancelEditAcronymBtn) elements.cancelEditAcronymBtn.classList.remove('hidden');
+  } else {
+    if (titleEl) titleEl.textContent = 'Add Acronym Entry';
+    if (elements.acronymCodeInput) elements.acronymCodeInput.value = '';
+    if (elements.acronymTermInput) elements.acronymTermInput.innerHTML = '';
+    if (elements.cancelEditAcronymBtn) elements.cancelEditAcronymBtn.classList.add('hidden');
+  }
+
+  if (elements.acronymCodeInput) elements.acronymCodeInput.focus();
+}
+
+function resetAcronymForm() {
+  editAcronymId = null;
+  const titleEl = document.getElementById('acronym-form-action-title');
+  if (titleEl) titleEl.textContent = 'Add Acronym Entry';
+  if (elements.acronymIdInput) elements.acronymIdInput.value = '';
+  if (elements.acronymCodeInput) elements.acronymCodeInput.value = '';
+  if (elements.acronymTermInput) elements.acronymTermInput.innerHTML = '';
+  if (elements.cancelEditAcronymBtn) elements.cancelEditAcronymBtn.classList.add('hidden');
+}
+
+function handleAcronymFormSubmit(e) {
+  if (e) e.preventDefault();
+  const id = elements.acronymIdInput ? elements.acronymIdInput.value : '';
+  const acCode = elements.acronymCodeInput ? elements.acronymCodeInput.value.trim() : '';
+  let acTerm = elements.acronymTermInput ? elements.acronymTermInput.innerHTML.trim() : '';
+
+  if (acTerm === '<br>') acTerm = '';
+
+  if (!acCode || !acTerm) {
+    alert("Please enter both the Acronym and the Full Term / Definition.");
+    return;
+  }
+
+  if (id) {
+    // Edit existing
+    const item = state.acronyms.find(a => a.id === id);
+    if (item) {
+      item.acronym = acCode;
+      item.term = acTerm;
+    }
+  } else {
+    // Add new
+    state.acronyms.push({
+      id: `acronym-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      courseId: state.currentCourseId,
+      acronym: acCode,
+      term: acTerm,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  saveState();
+  resetAcronymForm();
+  renderAcronyms();
+  if (elements.acronymCodeInput) elements.acronymCodeInput.focus();
+}
+
+// Bind acronym event listeners
+if (elements.acronymForm) {
+  elements.acronymForm.addEventListener('submit', handleAcronymFormSubmit);
+}
+if (elements.cancelEditAcronymBtn) {
+  elements.cancelEditAcronymBtn.addEventListener('click', () => resetAcronymForm());
+}
+
+// Handle acronym form formatting toolbar click events
+document.querySelectorAll('.acronym-format-btn').forEach(btn => {
+  btn.addEventListener('mousedown', (e) => {
+    e.preventDefault(); // Prevents selection loss
+  });
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const format = btn.getAttribute('data-format');
+    if (elements.acronymTermInput) {
+      applyFormatting(elements.acronymTermInput, format);
+      updateFormatButtonsActiveStates(elements.acronymForm || document);
+    }
+  });
+});
+
+if (elements.acronymTermInput) {
+  elements.acronymTermInput.addEventListener('keyup', () => updateFormatButtonsActiveStates(elements.acronymForm || document));
+  elements.acronymTermInput.addEventListener('mouseup', () => updateFormatButtonsActiveStates(elements.acronymForm || document));
+  elements.acronymTermInput.addEventListener('click', () => updateFormatButtonsActiveStates(elements.acronymForm || document));
+
+  elements.acronymTermInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      if (e.shiftKey) {
+        return;
+      }
+      e.preventDefault();
+      handleAcronymFormSubmit(e);
+      return;
+    }
+    if (e.ctrlKey || e.metaKey) {
+      const key = e.key.toLowerCase();
+      if (key === 'b') {
+        e.preventDefault();
+        applyFormatting(elements.acronymTermInput, 'bold');
+        updateFormatButtonsActiveStates(elements.acronymForm || document);
+      } else if (key === 'i') {
+        e.preventDefault();
+        applyFormatting(elements.acronymTermInput, 'italic');
+        updateFormatButtonsActiveStates(elements.acronymForm || document);
+      } else if (key === 'u') {
+        e.preventDefault();
+        applyFormatting(elements.acronymTermInput, 'underline');
+        updateFormatButtonsActiveStates(elements.acronymForm || document);
+      }
+    }
+  });
+}
+if (elements.parseIndexAcronymsBtn) {
+  elements.parseIndexAcronymsBtn.addEventListener('click', parseIndexForAcronyms);
+}
+if (elements.confirmAcronymReviewBtn) {
+  elements.confirmAcronymReviewBtn.addEventListener('click', confirmAcronymReview);
+}
+if (elements.acronymSearchInput) {
+  elements.acronymSearchInput.addEventListener('input', () => renderAcronyms());
+}
+if (elements.selectAllAcronymsCheckbox) {
+  elements.selectAllAcronymsCheckbox.addEventListener('change', () => {
+    const activeAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId);
+    if (elements.selectAllAcronymsCheckbox.checked) {
+      activeAcronyms.forEach(a => selectedAcronymIds.add(a.id));
+    } else {
+      selectedAcronymIds.clear();
+    }
+    renderAcronyms();
+  });
+}
+if (elements.acronymsApplyDefinitionsBtn) {
+  elements.acronymsApplyDefinitionsBtn.addEventListener('click', applyAcronymDefinitionsToIndex);
+}
+if (elements.acronymsCancelSelectionBtn) {
+  elements.acronymsCancelSelectionBtn.addEventListener('click', () => {
+    selectedAcronymIds.clear();
+    renderAcronyms();
+  });
+}
+if (elements.acronymsDeleteSelectedBtn) {
+  elements.acronymsDeleteSelectedBtn.addEventListener('click', deleteSelectedAcronyms);
+}
+if (elements.acronymReviewSelectAllBtn) {
+  elements.acronymReviewSelectAllBtn.addEventListener('click', () => {
+    if (elements.acronymReviewTableBody) {
+      elements.acronymReviewTableBody.querySelectorAll('.acronym-review-row-checkbox').forEach(cb => cb.checked = true);
+    }
+    if (elements.acronymReviewHeaderCheckbox) elements.acronymReviewHeaderCheckbox.checked = true;
+  });
+}
+if (elements.acronymReviewDeselectAllBtn) {
+  elements.acronymReviewDeselectAllBtn.addEventListener('click', () => {
+    if (elements.acronymReviewTableBody) {
+      elements.acronymReviewTableBody.querySelectorAll('.acronym-review-row-checkbox').forEach(cb => cb.checked = false);
+    }
+    if (elements.acronymReviewHeaderCheckbox) elements.acronymReviewHeaderCheckbox.checked = false;
+  });
+}
+if (elements.acronymReviewHeaderCheckbox) {
+  elements.acronymReviewHeaderCheckbox.addEventListener('change', () => {
+    if (elements.acronymReviewTableBody) {
+      elements.acronymReviewTableBody.querySelectorAll('.acronym-review-row-checkbox').forEach(cb => cb.checked = elements.acronymReviewHeaderCheckbox.checked);
+    }
+  });
+}
+
+// Sort acronym headers
+document.querySelectorAll('#acronyms-table th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const field = th.getAttribute('data-acronym-sort');
+    if (field) {
+      if (acronymSortField === field) {
+        acronymSortAsc = !acronymSortAsc;
+      } else {
+        acronymSortField = field;
+        acronymSortAsc = true;
+      }
+      renderAcronyms();
+    }
+  });
+});

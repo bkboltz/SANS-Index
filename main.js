@@ -298,10 +298,10 @@ ipcMain.handle('save-pdf', async (event, options = {}) => {
       pageSize: 'Letter',
       printBackground: true,
       margin: {
-        top: 0.5,
-        bottom: 0.5,
-        left: 0.5,
-        right: 0.5
+        top: 0.25,
+        bottom: 0.25,
+        left: 0.25,
+        right: 0.25
       },
       preferCSSPageSize: true
     });
@@ -1275,6 +1275,75 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     } else {
       usePdfDirectly = true;
     }
+
+    // Apply Front-Matter & Back-Matter Page Exclusion Rules (Regular Books vs Lab Workbooks)
+    if (fs.existsSync(textFile)) {
+      const rawText = fs.readFileSync(textFile, 'utf8');
+      const pages = rawText.split('\x0c');
+
+      if (pages.length > 1) {
+        // 1. Detect Book Type (Lab Workbook vs Regular Textbook) based on cover page title conventions
+        const coverText = (pages[0] || '') + ' ' + (pages[1] || '');
+        const baseName = path.basename(sourceFile || '').toLowerCase();
+
+        // SANS Cover Conventions:
+        // - Lab Workbooks: Cover title reads "Workbook Sections [x]-[x]" or filename contains "workbook"
+        // - Regular Textbooks: Cover title format reads "[Class #].[Book #]" (e.g. SEC565.1, 565.1)
+        const isLabWorkbook = /\bworkbook\s+sections?\b/i.test(coverText) ||
+                              /\b(lab\s*workbook|exercise\s*workbook|hands-on\s*labs?)\b/i.test(coverText) ||
+                              /\b(workbook|lab_workbook|lab-workbook)\b/i.test(baseName);
+
+        if (isLabWorkbook) {
+          // Lab Workbook Rule: Ignore everything up until the first lab banner in the book
+          const labBannerRegex = /\b(lab\s*\d|exercise\s*\d|lab\s*banner|hands-on\s*lab)\b/i;
+          let firstLabIdx = -1;
+          for (let i = 0; i < Math.min(pages.length, 25); i++) {
+            if (labBannerRegex.test(pages[i])) {
+              firstLabIdx = i;
+              break;
+            }
+          }
+          if (firstLabIdx > 0) {
+            for (let k = 0; k < firstLabIdx; k++) {
+              pages[k] = ''; // Clear text before first lab banner
+            }
+            logDebug(`[Auto-Index Filter] LAB WORKBOOK: Cleared pages 1 to ${firstLabIdx} (before first lab banner on page ${firstLabIdx + 1}).`);
+          }
+        } else {
+          // Regular Textbook Rule: Ignore front matter up to & including the 1st "Module Objectives" page. Ignore last page.
+          // Matches "Module Objectives", "Module 1 Objectives", "Course Objectives", "Module 1 Overview", etc.
+          const objRegex = /\b(module\s*(?:\d+)?\s*objectives?|course\s+objectives?|module\s*(?:\d+)?\s*overview|course\s+overview|course\s+agenda)\b/i;
+          let firstObjIdx = -1;
+          for (let i = 0; i < Math.min(pages.length, 15); i++) {
+            if (objRegex.test(pages[i])) {
+              firstObjIdx = i;
+              break;
+            }
+          }
+          if (firstObjIdx >= 0) {
+            for (let k = 0; k <= firstObjIdx; k++) {
+              pages[k] = ''; // Clear pages up to & including the 1st module objectives page
+            }
+            logDebug(`[Auto-Index Filter] REGULAR TEXTBOOK: Cleared pages 1 to ${firstObjIdx + 1} (1st Module Objectives on page ${firstObjIdx + 1}). Indexing starts on page ${firstObjIdx + 2}.`);
+          } else {
+            // Fallback if no objectives header found: clear first 5 pages of front-matter
+            const defaultSkip = Math.min(5, pages.length - 1);
+            for (let k = 0; k < defaultSkip; k++) {
+              pages[k] = '';
+            }
+            logDebug(`[Auto-Index Filter] REGULAR TEXTBOOK: No objectives header found. Default cleared pages 1 to ${defaultSkip}.`);
+          }
+
+          // Clear very last page (SANS contact / feedback page) for regular books
+          if (pages.length > 1) {
+            pages[pages.length - 1] = '';
+            logDebug(`[Auto-Index Filter] REGULAR TEXTBOOK: Cleared last contact page (page ${pages.length}).`);
+          }
+        }
+
+        fs.writeFileSync(textFile, pages.join('\x0c'), 'utf8');
+      }
+    }
     
     const indexInputFile = usePdfDirectly ? sourceFile : textFile;
     // Indexing
@@ -1894,6 +1963,200 @@ ${chunkText}`;
 
   } catch (err) {
     logDebug(`[PDF Index Parser] Unexpected error: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+});
+
+// ==========================================================================
+// IPC Handler: Combine Same Items using Gemini AI (Chunked Batching Engine)
+// ==========================================================================
+ipcMain.handle('combine-same-items', async (event, { entries, geminiApiKey, geminiModel }) => {
+  logDebug(`[Same Items Consolidation] Starting chunked AI analysis for ${entries.length} entries.`);
+
+  if (!geminiApiKey) {
+    return { success: false, error: 'Gemini API key is required.' };
+  }
+
+  if (!entries || entries.length === 0) {
+    return { success: false, error: 'No index entries were provided for analysis.' };
+  }
+
+  try {
+    const modelName = geminiModel || 'gemini-flash-latest';
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
+
+    // 1. Sort entries alphabetically by topic title
+    const sortedEntries = [...entries].sort((a, b) => (a.topic || '').localeCompare(b.topic || '', undefined, { sensitivity: 'base' }));
+
+    // 2. Build Global Acronym & Short-Term Reference Map across full project
+    const globalAcronymMap = {};
+    sortedEntries.forEach(e => {
+      if (!e || !e.topic) return;
+      const t = e.topic.trim();
+      const m = t.match(/\(([A-Z0-9]{2,10})\)/i);
+      if (m) {
+        globalAcronymMap[m[1].toUpperCase()] = t;
+      }
+      const words = t.split(/\s+/).filter(w => w.length > 0 && !['and', 'or', 'for', 'of', 'in', 'on', 'with', 'the', 'a', 'an'].includes(w.toLowerCase()));
+      if (words.length >= 2) {
+        const acr = words.map(w => w[0]?.toUpperCase() || '').join('');
+        if (acr.length >= 2 && acr.length <= 6) {
+          globalAcronymMap[acr] = t;
+        }
+      }
+    });
+
+    // 3. Split entries into batches of 120 entries each to prevent LLM response truncation
+    const chunkSize = 120;
+    const chunks = [];
+    for (let i = 0; i < sortedEntries.length; i += chunkSize) {
+      chunks.push(sortedEntries.slice(i, i + chunkSize));
+    }
+
+    const allProposals = [];
+    const totalChunks = chunks.length;
+    const concurrencyLimit = 5;
+    let completedChunks = 0;
+
+    logDebug(`[Same Items Consolidation] Processing ${sortedEntries.length} entries in ${totalChunks} parallel batches (concurrency: 5).`);
+
+    const processBatch = async (chunk, cIdx) => {
+      const firstLetter = (chunk[0].topic || '').charAt(0).toUpperCase() || 'A';
+      const lastLetter = (chunk[chunk.length - 1].topic || '').charAt(0).toUpperCase() || 'Z';
+
+      const batchEntries = chunk.map(e => ({
+        id: e.id,
+        topic: e.topic,
+        book: e.bookNum || e.book || 1,
+        pages: e.pages
+      }));
+
+      const systemPrompt = `You are an expert cybersecurity index consolidation assistant.
+Analyze the following batch of course index entries (${cIdx + 1} of ${totalChunks}) and identify terms that represent the SAME concept, tool, technology, or standard (e.g. "Active Directory" and "AD", "Active Directory Certificate Services (AD CS)" and "AD CS", "Resource-Based Constrained Delegation (RBCD)" and "RBCD").
+
+GLOBAL ACRONYM & FULL NAME REFERENCE MAP Across Full Index:
+${JSON.stringify(globalAcronymMap, null, 2)}
+
+CRITICAL CONSOLIDATION & ACRONYM RULES:
+1. ONLY COMBINE MULTIPLE DISTINCT TERMS: Do NOT propose changes for single standalone terms (like "Attack Instances" or "Kerberos") unless they match a separate abbreviation, acronym, or equivalent term in the batch or Global Reference Map!
+2. NEVER INVENT OR GENERATE FAKE ACRONYMS: Do NOT append invented parenthetical acronyms (like "(AI)" for "Attack Instances" or "(KD)" for "Key Distribution") unless that acronym actually exists as a separate term in the index or Global Reference Map!
+3. High Recall Preference for Genuine Matches: Actively combine terms when a true abbreviation or equivalent term exists (e.g. "AD" <-> "Active Directory", "RBCD" <-> "Resource-Based Constrained Delegation").
+4. Moderate Precision Limit: Do NOT combine clearly distinct sub-topics or modules just because they share a prefix (e.g. do NOT combine "AD Module" with "Active Directory").
+5. Standardized Naming Format:
+   - If combining a long-form title with a known acronym: format as "Long-Form Title (ACRONYM)". E.g. "Active Directory (AD)".
+   - If no established acronym exists in the index, keep the clean long-form title WITHOUT inventing any parenthetical letters!
+6. Return ONLY a JSON array of consolidation proposals matching this structure:
+[
+  {
+    "originalTopic": "AD",
+    "book": 1,
+    "proposedTopic": "Active Directory (AD)",
+    "targetTopic": "Active Directory",
+    "reason": "Abbreviation for Active Directory"
+  }
+]
+
+List of entries in this batch (${firstLetter} to ${lastLetter}):
+${JSON.stringify(batchEntries, null, 2)}
+`;
+
+      const requestBody = {
+        contents: [{ parts: [{ text: systemPrompt }] }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 8192,
+          responseMimeType: "application/json"
+        }
+      };
+
+      try {
+        const startTime = Date.now();
+        let response = null;
+
+        while (true) {
+          response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
+          });
+
+          if (response.status === 429) {
+            const elapsed = Date.now() - startTime;
+            if (elapsed >= 60000) {
+              throw new Error(`Gemini API rate limit (HTTP 429) persisted for more than 1 minute on batch ${cIdx + 1}. Please wait a moment or check API quota.`);
+            }
+            logDebug(`[Same Items Consolidation] HTTP 429 on batch ${cIdx + 1}. Pausing 15 seconds before retrying (elapsed: ${Math.round(elapsed / 1000)}s)...`);
+            if (event) {
+              event.sender.send('pdf-import-progress', {
+                percent: Math.round((completedChunks / totalChunks) * 100),
+                message: `Rate limit hit (429). Waiting 15s before retrying batch ${cIdx + 1}...`
+              });
+            }
+            await new Promise(res => setTimeout(res, 15000));
+            continue;
+          }
+
+          break;
+        }
+
+        completedChunks++;
+        const progressPercent = Math.round((completedChunks / totalChunks) * 100);
+
+        if (event) {
+          event.sender.send('pdf-import-progress', {
+            percent: progressPercent,
+            message: `Analyzing topics in parallel [Completed ${completedChunks} of ${totalChunks} (${firstLetter} - ${lastLetter})]...`
+          });
+        }
+
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.candidates && resData.candidates.length > 0) {
+            const responseText = resData.candidates[0].content.parts[0].text;
+            const chunkProposals = tryParseJSONArray(responseText);
+            if (Array.isArray(chunkProposals) && chunkProposals.length > 0) {
+              return chunkProposals;
+            }
+          }
+        } else {
+          logDebug(`[Same Items Consolidation] Batch ${cIdx + 1} HTTP error ${response.status}`);
+        }
+      } catch (batchErr) {
+        logDebug(`[Same Items Consolidation] Batch ${cIdx + 1} error: ${batchErr.message}`);
+        if (batchErr.message.includes('rate limit')) {
+          throw batchErr;
+        }
+      }
+      return [];
+    };
+
+    // Run parallel batch processing with concurrency limit of 5
+    for (let i = 0; i < chunks.length; i += concurrencyLimit) {
+      const batchPromises = chunks.slice(i, i + concurrencyLimit).map((chunk, index) => processBatch(chunk, i + index));
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach(r => allProposals.push(...r));
+    }
+
+    if (allProposals.length === 0) {
+      return { success: true, proposals: [] };
+    }
+
+    // 4. Deduplicate proposals by originalTopic + book + proposedTopic
+    const uniqueMap = new Map();
+    allProposals.forEach(p => {
+      if (!p || !p.originalTopic || !p.proposedTopic) return;
+      const key = `${p.originalTopic.toLowerCase()}_${p.book || 1}_${p.proposedTopic.toLowerCase()}`;
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, p);
+      }
+    });
+
+    const deduplicatedProposals = Array.from(uniqueMap.values());
+    logDebug(`[Same Items Consolidation] Total deduplicated AI proposals: ${deduplicatedProposals.length}`);
+    return { success: true, proposals: deduplicatedProposals };
+
+  } catch (err) {
+    logDebug(`[Same Items Consolidation] Unexpected error: ${err.message}`);
     return { success: false, error: err.message };
   }
 });
