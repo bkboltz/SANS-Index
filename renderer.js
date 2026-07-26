@@ -4813,8 +4813,8 @@ function renderPrintPreview() {
     measureContainer.innerHTML = '';
   }
 
-  // Group acronym items into 2-column page sheets using 950px target column height
-  const maxAcronymColumnHeight = 950;
+  // Group acronym items into 2-column page sheets using 878px target column height
+  const maxAcronymColumnHeight = 878;
   const acronymPageSheets = [];
   let acIdx = 0;
 
