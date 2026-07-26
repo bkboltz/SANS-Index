@@ -381,6 +381,7 @@ let editAcronymId = null;
 let acronymSortField = 'acronym';
 let acronymSortAsc = true;
 let selectedAcronymIds = new Set();
+let pendingDeleteAcronymId = null;
 let pendingDeleteAcronymIds = null;
 let pendingAcronymCandidates = [];
 
@@ -4515,17 +4516,35 @@ function initEventBindings() {
   }
 
 function openPrintPreview() {
-  elements.printFormatSelect.value = 'standard';
-  syncCustomSelect(elements.printFormatSelect);
+  if (elements.printFormatSelect) {
+    elements.printFormatSelect.value = 'standard';
+    syncCustomSelect(elements.printFormatSelect);
+  }
   if (elements.printColumnsSelect) {
     elements.printColumnsSelect.value = localStorage.getItem('print_columns_count') || '1';
+    syncCustomSelect(elements.printColumnsSelect);
   }
-  renderPrintPreview();
-  elements.printPreviewDialog.showModal();
+  try {
+    renderPrintPreview();
+  } catch (err) {
+    console.error('Error rendering print preview:', err);
+    alert('Error generating print preview:\n\n' + err.message);
+  }
+  if (elements.printPreviewDialog) {
+    if (elements.printPreviewDialog.open) {
+      elements.printPreviewDialog.close();
+    }
+    try {
+      elements.printPreviewDialog.showModal();
+    } catch (e) {
+      console.error('Error showing print preview modal:', e);
+      elements.printPreviewDialog.setAttribute('open', '');
+    }
+  }
 }
 
 function renderPrintPreview() {
-  const format = elements.printFormatSelect.value;
+  const format = elements.printFormatSelect ? elements.printFormatSelect.value : 'standard';
   const cols = elements.printColumnsSelect ? elements.printColumnsSelect.value : (localStorage.getItem('print_columns_count') || '1');
   const includeNotes = elements.printIncludeNotes ? elements.printIncludeNotes.checked : true;
   const activeEntries = state.entries.filter(entry => entry && entry.courseId === state.currentCourseId);
@@ -4590,14 +4609,15 @@ function renderPrintPreview() {
   } else {
     // Topic Sorted Format (Standard or Topic-by-Book)
     const sorted = [...activeEntries].sort((a, b) =>
-      a.topic.localeCompare(b.topic, undefined, { sensitivity: 'base', numeric: true })
+      String(a && a.topic ? a.topic : '').localeCompare(String(b && b.topic ? b.topic : ''), undefined, { sensitivity: 'base', numeric: true })
     );
 
     const topicMap = new Map();
     sorted.forEach(entry => {
-      const key = entry.topic.trim().toLowerCase();
+      const topicStr = String(entry && entry.topic ? entry.topic : '');
+      const key = topicStr.trim().toLowerCase();
       if (!topicMap.has(key)) {
-        topicMap.set(key, { topic: entry.topic, entries: [], notes: [] });
+        topicMap.set(key, { topic: topicStr, entries: [], notes: [] });
       }
       const group = topicMap.get(key);
       group.entries.push(entry);
@@ -4742,13 +4762,93 @@ function renderPrintPreview() {
     indexPageSheets.push({ col1Items: [], col2Items: [] });
   }
 
-  // Acronym pagination — 64 items per page (32 per column in 2-column mode)
+  const totalIndexPages = indexPageSheets.length;
+
+  // Acronym pagination — dynamically measured to fill maxColumnHeight (903px in 2-column mode, 950px in 1-column mode)
   const sortedAcronyms = includeAcronyms
     ? [...activeAcronyms].sort((a, b) => String(a.acronym || '').localeCompare(String(b.acronym || ''), undefined, { sensitivity: 'base', numeric: true }))
     : [];
-  const acronymsPerPage = 64; // 32 per column
-  const totalAcronymPages = includeAcronyms ? Math.max(1, Math.ceil(sortedAcronyms.length / acronymsPerPage)) : 0;
 
+  const acronymHeaderHtml = `
+    <thead>
+      <tr>
+        <th style="width: 30%;">Acronym</th>
+        <th style="width: 70%;">Definition</th>
+      </tr>
+    </thead>
+  `;
+
+  // Measure each acronym item's actual rendered height
+  const measuredAcronyms = sortedAcronyms.map(ac => {
+    const html = `
+      <tr>
+        <td class="col-acronym-code">${escapeHtml(String(ac.acronym || ''))}</td>
+        <td>${ac.term ? formatNoteMarkup(String(ac.term)) : ''}</td>
+      </tr>
+    `;
+    return { acronym: ac, html, pixelHeight: 25 };
+  });
+
+  if (measureContainer && measuredAcronyms.length > 0) {
+    measureContainer.innerHTML = `
+      <div class="print-preview-2col-grid">
+        <div class="print-preview-2col-col">
+          <table class="print-acronyms-table" style="table-layout: fixed; width: 100%;">
+            ${acronymHeaderHtml}
+            <tbody id="print-measure-ac-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    const measureAcTbody = document.getElementById('print-measure-ac-tbody');
+    if (measureAcTbody) {
+      measuredAcronyms.forEach(item => {
+        measureAcTbody.innerHTML = item.html;
+        const row = measureAcTbody.firstElementChild;
+        if (row) {
+          item.pixelHeight = Math.max(row.getBoundingClientRect().height, 13.5);
+        }
+      });
+    }
+    measureContainer.innerHTML = '';
+  }
+
+  // Group acronym items into 2-column page sheets using 950px target column height
+  const maxAcronymColumnHeight = 950;
+  const acronymPageSheets = [];
+  let acIdx = 0;
+
+  while (acIdx < measuredAcronyms.length) {
+    const col1Items = [];
+    let col1Height = 0;
+    while (acIdx < measuredAcronyms.length) {
+      const item = measuredAcronyms[acIdx];
+      const px = item.pixelHeight;
+      if (col1Items.length > 0 && (col1Height + px > maxAcronymColumnHeight)) {
+        break;
+      }
+      col1Items.push(item);
+      col1Height += px;
+      acIdx++;
+    }
+
+    const col2Items = [];
+    let col2Height = 0;
+    while (acIdx < measuredAcronyms.length) {
+      const item = measuredAcronyms[acIdx];
+      const px = item.pixelHeight;
+      if (col2Items.length > 0 && (col2Height + px > maxAcronymColumnHeight)) {
+        break;
+      }
+      col2Items.push(item);
+      col2Height += px;
+      acIdx++;
+    }
+
+    acronymPageSheets.push({ col1Items, col2Items });
+  }
+
+  const totalAcronymPages = acronymPageSheets.length;
   const grandTotalPages = totalIndexPages + totalAcronymPages;
 
   let pagesHtml = '';
@@ -4811,7 +4911,7 @@ function renderPrintPreview() {
 
   // 4. Render Acronym Page Sheets
   for (let ap = 1; ap <= totalAcronymPages; ap++) {
-    const pageAcronyms = sortedAcronyms.slice((ap - 1) * acronymsPerPage, ap * acronymsPerPage);
+    const sheetData = acronymPageSheets[ap - 1] || { col1Items: [], col2Items: [] };
     const pageNum = totalIndexPages + ap;
     const headerHtml = `
       <div class="print-header">
@@ -4825,37 +4925,19 @@ function renderPrintPreview() {
       </div>
     `;
 
-    const mid = Math.ceil(pageAcronyms.length / 2);
-    const col1Items = pageAcronyms.slice(0, mid);
-    const col2Items = pageAcronyms.slice(mid);
-
-    const makeAcRows = (items) => items.map(ac => `
-      <tr>
-        <td class="col-acronym-code">${escapeHtml(String(ac.acronym || ''))}</td>
-        <td>${ac.term ? formatNoteMarkup(String(ac.term)) : ''}</td>
-      </tr>
-    `).join('');
-
-    const acronymHeaderHtml = `
-      <thead>
-        <tr>
-          <th style="width: 30%;">Acronym</th>
-          <th style="width: 70%;">Definition</th>
-        </tr>
-      </thead>
-    `;
+    const makeAcRows = (items) => items.map(i => i.html).join('');
 
     const table1Html = `
       <table class="print-acronyms-table">
         ${acronymHeaderHtml}
-        <tbody>${makeAcRows(col1Items)}</tbody>
+        <tbody>${makeAcRows(sheetData.col1Items)}</tbody>
       </table>
     `;
 
-    const table2Html = col2Items.length > 0 ? `
+    const table2Html = sheetData.col2Items.length > 0 ? `
       <table class="print-acronyms-table">
         ${acronymHeaderHtml}
-        <tbody>${makeAcRows(col2Items)}</tbody>
+        <tbody>${makeAcRows(sheetData.col2Items)}</tbody>
       </table>
     ` : '';
 
