@@ -84,6 +84,7 @@ const elements = {
   printColumnsSelect: document.getElementById('print-columns-select'),
   printOnlyContainer: document.getElementById('print-only-container'),
   printIncludeNotes: document.getElementById('print-include-notes'),
+  printIncludeIndex: document.getElementById('print-include-index'),
   printIncludeAcronyms: document.getElementById('print-include-acronyms'),
 
   // Delete confirmation dialog
@@ -4368,6 +4369,15 @@ function initEventBindings() {
     });
   }
 
+  // Include Index checkbox — persist and re-render preview when toggled
+  if (elements.printIncludeIndex) {
+    elements.printIncludeIndex.checked = localStorage.getItem('print_include_index') !== 'false';
+    elements.printIncludeIndex.addEventListener('change', () => {
+      localStorage.setItem('print_include_index', elements.printIncludeIndex.checked);
+      renderPrintPreview();
+    });
+  }
+
   // Include Acronyms checkbox — persist and re-render preview when toggled
   if (elements.printIncludeAcronyms) {
     elements.printIncludeAcronyms.checked = localStorage.getItem('print_include_acronyms') !== 'false';
@@ -4547,6 +4557,7 @@ function renderPrintPreview() {
   const format = elements.printFormatSelect ? elements.printFormatSelect.value : 'standard';
   const cols = elements.printColumnsSelect ? elements.printColumnsSelect.value : (localStorage.getItem('print_columns_count') || '1');
   const includeNotes = elements.printIncludeNotes ? elements.printIncludeNotes.checked : true;
+  const includeIndex = elements.printIncludeIndex ? elements.printIncludeIndex.checked : true;
   const activeEntries = state.entries.filter(entry => entry && entry.courseId === state.currentCourseId);
   const activeAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym && a.term);
   const includeAcronyms = elements.printIncludeAcronyms && elements.printIncludeAcronyms.checked && activeAcronyms.length > 0;
@@ -4722,47 +4733,49 @@ function renderPrintPreview() {
   const maxColumnHeight = cols === '2' ? 903 : 950;
   const indexPageSheets = [];
 
-  let itemIdx = 0;
-  while (itemIdx < groupedItems.length) {
-    // 1. Fill Left Column (Column 1) sequentially up to maxColumnHeight
-    const col1Items = [];
-    let col1Height = 0;
+  if (includeIndex) {
+    let itemIdx = 0;
     while (itemIdx < groupedItems.length) {
-      const item = groupedItems[itemIdx];
-      const px = item.pixelHeight || baseRowHeight;
-      if (col1Items.length > 0 && (col1Height + px > maxColumnHeight)) {
-        break; // Column 1 is full!
-      }
-      col1Items.push(item);
-      col1Height += px;
-      itemIdx++;
-    }
-
-    // 2. Fill Right Column (Column 2) sequentially up to maxColumnHeight (in 2-column mode)
-    const col2Items = [];
-    let col2Height = 0;
-    if (cols === '2') {
+      // 1. Fill Left Column (Column 1) sequentially up to maxColumnHeight
+      const col1Items = [];
+      let col1Height = 0;
       while (itemIdx < groupedItems.length) {
         const item = groupedItems[itemIdx];
         const px = item.pixelHeight || baseRowHeight;
-        if (col2Items.length > 0 && (col2Height + px > maxColumnHeight)) {
-          break; // Column 2 is full!
+        if (col1Items.length > 0 && (col1Height + px > maxColumnHeight)) {
+          break; // Column 1 is full!
         }
-        col2Items.push(item);
-        col2Height += px;
+        col1Items.push(item);
+        col1Height += px;
         itemIdx++;
       }
+
+      // 2. Fill Right Column (Column 2) sequentially up to maxColumnHeight (in 2-column mode)
+      const col2Items = [];
+      let col2Height = 0;
+      if (cols === '2') {
+        while (itemIdx < groupedItems.length) {
+          const item = groupedItems[itemIdx];
+          const px = item.pixelHeight || baseRowHeight;
+          if (col2Items.length > 0 && (col2Height + px > maxColumnHeight)) {
+            break; // Column 2 is full!
+          }
+          col2Items.push(item);
+          col2Height += px;
+          itemIdx++;
+        }
+      }
+
+      // 3. Save completed Page Sheet
+      indexPageSheets.push({ col1Items, col2Items });
     }
 
-    // 3. Save completed Page Sheet
-    indexPageSheets.push({ col1Items, col2Items });
+    if (indexPageSheets.length === 0) {
+      indexPageSheets.push({ col1Items: [], col2Items: [] });
+    }
   }
 
-  if (indexPageSheets.length === 0) {
-    indexPageSheets.push({ col1Items: [], col2Items: [] });
-  }
-
-  const totalIndexPages = indexPageSheets.length;
+  const totalIndexPages = includeIndex ? indexPageSheets.length : 0;
 
   // Acronym pagination — dynamically measured to fill maxColumnHeight (903px in 2-column mode, 950px in 1-column mode)
   const sortedAcronyms = includeAcronyms
@@ -4952,6 +4965,14 @@ function renderPrintPreview() {
       <div class="print-preview-page-sheet">
         ${headerHtml}
         ${bodyHtml}
+      </div>
+    `;
+  }
+
+  if (!pagesHtml) {
+    pagesHtml = `
+      <div style="text-align: center; padding: 80px 20px; color: var(--text-secondary); font-size: 1rem; font-family: var(--font-sans);">
+        No sections selected for printing. Please enable "Include Index" or "Include Acronyms" in print options.
       </div>
     `;
   }

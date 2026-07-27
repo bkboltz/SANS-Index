@@ -1789,6 +1789,8 @@ input[type="color"]::-webkit-color-swatch {
   width: 90vw;
   max-width: 920px;
   height: 90vh;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   background-color: var(--bg-sidebar);
@@ -1811,6 +1813,7 @@ input[type="color"]::-webkit-color-swatch {
   gap: 12px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-card);
+  flex-shrink: 0;
 }
 
 .print-preview-actions {
@@ -1846,8 +1849,9 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .print-preview-modal-body {
-  padding: 24px;
-  height: calc(90vh - 72px);
+  padding: 24px 24px 60px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   background-color: #0b0f19; /* dark canvas background */
   box-sizing: border-box;

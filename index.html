@@ -2021,7 +2021,7 @@
         </div>
       </div>
 
-      <!-- Row 2: Format & Column Dropdowns + Checkboxes Line Underneath -->
+      <!-- Row 2: Format & Column Dropdowns -->
       <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.15); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
         <div style="display: flex; align-items: center; gap: 8px;">
           <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Format:</label>
@@ -2039,8 +2039,14 @@
             <option value="2">2 Columns</option>
           </select>
         </div>
+      </div>
 
-        <div style="height: 16px; width: 1px; background: var(--border-color); margin: 0 4px;"></div>
+      <!-- Row 3: All 3 Option Checkboxes on a Dedicated Single Line -->
+      <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.1); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
+        <label id="print-include-index-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Index topics in printed document">
+          <input type="checkbox" id="print-include-index" checked>
+          <span>Include Index</span>
+        </label>
 
         <label id="print-include-notes-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Notes/Reference Details column in printed index">
           <input type="checkbox" id="print-include-notes" checked>
