@@ -788,7 +788,8 @@ select:focus, input[type="text"]:focus, input[type="password"]:focus, input[type
 }
 
 #table-search-input,
-#preview-search-input {
+#preview-search-input,
+#acronym-search-input {
   padding-left: 36px;
   background-color: var(--bg-sidebar);
 }
@@ -797,6 +798,72 @@ select:focus, input[type="text"]:focus, input[type="password"]:focus, input[type
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+#combine-same-items-btn:hover {
+  background: rgba(20, 184, 166, 0.28) !important;
+  border-color: rgba(20, 184, 166, 0.6) !important;
+  box-shadow: 0 0 12px rgba(20, 184, 166, 0.3);
+}
+
+/* Same Items Consolidation Group Cards & Sticky Headers */
+.same-items-group-card {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-sidebar);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.same-items-group-header {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  background: #1e293b;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.same-items-group-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.same-items-group-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #14b8a6;
+}
+
+.same-items-group-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.same-items-group-table th {
+  position: sticky;
+  top: 41px;
+  z-index: 10;
+  background: #0f172a;
+  padding: 7px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.same-items-group-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.83rem;
 }
 
 #filter-book-select {
@@ -927,10 +994,13 @@ th.sortable:hover .sort-icon {
   font-size: 0.85rem;
   word-break: break-word;
 }
+#acronyms-table .col-notes {
+  font-size: inherit !important;
+  color: var(--text-primary) !important;
+}
 
 /* References column for combined print output */
 .col-references {
-  width: 28%;
   font-family: var(--font-mono);
   font-size: 0.85rem;
   vertical-align: top;
@@ -998,7 +1068,6 @@ th.sortable:hover .sort-icon {
 
 /* References column for combined print output */
 .col-references {
-  width: 28%;
   font-family: var(--font-mono);
   font-size: 0.85rem;
   vertical-align: top;
@@ -1238,11 +1307,68 @@ input[type="color"]::-webkit-color-swatch {
   display: none;
 }
 
+/* 2-Column Print Layout Styles (Screen Preview & Paper) */
+.print-columns-2 {
+  column-count: 2 !important;
+  column-gap: 4pt !important;
+  column-rule: none !important;
+}
+
+.print-columns-2 .print-header {
+  column-span: all !important;
+  margin-bottom: 8px !important;
+  border-bottom: 0.5pt solid #000000 !important;
+}
+
+.print-columns-2 .booklet-header {
+  column-span: all !important;
+}
+
+.print-columns-2 .index-table {
+  font-size: 7pt !important;
+  line-height: 1.2 !important;
+  border: 0.5pt solid #000000 !important;
+}
+
+.print-columns-2 .index-table th {
+  font-size: 7pt !important;
+  padding: 2.5px 4px !important;
+  border-bottom: 0.5pt solid #000000 !important;
+  border-right: 0.5pt solid #cccccc !important;
+}
+
+.print-columns-2 .index-table td {
+  font-size: 7pt !important;
+  padding: 2px 4px !important;
+  line-height: 1.2 !important;
+  border-bottom: 0.5pt solid #cccccc !important;
+  border-right: 0.5pt solid #eeeeee !important;
+}
+
+.print-columns-2 .index-table tr {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+/* Table Header Repeating Rules across Pages and CSS Columns */
+.print-only .index-table thead,
+.print-columns-2 .index-table thead {
+  display: table-header-group !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+.print-only .index-table thead tr,
+.print-columns-2 .index-table thead tr {
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
 @media print {
   body {
     background-color: #ffffff !important;
     color: #000000 !important;
-    font-size: 8.5pt !important;
+    font-size: 8pt !important;
     height: auto !important;
     overflow: visible !important;
   }
@@ -1262,16 +1388,38 @@ input[type="color"]::-webkit-color-swatch {
     overflow: visible !important;
   }
 
+  .print-only .print-preview-page-sheet {
+    display: block !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-only .print-preview-page-sheet:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
   /* Print Header styling */
   .print-only .print-header {
     display: block !important;
     margin-bottom: 10px !important;
-    border-bottom: 2px solid #000000 !important;
+    border-bottom: 0.5pt solid #000000 !important;
     padding-bottom: 4px !important;
   }
 
   .print-only .print-header h1 {
-    font-size: 15pt !important;
+    font-size: 14pt !important;
     font-weight: 700 !important;
     margin: 0 0 4px 0 !important;
     color: #000000 !important;
@@ -1280,7 +1428,7 @@ input[type="color"]::-webkit-color-swatch {
   .print-only .print-meta {
     display: flex !important;
     justify-content: space-between !important;
-    font-size: 8pt !important;
+    font-size: 7.5pt !important;
     color: #444444 !important;
     font-weight: 500 !important;
   }
@@ -1295,7 +1443,7 @@ input[type="color"]::-webkit-color-swatch {
   }
 
   .print-only .booklet-header h2 {
-    font-size: 11pt !important;
+    font-size: 10pt !important;
     font-weight: 700 !important;
     margin: 0 !important;
   }
@@ -1303,12 +1451,12 @@ input[type="color"]::-webkit-color-swatch {
   /* Format Table for High-Density Print */
   .print-only .index-table {
     background-color: #ffffff !important;
-    border: 1px solid #000000 !important;
+    border: 0.5pt solid #000000 !important;
     color: #000000 !important;
     width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
-    font-size: 8.5pt !important;
+    font-size: 8pt !important;
     line-height: 1.25 !important;
     margin-bottom: 12px !important;
   }
@@ -1317,25 +1465,31 @@ input[type="color"]::-webkit-color-swatch {
     background-color: #f1f5f9 !important;
     color: #000000 !important;
     font-weight: 700 !important;
-    border-bottom: 2px solid #000000 !important;
-    border-right: 1px solid #dddddd !important;
-    padding: 4px 6px !important;
+    border-bottom: 0.5pt solid #000000 !important;
+    border-right: 0.5pt solid #cccccc !important;
+    padding: 3.5px 5px !important;
     text-transform: uppercase !important;
     text-align: left !important;
-    font-size: 8.5pt !important;
+    font-size: 8pt !important;
   }
 
   .print-only .index-table td {
-    padding: 3.5px 6px !important;
-    border-bottom: 1px solid #cccccc !important;
-    border-right: 1px solid #eeeeee !important;
+    padding: 3px 5px !important;
+    border-bottom: 0.5pt solid #cccccc !important;
+    border-right: 0.5pt solid #eeeeee !important;
     color: #000000 !important;
     font-weight: 400 !important;
     white-space: normal !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
-    font-size: 8.5pt !important;
+    font-size: 8pt !important;
     line-height: 1.25 !important;
+  }
+
+  .print-only .print-2col-table td {
+    font-size: 7pt !important;
+    line-height: 1.2 !important;
+    padding: 2px 4px !important;
   }
 
   .print-only .index-table td:last-child {
@@ -1348,10 +1502,9 @@ input[type="color"]::-webkit-color-swatch {
 
   /* Columns Width adjustments on physical paper */
   .print-only .col-book {
-    width: 14% !important;
+    font-weight: 700 !important;
   }
   .print-only .col-pages {
-    width: 18% !important;
     font-weight: 700 !important;
     white-space: normal !important;
     word-break: break-word !important;
@@ -1400,8 +1553,8 @@ input[type="color"]::-webkit-color-swatch {
 
   /* Custom Page margins */
   @page {
-    margin: 0.5in;
-    size: portrait;
+    size: Letter portrait !important;
+    margin: 0.25in !important;
   }
 }
 
@@ -1636,6 +1789,8 @@ input[type="color"]::-webkit-color-swatch {
   width: 90vw;
   max-width: 920px;
   height: 90vh;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   background-color: var(--bg-sidebar);
@@ -1654,10 +1809,11 @@ input[type="color"]::-webkit-color-swatch {
 .print-preview-modal-header {
   padding: 16px 24px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-card);
+  flex-shrink: 0;
 }
 
 .print-preview-actions {
@@ -1693,25 +1849,80 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .print-preview-modal-body {
-  padding: 24px;
-  height: calc(90vh - 72px);
+  padding: 24px 24px 60px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   background-color: #0b0f19; /* dark canvas background */
   box-sizing: border-box;
 }
 
 .print-preview-page-container {
+  background-color: transparent !important;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0;
+  box-shadow: none;
+}
+
+.print-preview-page-sheet {
   background-color: #ffffff !important;
   color: #000000 !important;
-  width: 100%;
-  max-width: 816px; /* standard Letter width in px at 96dpi */
-  min-height: 1056px; /* standard Letter height */
-  margin: 0 auto 40px; /* center horizontally and add bottom spacing */
-  padding: 32px 36px; /* simulating 0.5in page margin */
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-  font-size: 8.5pt;
+  width: 612pt !important; /* standard Letter width in pt (8.5in * 72pt/in) */
+  min-height: 792pt !important; /* standard Letter height in pt (11.0in * 72pt/in) */
+  margin: 0 auto 36px; /* center horizontally and add page stack spacing */
+  padding: 18pt 18pt !important; /* 0.25in page margin (18pt) */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  font-size: 7pt;
   font-family: var(--font-sans);
   box-sizing: border-box;
+  position: relative;
+  page-break-after: always !important;
+  break-after: page !important;
+}
+
+/* Off-screen DOM Measurement Container for Pt-Accurate Print Pagination */
+#print-measure-container {
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 612pt !important; /* Letter width: 8.5in * 72pt/in */
+  padding: 18pt !important; /* 0.25in margin: 18pt */
+  box-sizing: border-box !important;
+  background: #ffffff !important;
+  font-family: var(--font-sans) !important;
+}
+
+.print-preview-2col-grid {
+  display: flex !important;
+  gap: 4pt !important;
+  width: 100% !important;
+  align-items: flex-start !important;
+}
+
+.print-preview-2col-col {
+  flex: 1 !important;
+  width: 50% !important;
+  box-sizing: border-box !important;
+}
+
+.print-2col-table {
+  font-size: 7pt !important;
+  line-height: 1.2 !important;
+}
+
+.print-2col-table th {
+  font-size: 7pt !important;
+  padding: 2.5px 4px !important;
+}
+
+.print-2col-table td {
+  font-size: 7pt !important;
+  padding: 2px 4px !important;
+  line-height: 1.2 !important;
 }
 
 /* Print preview inner content resets to match printing rules */
@@ -1723,11 +1934,14 @@ input[type="color"]::-webkit-color-swatch {
   color: #000 !important;
 }
 
-.print-preview-page-container .print-header h1 {
+.print-header h1,
+.print-preview-page-container .print-header h1,
+.print-only .print-header h1 {
   font-size: 15pt !important;
   font-weight: 700 !important;
   margin-bottom: 4px !important;
   color: #000 !important;
+  text-align: center !important;
 }
 
 .print-preview-page-container .print-meta {
@@ -1765,7 +1979,7 @@ input[type="color"]::-webkit-color-swatch {
   border-right: 1px solid #e2e8f0 !important;
   padding: 3.5px 6px !important;
   color: #334155 !important;
-  font-size: 8.5pt !important;
+  font-size: 8pt !important;
   font-weight: 400 !important;
   white-space: normal !important;
   word-break: break-word !important;
@@ -1835,7 +2049,6 @@ input[type="color"]::-webkit-color-swatch {
 /* Print media: new column styles */
 @media print {
   .print-only .col-references {
-    width: 30% !important;
     vertical-align: top !important;
   }
   .print-only .ref-grid {
@@ -4039,7 +4252,6 @@ tr.auto-row:hover {
 /* Print media: new column styles */
 @media print {
   .print-only .col-references {
-    width: 30% !important;
     vertical-align: top !important;
   }
   .print-only .ref-grid {
@@ -4072,6 +4284,121 @@ tr.auto-row:hover {
     font-weight: 700 !important;
   }
 }
+
+/* ==========================================================================
+   ACRONYM LIST & 2-COLUMN PRINT STYLES
+   ========================================================================== */
+
+.print-acronyms-section {
+  column-span: all !important;
+  page-break-before: always !important;
+  break-before: page !important;
+  margin-top: 24px !important;
+  padding-top: 12px !important;
+  width: 100% !important;
+  clear: both !important;
+  display: block !important;
+}
+
+.print-columns-2 .print-acronyms-section {
+  column-span: all !important;
+  page-break-before: always !important;
+  break-before: page !important;
+}
+
+.print-acronyms-section .acronyms-print-header {
+  margin-bottom: 12px !important;
+  border-bottom: 0.5pt solid #000000 !important;
+  padding-bottom: 4px !important;
+}
+
+.print-acronyms-section .acronyms-print-header h2 {
+  font-size: 13pt !important;
+  font-weight: 700 !important;
+  margin: 0 0 4px 0 !important;
+  color: #000000 !important;
+}
+
+.print-acronyms-grid {
+  display: flex !important;
+  gap: 4pt !important;
+  width: 100% !important;
+  align-items: flex-start !important;
+}
+
+.print-acronyms-col {
+  flex: 1 !important;
+  width: 50% !important;
+  box-sizing: border-box !important;
+}
+
+.print-acronyms-table {
+  background-color: #ffffff !important;
+  border: 0.5pt solid #cccccc !important;
+  color: #000000 !important;
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  font-size: 8pt !important;
+  font-family: var(--font-sans) !important;
+  line-height: 1.25 !important;
+  margin-bottom: 12px !important;
+}
+
+.print-acronyms-table th {
+  background-color: #f1f5f9 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border: 0.5pt solid #cccccc !important;
+  padding: 3.5px 5px !important;
+  text-transform: uppercase !important;
+  text-align: left !important;
+  font-size: 8pt !important;
+  font-family: var(--font-sans) !important;
+}
+
+.print-acronyms-table td {
+  padding: 3px 5px !important;
+  border: 0.5pt solid #cccccc !important;
+  color: #000000 !important;
+  font-weight: 400 !important;
+  font-size: 8pt !important;
+  font-family: var(--font-sans) !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  vertical-align: top !important;
+}
+
+.print-acronyms-table td.col-acronym-code {
+  font-weight: 400 !important;
+  font-family: var(--font-sans) !important;
+  color: #000000 !important;
+  vertical-align: top !important;
+}
+
+.print-preview-2col-grid .print-acronyms-table {
+  font-size: 7pt !important;
+  line-height: 1.2 !important;
+}
+
+.print-preview-2col-grid .print-acronyms-table th {
+  font-size: 7pt !important;
+  padding: 2.5px 4px !important;
+}
+
+.print-preview-2col-grid .print-acronyms-table td {
+  font-size: 7pt !important;
+  padding: 2px 4px !important;
+  line-height: 1.2 !important;
+}
+
+.print-acronyms-table thead {
+  display: table-header-group !important;
+  break-inside: avoid !important;
+}
+
 
 
 
