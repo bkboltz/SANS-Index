@@ -1084,9 +1084,33 @@ th.sortable:hover .sort-icon {
   backdrop-filter: blur(4px);
 }
 
-.dialog-content {
+/* Ensure closed HTML5 dialogs are instantly hidden regardless of inline display styles */
+dialog:not([open]) {
+  display: none !important;
+}
+
+.custom-dialog .dialog-content {
   padding: 24px;
   overflow: visible !important;
+}
+
+/* Fix for PDF Index Review Dialog container overflow & sticky buttons */
+#pdf-index-review-dialog[open] {
+  display: flex !important;
+  flex-direction: column;
+}
+
+#pdf-index-review-dialog .dialog-content {
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  padding: 24px;
+}
+
+/* PDF Review Info Tooltip */
+.info-tooltip-wrapper:hover .info-tooltip-popover {
+  display: block !important;
 }
 
 .custom-dialog h3 {

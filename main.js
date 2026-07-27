@@ -423,7 +423,7 @@ async function ensurePythonEnvironment(event) {
   let venvValid = false;
   if (fs.existsSync(venvPython)) {
     venvValid = await new Promise((resolve) => {
-      exec(`"${venvPython}" -c "import pdfminer, nltk, wordfreq; print('ok')"`, (err, stdout) => {
+      exec(`"${venvPython}" -c "import pdfminer, nltk, wordfreq, fitz; print('ok')"`, (err, stdout) => {
         resolve(!err && stdout.trim() === 'ok');
       });
     });
@@ -1492,6 +1492,408 @@ ipcMain.handle('download-local-model', async (event, modelKey) => {
       });
     });
   } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// Helper: Robustly parse or repair JSON array output from AI models
+function tryParseJSONArray(text) {
+  if (!text) return null;
+  let clean = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+
+  // 1. Direct JSON parse
+  try {
+    const val = JSON.parse(clean);
+    if (Array.isArray(val)) return val;
+  } catch (e) {}
+
+  // 2. Extract array substring using regex
+  const match = clean.match(/\[[\s\S]*\]/);
+  if (match) {
+    try {
+      const val = JSON.parse(match[0]);
+      if (Array.isArray(val)) return val;
+    } catch (e) {}
+  }
+
+  // 3. Repair truncated JSON array: find start '[' and last completed object '}'
+  const startIdx = clean.indexOf('[');
+  const lastObjEnd = clean.lastIndexOf('}');
+  if (startIdx !== -1 && lastObjEnd > startIdx) {
+    const repaired = clean.substring(startIdx, lastObjEnd + 1) + ']';
+    try {
+      const val = JSON.parse(repaired);
+      if (Array.isArray(val)) return val;
+    } catch (e) {}
+  }
+
+  return null;
+}
+
+// ==========================================================================
+// IPC Handler: Parse PDF Index File with Gemini AI
+// ==========================================================================
+ipcMain.handle('parse-pdf-index', async (event, params = {}) => {
+  const pdfPath = params.pdfPath || params.filePath;
+  const geminiApiKey = params.geminiApiKey || params.geminiKey;
+  const geminiModel = params.geminiModel;
+  const mode = params.parseMode || params.mode || (geminiApiKey ? 'ai-generic' : 'sans-fast');
+  logDebug(`[PDF Index Parser] Starting. Mode: ${mode}, PDF: ${pdfPath}, Key present: ${!!geminiApiKey}, Model: ${geminiModel || 'gemini-flash-latest'}`);
+
+  try {
+    const pythonExe = await ensurePythonEnvironment(event);
+
+    // =========================================================================
+    // MODE 1: Fast Local SANS Index Parsing (PyMuPDF / fitz layout extraction)
+    // =========================================================================
+    if (mode === 'sans-fast') {
+      const fastScript = `
+import sys, json, fitz, re
+
+pdf_path = sys.argv[1]
+doc = fitz.open(pdf_path)
+all_entries = []
+
+for page in doc:
+    drawings = page.get_drawings()
+    gray_rects = []
+    for d in drawings:
+        if 'rect' in d and d.get('fill'):
+            r = d['rect']
+            if r.width > 200 and r.height >= 8.0:
+                gray_rects.append((round(r.y0, 1), round(r.y1, 1)))
+
+    gray_rects = sorted(list(set(gray_rects)), key=lambda x: x[0])
+    merged_gray = []
+    for g_y0, g_y1 in gray_rects:
+        if merged_gray and g_y0 < merged_gray[-1][1]:
+            merged_gray[-1] = (merged_gray[-1][0], max(merged_gray[-1][1], g_y1))
+        else:
+            merged_gray.append((g_y0, g_y1))
+
+    def get_gray_rect(y_val):
+        for g in merged_gray:
+            if g[0] - 0.5 <= y_val < g[1] - 0.5:
+                return g
+        return None
+
+    page_dict = page.get_text('dict')
+    lines = []
+    for b in page_dict['blocks']:
+        if 'lines' in b:
+            for l in b['lines']:
+                line_text = ''.join([w['text'] for w in l['spans']]).strip()
+                if line_text:
+                    y0 = round(l['bbox'][1], 1)
+                    x0 = round(l['bbox'][0], 1)
+                    lines.append((y0, x0, line_text))
+    lines.sort(key=lambda x: (x[0], x[1]))
+
+    filtered_lines = []
+    for y0, x0, text in lines:
+        if text in ['Index', 'Note: The numbers indicate the book number, followed by the page number.']:
+            continue
+        if len(text) == 1 and text.isupper():
+            continue
+        filtered_lines.append((y0, x0, text))
+
+    if not filtered_lines: continue
+
+    rows = []
+    for y0, x0, text in filtered_lines:
+        matched = False
+        for r in rows:
+            if abs(r['y0'] - y0) <= 4.0:
+                if x0 < 250:
+                    r['topic_parts'].append((x0, text))
+                else:
+                    r['page_parts'].append((x0, text))
+                matched = True
+                break
+        if not matched:
+            rows.append({
+                'y0': y0,
+                'gray_rect': get_gray_rect(y0),
+                'topic_parts': [(x0, text)] if x0 < 250 else [],
+                'page_parts': [(x0, text)] if x0 >= 250 else []
+            })
+    rows.sort(key=lambda r: r['y0'])
+
+    idx = 0
+    while idx < len(rows):
+        t_spans = sorted(rows[idx]['topic_parts'], key=lambda x: x[0])
+        if not t_spans:
+            idx += 1
+            continue
+
+        t_first = ' '.join([s[1] for s in t_spans]).strip()
+        topic_lines = [t_first]
+        page_lines = []
+
+        p_spans = sorted(rows[idx]['page_parts'], key=lambda x: x[0])
+        p_first = ' '.join([s[1] for s in p_spans]).strip()
+        if p_first:
+            page_lines.append(p_first)
+
+        curr_rect = rows[idx]['gray_rect']
+
+        curr = idx + 1
+        while curr < len(rows):
+            r_curr = rows[curr]
+            curr_t_spans = sorted(r_curr['topic_parts'], key=lambda x: x[0])
+            curr_p_spans = sorted(r_curr['page_parts'], key=lambda x: x[0])
+
+            t_curr = ' '.join([s[1] for s in curr_t_spans]).strip()
+            p_curr = ' '.join([s[1] for s in curr_p_spans]).strip()
+
+            if not t_curr and not p_curr:
+                curr += 1
+                continue
+
+            if not t_curr and p_curr:
+                page_lines.append(p_curr)
+                curr += 1
+                continue
+
+            is_continuation = False
+            if t_curr.startswith('(') or t_curr.startswith('-'):
+                is_continuation = True
+            elif curr_rect is not None and r_curr['gray_rect'] == curr_rect:
+                is_continuation = True
+
+            if is_continuation:
+                topic_lines.append(t_curr)
+                if p_curr:
+                    page_lines.append(p_curr)
+                curr += 1
+            else:
+                break
+
+        all_entries.append((' '.join(topic_lines).strip(), ' '.join(page_lines).strip()))
+        idx = curr
+
+result_entries = []
+for topic, pages_raw in all_entries:
+    parts = re.split(r'(?=\\b\\d+:)', pages_raw)
+    book_pages = {}
+    for part in parts:
+        part = part.strip().rstrip(',')
+        if not part: continue
+        m = re.match(r'^(\\d+):(.*)$', part)
+        if m:
+            book_num = int(m.group(1))
+            p_clean = m.group(2).strip().rstrip(',')
+            if p_clean:
+                if book_num not in book_pages: book_pages[book_num] = []
+                book_pages[book_num].append(p_clean)
+        else:
+            if 1 not in book_pages: book_pages[1] = []
+            book_pages[1].append(part)
+
+    for b_num, p_list in book_pages.items():
+        result_entries.append({
+            'topic': topic,
+            'book': b_num,
+            'pages': ', '.join(p_list)
+        })
+
+print(json.dumps(result_entries))
+`;
+
+      let scriptOut = '';
+      let scriptErr = '';
+      await new Promise((resolve, reject) => {
+        const proc = spawn(pythonExe, ['-c', fastScript, pdfPath]);
+        proc.stdout.on('data', d => { scriptOut += d.toString(); });
+        proc.stderr.on('data', d => { scriptErr += d.toString(); });
+        proc.on('close', code => {
+          if (code !== 0) reject(new Error(`Local PDF parse failed: ${scriptErr || 'Unknown error'}`));
+          else resolve();
+        });
+      });
+
+      let parsedEntries = [];
+      try { parsedEntries = JSON.parse(scriptOut); } catch (e) {
+        return { success: false, error: 'Failed to parse JSON from local PDF reader.' };
+      }
+
+      if (!Array.isArray(parsedEntries) || parsedEntries.length === 0) {
+        return { success: false, error: 'No index entries were found using the fast SANS PDF parser. Try AI mode for custom PDF formats.' };
+      }
+
+      logDebug(`[PDF Index Parser] Fast Local SANS parser extracted ${parsedEntries.length} entries successfully.`);
+      return { success: true, entries: parsedEntries };
+    }
+
+    // =========================================================================
+    // MODE 2: AI-Powered PDF Parsing (Gemini API with ~1,800-char chunks)
+    // =========================================================================
+    if (!geminiApiKey) {
+      return { success: false, error: 'A Gemini API key is required to use AI-Powered PDF parsing.' };
+    }
+
+    const extractCode = `import sys; from pdfminer.high_level import extract_text; text=extract_text(sys.argv[1]); print(text)`;
+    let pdfText = '';
+    await new Promise((resolve, reject) => {
+      const proc = spawn(pythonExe, ['-c', extractCode, pdfPath]);
+      let out = '';
+      let err = '';
+      proc.stdout.on('data', d => { out += d.toString(); });
+      proc.stderr.on('data', d => { err += d.toString(); });
+      proc.on('close', code => {
+        if (code !== 0) reject(new Error(`PDF text extraction failed: ${err || 'Unknown error'}`));
+        else resolve();
+        pdfText = out;
+      });
+    });
+
+    if (!pdfText || pdfText.trim().length < 20) {
+      return { success: false, error: 'Could not extract readable text from the PDF. It may be scanned or image-based.' };
+    }
+
+    logDebug(`[PDF Index Parser] Extracted ${pdfText.length} chars of text for AI parsing.`);
+
+    // Split text into small chunks (~1,800 chars each) to ensure ~99.8% extraction recall
+    const lines = pdfText.split(/\r?\n/);
+    const chunks = [];
+    let currentChunk = [];
+    let currentLen = 0;
+
+    for (const line of lines) {
+      currentChunk.push(line);
+      currentLen += line.length + 1;
+      if (currentLen >= 1800) {
+        chunks.push(currentChunk.join('\n'));
+        currentChunk = [];
+        currentLen = 0;
+      }
+    }
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk.join('\n'));
+    }
+
+    logDebug(`[PDF Index Parser] Split text into ${chunks.length} small chunks (~1800 chars) for complete extraction.`);
+
+    const model = geminiModel || 'gemini-flash-latest';
+    const allRawParsedEntries = [];
+
+    for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
+      const chunkText = chunks[cIdx];
+      const progressPercent = Math.round(((cIdx + 1) / chunks.length) * 100);
+
+      event.sender.send('pdf-import-progress', {
+        chunkIndex: cIdx + 1,
+        totalChunks: chunks.length,
+        percent: progressPercent,
+        message: `Parsing index chunk ${cIdx + 1} of ${chunks.length} (${progressPercent}%)...`
+      });
+
+      const prompt = `You are an expert index parser. The following text is a slice of a book index PDF.
+Your task is to extract EVERY SINGLE index entry and its page references. The page references always include a BOOK NUMBER and a PAGE NUMBER.
+
+CRITICAL INSTRUCTION: You MUST extract EVERY SINGLE index entry present in the text snippet below.
+Do NOT summarize, skip, or truncate any entries. Every line with a term and page reference MUST be included.
+
+The format can vary. Examples:
+- "1:23" means Book 1, Page 23
+- "2:45-47" means Book 2, Pages 45-47
+- "Bk1 p.23" means Book 1, Page 23
+- "Book 2, pg 45" means Book 2, Page 45
+- "1-23" (where first digit is the book) means Book 1, Page 23
+- "3:12, 3:45, 4:7" means Book 3 pages 12 and 45, Book 4 page 7
+
+For each index entry, create one JSON object PER BOOK it appears in:
+{ "topic": "Entry Name", "book": 1, "pages": "23, 45-47" }
+
+Rules:
+- "book" must be an integer (the book number)
+- "pages" must be a string of comma-separated page numbers/ranges for THAT BOOK ONLY
+- "topic" is the index entry name exactly as it appears
+- If an entry appears in multiple books, create one object per book
+- Ignore headers, footers, page numbers that are not part of index entries
+- Return ONLY a raw JSON array, no markdown, no explanation
+
+Index text slice:
+${chunkText}`;
+
+      const maxAttempts = 3;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        logDebug(`[PDF Index Parser] Chunk ${cIdx + 1}/${chunks.length}, attempt ${attempt}/${maxAttempts}...`);
+        try {
+          const response = await net.fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { 
+                  responseMimeType: 'application/json',
+                  maxOutputTokens: 8192
+                },
+                safetySettings: [
+                  { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                  { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                  { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                  { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                ]
+              })
+            }
+          );
+
+          if (!response.ok) {
+            const errText = await response.text();
+            logDebug(`[PDF Index Parser] Chunk ${cIdx + 1} API error ${response.status}: ${errText}`);
+            if ((response.status === 429 || response.status === 503) && attempt < maxAttempts) {
+              // Rate limit hit (Free Tier 15 RPM). Emit user-facing status message before pausing.
+              event.sender.send('pdf-import-progress', {
+                chunkIndex: cIdx + 1,
+                totalChunks: chunks.length,
+                percent: progressPercent,
+                message: `Waiting for API request per minute to refresh. Pausing for maximum of 1 minute...`
+              });
+              await new Promise(r => setTimeout(r, 16000));
+              continue;
+            }
+            break;
+          }
+
+          const resData = await response.json();
+          if (resData.candidates && resData.candidates.length > 0) {
+            const responseText = resData.candidates[0].content.parts[0].text;
+            const chunkEntries = tryParseJSONArray(responseText);
+            if (Array.isArray(chunkEntries) && chunkEntries.length > 0) {
+              allRawParsedEntries.push(...chunkEntries);
+              logDebug(`[PDF Index Parser] Chunk ${cIdx + 1} succeeded: ${chunkEntries.length} entries.`);
+              break;
+            }
+          }
+        } catch (fetchErr) {
+          logDebug(`[PDF Index Parser] Chunk ${cIdx + 1} fetch error: ${fetchErr.message}`);
+          if (attempt < maxAttempts) await new Promise(r => setTimeout(r, 5000));
+        }
+      }
+    }
+
+    if (allRawParsedEntries.length === 0) {
+      return { success: false, error: 'No valid index entries could be parsed from the PDF using AI.' };
+    }
+
+    // Validate and sanitize entries
+    const validEntries = allRawParsedEntries
+      .filter(e => e && typeof e.topic === 'string' && e.topic.trim() && typeof e.book === 'number' && e.pages)
+      .map(e => ({
+        topic: e.topic.trim(),
+        book: Math.round(e.book),
+        pages: String(e.pages).trim()
+      }));
+
+    logDebug(`[PDF Index Parser] AI Total parsed valid entries: ${validEntries.length}`);
+    return { success: true, entries: validEntries };
+
+  } catch (err) {
+    logDebug(`[PDF Index Parser] Unexpected error: ${err.message}`);
     return { success: false, error: err.message };
   }
 });

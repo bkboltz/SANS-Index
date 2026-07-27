@@ -214,6 +214,31 @@ const elements = {
   previewHeaderCheckbox: document.getElementById('preview-header-checkbox'),
   quizNewQuestionsToast: document.getElementById('quiz-new-questions-toast'),
 
+  // PDF Index Import
+  pdfIndexBrowseBtn: document.getElementById('pdf-index-browse-btn'),
+  pdfIndexFileDisplay: document.getElementById('pdf-index-file-display'),
+  pdfIndexKeyRow: document.getElementById('pdf-index-key-row'),
+  pdfIndexGeminiKey: document.getElementById('pdf-index-gemini-key'),
+  pdfIndexReviewDialog: document.getElementById('pdf-index-review-dialog'),
+  pdfReviewTableBody: document.getElementById('pdf-review-table-body'),
+  pdfReviewHeaderCheckbox: document.getElementById('pdf-review-header-checkbox'),
+  pdfReviewSelectAllBtn: document.getElementById('pdf-review-select-all-btn'),
+  pdfReviewDeselectAllBtn: document.getElementById('pdf-review-deselect-all-btn'),
+  pdfReviewImportBtn: document.getElementById('pdf-review-import-btn'),
+  pdfReviewCancelBtn: document.getElementById('pdf-review-cancel-btn'),
+  pdfReviewSummaryText: document.getElementById('pdf-review-summary-text'),
+  pdfReviewStatTotal: document.getElementById('pdf-review-stat-total'),
+  pdfReviewStatNew: document.getElementById('pdf-review-stat-new'),
+  pdfReviewStatMerge: document.getElementById('pdf-review-stat-merge'),
+  pdfReviewStatCapped: document.getElementById('pdf-review-stat-capped'),
+  pdfReviewStatDuplicate: document.getElementById('pdf-review-stat-duplicate'),
+  pdfReviewStatSelected: document.getElementById('pdf-review-stat-selected'),
+  pdfReviewFilterDropdownBtn: document.getElementById('pdf-review-filter-dropdown-btn'),
+  pdfReviewFilterMenu: document.getElementById('pdf-review-filter-menu'),
+  pdfReviewBypassCapToggle: document.getElementById('pdf-review-bypass-cap-toggle'),
+  pdfIndexLoadingDialog: document.getElementById('pdf-index-loading-dialog'),
+  pdfFunFactText: document.getElementById('pdf-fun-fact-text'),
+
   // Practice Quiz Hub & Setup elements
   practiceQuizBtn: document.getElementById('practice-quiz-btn'),
   quizConfigDialog: document.getElementById('quiz-config-dialog'),
@@ -1213,6 +1238,27 @@ function saveInlineEntry(entryId, rowElement) {
     entry.topic = topic;
     entry.pages = formattedPages;
     entry.notes = notes;
+
+    // --- Duplicate detection: check if the edited topic+book now matches a DIFFERENT existing entry ---
+    const collision = state.entries.find(e =>
+      e &&
+      e.id !== entryId &&
+      e.courseId === state.currentCourseId &&
+      e.bookId === bookId &&
+      e.topic.toLowerCase() === topic.toLowerCase()
+    );
+
+    if (collision) {
+      // Merge this entry's pages into the pre-existing collision entry, then remove this one
+      const { merged, wasChanged } = mergePageStrings(collision.pages, formattedPages);
+      collision.pages = merged;
+      state.entries = state.entries.filter(e => e.id !== entryId);
+      if (wasChanged) {
+        showToast(`Entries merged — pages updated to: ${merged}`);
+      } else {
+        showToast('Duplicate entry removed — pages already covered.');
+      }
+    }
   }
 
   editEntryId = null;
@@ -2166,7 +2212,7 @@ function compressPageList(pagesStr) {
 
   for (let i = 1; i < sortedPages.length; i++) {
     const current = sortedPages[i];
-    if (current === rangeEnd + 1) {
+    if (current <= rangeEnd + 3) {
       rangeEnd = current;
     } else {
       if (rangeStart === rangeEnd) {
@@ -2186,6 +2232,134 @@ function compressPageList(pagesStr) {
   }
 
   return ranges.join(', ');
+}
+
+// ==========================================================================
+// PAGE HELPER UTILITIES
+// ==========================================================================
+
+// Expand a page string like "6-9, 14" into a Set of integers {6,7,8,9,14}
+function expandPagesToIntegers(pagesStr) {
+  const result = new Set();
+  if (!pagesStr) return result;
+  const parts = pagesStr.split(',').map(p => p.trim()).filter(p => p.length > 0);
+  for (const part of parts) {
+    if (part.includes('-')) {
+      const rangeParts = part.split('-').map(x => parseInt(x.trim(), 10));
+      if (rangeParts.length === 2 && !isNaN(rangeParts[0]) && !isNaN(rangeParts[1])) {
+        const lo = Math.min(rangeParts[0], rangeParts[1]);
+        const hi = Math.max(rangeParts[0], rangeParts[1]);
+        for (let i = lo; i <= hi; i++) result.add(i);
+      }
+    } else {
+      const val = parseInt(part, 10);
+      if (!isNaN(val)) result.add(val);
+    }
+  }
+  return result;
+}
+
+// Merge two page strings; returns {merged: string, wasChanged: bool}
+function mergePageStrings(existingStr, newStr) {
+  const existingSet = expandPagesToIntegers(existingStr);
+  const newSet = expandPagesToIntegers(newStr);
+  const beforeSize = existingSet.size;
+  newSet.forEach(p => existingSet.add(p));
+  const wasChanged = existingSet.size > beforeSize;
+  const merged = compressPageList(Array.from(existingSet).sort((a, b) => a - b).join(', '));
+  return { merged, wasChanged };
+}
+
+// Merge page strings respecting reference caps and page range inclusions:
+// 1. Expand existing and new page strings into integer page sets (so '13' is recognized inside '12-15').
+// 2. If existing tokens >= 7, cap is reached (wasChanged: false, capped: true).
+// 3. If existing tokens < 7, add new integer pages incrementally up to maxTokens (8) max, compressing into ranges.
+function mergePageStringsWithCap(existingStr, newStr, maxTokens = 8) {
+  const sExist = expandPagesToIntegers(existingStr);
+  const sNew = expandPagesToIntegers(newStr);
+
+  const existCompressed = compressPageList(Array.from(sExist).sort((a, b) => a - b).join(', '));
+  const existTokenCount = countPageTokens(existCompressed);
+
+  if (existTokenCount >= 7) {
+    return { merged: existCompressed, wasChanged: false, capped: true };
+  }
+
+  // Find integers in sNew that are not already covered in sExist
+  const newIntegers = Array.from(sNew).filter(p => !sExist.has(p)).sort((a, b) => a - b);
+  if (newIntegers.length === 0) {
+    return { merged: existCompressed, wasChanged: false, capped: false };
+  }
+
+  let currSet = new Set(sExist);
+  let addedAny = false;
+
+  for (const p of newIntegers) {
+    const testSet = new Set(currSet);
+    testSet.add(p);
+    const testCompressed = compressPageList(Array.from(testSet).sort((a, b) => a - b).join(', '));
+    if (countPageTokens(testCompressed) <= maxTokens) {
+      currSet = testSet;
+      addedAny = true;
+    } else {
+      break;
+    }
+  }
+
+  const finalMerged = compressPageList(Array.from(currSet).sort((a, b) => a - b).join(', '));
+  return {
+    merged: finalMerged,
+    wasChanged: addedAny,
+    capped: newIntegers.length > 0 && !addedAny
+  };
+}
+
+// Count comma-separated tokens in a page string ("6-9" = 1 token, not 4)
+function countPageTokens(pagesStr) {
+  if (!pagesStr) return 0;
+  return pagesStr.split(',').map(p => p.trim()).filter(p => p.length > 0).length;
+}
+
+// Count total comma-separated page tokens for a topic across ALL books in the current course
+function countTotalPageTokensForTopic(topicLower) {
+  return state.entries
+    .filter(e => e && e.courseId === state.currentCourseId && e.topic && e.topic.toLowerCase() === topicLower)
+    .reduce((sum, e) => sum + countPageTokens(e.pages), 0);
+}
+
+// Show a small auto-dismissing toast bubble in the bottom-right corner
+function showToast(message, durationMs = 1800) {
+  // Remove any existing toast
+  const existing = document.getElementById('sans-toast-bubble');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.id = 'sans-toast-bubble';
+  toast.textContent = message;
+  toast.style.cssText = [
+    'position: fixed',
+    'bottom: 28px',
+    'right: 28px',
+    'z-index: 9999',
+    'background: var(--bg-sidebar)',
+    'border: 1px solid var(--border-color)',
+    'color: var(--text-primary)',
+    'padding: 10px 18px',
+    'border-radius: 8px',
+    'font-size: 0.88rem',
+    'font-weight: 500',
+    'box-shadow: 0 4px 20px rgba(0,0,0,0.4)',
+    'opacity: 0',
+    'transition: opacity 0.2s ease'
+  ].join(';');
+  document.body.appendChild(toast);
+  // Fade in
+  requestAnimationFrame(() => { toast.style.opacity = '1'; });
+  // Fade out and remove
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 250);
+  }, durationMs);
 }
 
 function parseAndValidatePages(pagesInput) {
@@ -2294,30 +2468,49 @@ function handleEntrySubmit(e) {
     }
     endEditEntry();
   } else {
-    // Create new entry
-    const newId = 'entry-' + Date.now();
-    state.entries.push({
-      id: newId,
-      courseId: state.currentCourseId,
-      bookId,
-      topic,
-      pages: formattedPages,
-      notes,
-      starred: false,
-      createdAt: new Date().toISOString()
-    });
-    
-    // Store last added entry ID for slide-in animation
-    state.lastAddedEntryId = newId;
-    
+    // --- Duplicate detection: check for same topic + book in this course ---
+    const existingMatch = state.entries.find(e =>
+      e &&
+      e.courseId === state.currentCourseId &&
+      e.bookId === bookId &&
+      e.topic.toLowerCase() === topic.toLowerCase()
+    );
+
+    if (existingMatch) {
+      // Merge pages
+      const { merged, wasChanged } = mergePageStrings(existingMatch.pages, formattedPages);
+      if (wasChanged) {
+        existingMatch.pages = merged;
+        showToast(`Duplicate entry combined — pages updated to: ${merged}`);
+      } else {
+        showToast('All entered pages already exist in this entry — nothing added.');
+      }
+    } else {
+      // Create new entry
+      const newId = 'entry-' + Date.now();
+      state.entries.push({
+        id: newId,
+        courseId: state.currentCourseId,
+        bookId,
+        topic,
+        pages: formattedPages,
+        notes,
+        starred: false,
+        createdAt: new Date().toISOString()
+      });
+
+      // Store last added entry ID for slide-in animation
+      state.lastAddedEntryId = newId;
+
+      // Trigger pulses
+      triggerStatPulse(elements.statTotalEntries.closest('.stat-card'));
+      triggerStatPulse(elements.statLastAdded.closest('.stat-card'));
+    }
+
     elements.entryTopicInput.value = '';
     elements.entryPagesInput.value = '';
     elements.entryNotesInput.innerHTML = '';
     updateFormatButtonsActiveStates(elements.entryForm);
-    
-    // Trigger pulses
-    triggerStatPulse(elements.statTotalEntries.closest('.stat-card'));
-    triggerStatPulse(elements.statLastAdded.closest('.stat-card'));
   }
   
   saveState();
@@ -2570,66 +2763,97 @@ function exportToCSV() {
 
 function processImport() {
   const activeTab = document.querySelector('.import-tab-btn.active').getAttribute('data-tab');
-  
+
   if (activeTab === 'tab-json') {
     const file = elements.importJsonFile.files[0];
     if (!file) {
       alert("Please select a JSON file to import.");
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
       try {
         const data = JSON.parse(e.target.result);
-        
+
+        // Case A: Full App Database Backup ({ courses, books, entries })
         if (data.courses && data.books && data.entries) {
           if (confirm("This is a full app backup. Do you want to OVERWRITE your current application database?")) {
             state = data;
             saveState();
             renderAll();
             elements.importDialog.close();
+            showToast("Full database backup restored successfully.");
           }
-        } else if (data.course && data.books && data.entries) {
-          if (confirm(`Do you want to import/merge "${data.course.name}"?`)) {
-            const existingCourse = state.courses.find(c => c.id === data.course.id);
-            if (!existingCourse) {
-              state.courses.push(data.course);
-            }
-            
-            data.books.forEach(b => {
-              if (b && !state.books.some(localB => localB && localB.id === b.id)) {
-                state.books.push(b);
-              }
-            });
-            
-            data.entries.forEach(entry => {
-              if (entry && !state.entries.some(localE => localE && localE.id === entry.id)) {
-                state.entries.push(entry);
-              }
-            });
-            
-            state.currentCourseId = data.course.id;
-            saveState();
-            renderAll();
-            elements.importDialog.close();
-          }
-        } else {
-          alert("Invalid JSON format. Check file structure.");
+          return;
         }
+
+        // Case B: Single Course Export or Entries Array / Object
+        let rawEntries = [];
+        const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+
+        if (Array.isArray(data)) {
+          rawEntries = data;
+        } else if (data.entries && Array.isArray(data.entries)) {
+          rawEntries = data.entries;
+        }
+
+        if (rawEntries.length === 0) {
+          alert("No index entries found in JSON file.");
+          return;
+        }
+
+        // Standardize entries to { topic, book: bookNum, pages }
+        const parsedEntries = [];
+        rawEntries.forEach(item => {
+          if (!item || !item.topic || !item.pages) return;
+          let bookNum = 1;
+          if (typeof item.book === 'number') {
+            bookNum = item.book;
+          } else if (typeof item.book === 'string') {
+            const m = item.book.match(/(\d+)/);
+            if (m) bookNum = parseInt(m[1], 10);
+          } else if (item.bookId) {
+            const b = activeBooks.find(bk => bk.id === item.bookId);
+            if (b) {
+              const m = b.name.match(/(\d+)/);
+              if (m) bookNum = parseInt(m[1], 10);
+            }
+          }
+
+          parsedEntries.push({
+            topic: item.topic.trim(),
+            book: bookNum,
+            pages: item.pages.trim()
+          });
+        });
+
+        if (parsedEntries.length === 0) {
+          alert("No valid topic/pages entries found in JSON file.");
+          return;
+        }
+
+        // Close import modal & open unified Review Dialog
+        elements.importDialog.close();
+        pdfIndexRawParsedEntries = parsedEntries;
+        pdfIndexParsedEntries = buildPdfReviewData(pdfIndexRawParsedEntries, pdfIndexBypassCap);
+        renderPdfIndexReviewTable(pdfIndexParsedEntries);
+        elements.pdfIndexReviewDialog.showModal();
+        lucide.createIcons();
+
       } catch (err) {
         alert("Failed to parse JSON file: " + err.message);
       }
     };
     reader.readAsText(file);
-    
+
   } else if (activeTab === 'tab-csv') {
     const file = elements.importCsvFile.files[0];
     if (!file) {
       alert("Please select a CSV file to import.");
       return;
     }
-    
+
     const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
     if (activeBooks.length === 0) {
       alert("Please configure at least one book in this course before importing a CSV index.");
@@ -2637,73 +2861,539 @@ function processImport() {
       openBookDialog();
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
       try {
         const text = e.target.result;
         const lines = parseCSVRows(text);
-        
+
         if (lines.length < 2) {
           alert("CSV file seems to be empty or missing data rows.");
           return;
         }
-        
+
         const headers = lines[0].map(h => h.trim().toLowerCase());
         const topicIdx = headers.indexOf('topic');
         const pagesIdx = headers.indexOf('pages');
-        const notesIdx = headers.indexOf('notes');
         const bookIdx = headers.indexOf('book');
-        
+
         if (topicIdx === -1 || pagesIdx === -1) {
-          alert("CSV requires at least 'Topic' and 'Pages' columns/headers.");
+          alert("CSV requires at least 'Topic' and 'Pages' headers.");
           return;
         }
-        
-        let importedCount = 0;
-        
+
+        const parsedEntries = [];
         for (let i = 1; i < lines.length; i++) {
           const row = lines[i];
           if (row.length < Math.max(topicIdx, pagesIdx) + 1) continue;
-          
+
           const topic = row[topicIdx]?.trim();
           const pages = row[pagesIdx]?.trim();
-          const notes = notesIdx !== -1 ? row[notesIdx]?.trim() : '';
-          const csvBookName = bookIdx !== -1 ? row[bookIdx]?.trim() : '';
-          
+          const csvBookStr = bookIdx !== -1 ? row[bookIdx]?.trim() : '';
+
           if (!topic || !pages) continue;
-          
-          let matchedBook = activeBooks[0];
-          if (csvBookName) {
-            const found = activeBooks.find(b => b && b.name.toLowerCase() === csvBookName.toLowerCase());
-            if (found) matchedBook = found;
+
+          let bookNum = 1;
+          if (csvBookStr) {
+            const m = csvBookStr.match(/(\d+)/);
+            if (m) {
+              bookNum = parseInt(m[1], 10);
+            } else {
+              const matched = activeBooks.find(b => b && b.name.toLowerCase() === csvBookStr.toLowerCase());
+              if (matched) {
+                const bm = matched.name.match(/(\d+)/);
+                if (bm) bookNum = parseInt(bm[1], 10);
+              }
+            }
           }
-          
+
           const validation = parseAndValidatePages(pages);
           const finalPages = validation.isValid ? validation.formatted : pages;
 
-          state.entries.push({
-            id: 'entry-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
-            courseId: state.currentCourseId,
-            bookId: matchedBook.id,
+          parsedEntries.push({
             topic,
-            pages: finalPages,
-            notes,
-            createdAt: new Date().toISOString()
+            book: bookNum,
+            pages: finalPages
           });
-          importedCount++;
         }
-        
-        saveState();
-        renderAll();
-        alert(`Successfully imported ${importedCount} index entries!`);
+
+        if (parsedEntries.length === 0) {
+          alert("No valid entries were found in the CSV file.");
+          return;
+        }
+
+        // Close import modal & open unified Review Dialog
         elements.importDialog.close();
-        
+        pdfIndexRawParsedEntries = parsedEntries;
+        pdfIndexParsedEntries = buildPdfReviewData(pdfIndexRawParsedEntries, pdfIndexBypassCap);
+        renderPdfIndexReviewTable(pdfIndexParsedEntries);
+        elements.pdfIndexReviewDialog.showModal();
+        lucide.createIcons();
+
       } catch (err) {
         alert("Failed to parse CSV file: " + err.message);
       }
     };
     reader.readAsText(file);
+
+  } else if (activeTab === 'tab-pdf-index') {
+    elements.importDialog.close();
+    initiatePdfIndexParse();
+  }
+}
+
+// ==========================================================================
+// PDF INDEX IMPORT — State & Functions
+// ==========================================================================
+let pdfIndexFilePath = null;
+let pdfIndexRawParsedEntries = [];
+let pdfIndexParsedEntries = [];  // [{topic, book, pages, action, existingEntry, mergedPages}]
+let pdfIndexBypassCap = false;
+let pdfFilterTypes = new Set(['NEW', 'MERGE']);
+
+async function initiatePdfIndexParse() {
+  if (!pdfIndexFilePath) {
+    alert('Please select a PDF file first.');
+    return;
+  }
+
+  const parseModeEl = document.querySelector('input[name="pdf-parse-mode"]:checked');
+  const parseMode = parseModeEl ? parseModeEl.value : 'sans-fast';
+
+  let geminiKey = '';
+  if (parseMode === 'ai-generic') {
+    geminiKey = localStorage.getItem('gemini_api_key') || '';
+    if (!geminiKey) {
+      const keyRow = elements.pdfIndexKeyRow;
+      const keyInput = elements.pdfIndexGeminiKey;
+      if (keyRow && keyInput) {
+        keyRow.style.display = 'block';
+        const enteredKey = keyInput.value.trim();
+        if (!enteredKey) {
+          alert('Please enter a Gemini API key to use AI-Powered generic extraction.');
+          return;
+        }
+        geminiKey = enteredKey;
+        localStorage.setItem('gemini_api_key', geminiKey);
+      }
+    }
+  }
+
+  // Close the import dialog and show the dedicated loading dialog
+  elements.importDialog.close();
+  if (elements.pdfIndexLoadingDialog) {
+    const titleEl = elements.pdfIndexLoadingDialog.querySelector('h3');
+    const subtextEl = elements.pdfIndexLoadingDialog.querySelector('p');
+    if (titleEl) titleEl.textContent = parseMode === 'sans-fast' ? 'Parsing SANS PDF Index (Local)...' : 'Parsing PDF Index with Gemini AI...';
+    if (subtextEl) subtextEl.textContent = parseMode === 'sans-fast' ? 'Extracting index terms and pages locally. Please wait...' : 'Extracting topics, book numbers, and page references across all books. Please wait...';
+    elements.pdfIndexLoadingDialog.showModal();
+    if (window.lucide) lucide.createIcons();
+  }
+  startFunFactsRotation();
+
+  // Listen for live parsing progress
+  let removeProgressListener = null;
+  if (window.api && typeof window.api.onPdfParseProgress === 'function') {
+    removeProgressListener = window.api.onPdfParseProgress((event, data) => {
+      if (elements.pdfFunFactText && data.message) {
+        elements.pdfFunFactText.textContent = `${data.message} (${data.percent}%)`;
+      }
+    });
+  }
+
+  try {
+    const geminiModel = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
+    const result = await window.api.parsePdfIndex({
+      pdfPath: pdfIndexFilePath,
+      geminiApiKey: geminiKey,
+      geminiModel: geminiModel,
+      parseMode: parseMode
+    });
+
+    if (elements.pdfIndexLoadingDialog) {
+      elements.pdfIndexLoadingDialog.close();
+    }
+    stopFunFactsRotation();
+    if (removeProgressListener && typeof removeProgressListener === 'function') removeProgressListener();
+
+    if (!result.success) {
+      alert(`PDF parsing failed: ${result.error}`);
+      return;
+    }
+
+    if (!result.entries || result.entries.length === 0) {
+      alert('No index entries were found in the PDF.');
+      return;
+    }
+
+    // Build enriched review data
+    pdfIndexRawParsedEntries = result.entries;
+    pdfIndexParsedEntries = buildPdfReviewData(pdfIndexRawParsedEntries, pdfIndexBypassCap);
+    renderPdfIndexReviewTable(pdfIndexParsedEntries);
+    elements.pdfIndexReviewDialog.showModal();
+    lucide.createIcons();
+
+  } catch (err) {
+    if (elements.pdfIndexLoadingDialog) {
+      elements.pdfIndexLoadingDialog.close();
+    }
+    stopFunFactsRotation();
+    if (removeProgressListener && typeof removeProgressListener === 'function') removeProgressListener();
+    alert(`Unexpected error during PDF parsing: ${err.message}`);
+  }
+}
+
+// Build enriched entry list with action classification for the review table
+function buildPdfReviewData(rawEntries, bypassCap = false) {
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+
+  return rawEntries.map(entry => {
+    const { topic, book, pages } = entry;
+    const topicLower = topic.toLowerCase();
+
+    // Match book by number — look for "Book N" or "book-N" style matches
+    const matchedBook = activeBooks.find(b => {
+      const nameNum = b.name.match(/(\d+)/);
+      return nameNum && parseInt(nameNum[1], 10) === book;
+    }) || null;
+
+    const bookId = matchedBook ? matchedBook.id : null;
+
+    // Find existing entry in current course for this topic+book
+    const existingEntry = bookId
+      ? state.entries.find(e =>
+          e && e.courseId === state.currentCourseId &&
+          e.bookId === bookId &&
+          e.topic.toLowerCase() === topicLower
+        )
+      : null;
+
+    // Determine action & merged pages using reference capping rules
+    let action = 'NEW';
+    let mergedPages = null;
+    let pagesToUse = pages;
+
+    if (!matchedBook) {
+      action = 'NO_BOOK'; // book number doesn't match any configured book
+    } else if (existingEntry) {
+      if (bypassCap) {
+        const result = mergePageStrings(existingEntry.pages, pages);
+        if (!result.wasChanged) {
+          action = 'DUPLICATE';
+        } else {
+          action = 'MERGE';
+          mergedPages = result.merged;
+        }
+      } else {
+        const result = mergePageStringsWithCap(existingEntry.pages, pages, 8);
+        if (!result.wasChanged) {
+          // Duplicate takes precedence over Capped: existing entry already covers all imported pages
+          action = 'DUPLICATE';
+        } else {
+          const existingTokenCount = countPageTokens(existingEntry.pages);
+          if (existingTokenCount >= 7) {
+            action = 'CAPPED'; // Existing entry ALREADY has 7+ references and imported new page references
+          } else {
+            action = 'MERGE';
+            mergedPages = result.merged;
+          }
+        }
+      }
+    } else {
+      // New entry
+      if (bypassCap) {
+        pagesToUse = pages;
+      } else {
+        const tokenCount = countPageTokens(pages);
+        if (tokenCount > 8) {
+          const result = mergePageStringsWithCap('', pages, 8);
+          pagesToUse = result.merged;
+        }
+      }
+      action = 'NEW';
+    }
+
+    return { topic, book, pages: pagesToUse, bookId, bookName: matchedBook ? matchedBook.name : `Book ${book} (not found)`, existingEntry, mergedPages, action };
+  });
+}
+
+function renderPdfIndexReviewTable(entries) {
+  const tbody = elements.pdfReviewTableBody;
+  tbody.innerHTML = '';
+
+  const actionConfig = {
+    NEW:       { label: '🟢 NEW',       color: '#10b981', defaultChecked: true },
+    MERGE:     { label: '🔵 MERGE',     color: '#60a5fa', defaultChecked: true },
+    DUPLICATE: { label: '🔴 DUPLICATE', color: '#ef4444', defaultChecked: false },
+    CAPPED:    { label: '🟡 CAPPED',   color: '#fbbf24', defaultChecked: pdfIndexBypassCap },
+    NO_BOOK:   { label: '❌ NO BOOK',  color: '#ef4444', defaultChecked: false }
+  };
+
+  entries.forEach((entry, idx) => {
+    // Check if this entry's action is currently enabled in the filter view
+    if (!pdfFilterTypes.has(entry.action)) return;
+
+    const cfg = actionConfig[entry.action] || actionConfig.NEW;
+    const isChecked = (pdfIndexBypassCap && (entry.action === 'MERGE' || entry.action === 'NEW' || entry.action === 'CAPPED')) ? true : cfg.defaultChecked;
+
+    const tr = document.createElement('tr');
+    tr.className = 'preview-row';
+    tr.innerHTML = `
+      <td style="text-align:center;">
+        <input type="checkbox" class="pdf-review-checkbox" data-idx="${idx}" ${isChecked ? 'checked' : ''}>
+      </td>
+      <td style="font-size:0.85rem;">${escapeHtml(entry.topic)}</td>
+      <td style="font-size:0.82rem; color:var(--text-muted);">${entry.book}</td>
+      <td style="font-size:0.82rem;">${escapeHtml(entry.pages)}</td>
+      <td style="font-size:0.82rem; color:var(--text-muted);">${entry.existingEntry ? escapeHtml(entry.existingEntry.pages) : '—'}</td>
+      <td><span style="font-size:0.78rem; font-weight:600; color:${cfg.color};">${cfg.label}</span>${entry.action === 'MERGE' ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">→ ${escapeHtml(entry.mergedPages || '')}</div>` : ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Header checkbox toggle
+  if (elements.pdfReviewHeaderCheckbox) {
+    elements.pdfReviewHeaderCheckbox.checked = true;
+    elements.pdfReviewHeaderCheckbox.onchange = () => {
+      tbody.querySelectorAll('.pdf-review-checkbox').forEach(cb => {
+        cb.checked = elements.pdfReviewHeaderCheckbox.checked;
+      });
+      updatePdfReviewStats(entries);
+    };
+  }
+
+  tbody.querySelectorAll('.pdf-review-checkbox').forEach(cb => {
+    cb.addEventListener('change', () => updatePdfReviewStats(entries));
+  });
+
+  updatePdfReviewStats(entries);
+}
+
+function updatePdfReviewStats(entries) {
+  let countNew = 0, countMerge = 0, countCapped = 0, countDuplicate = 0;
+  entries.forEach(e => {
+    if (!e) return;
+    if (e.action === 'NEW') countNew++;
+    if (e.action === 'MERGE') countMerge++;
+    if (e.action === 'CAPPED') countCapped++;
+    if (e.action === 'DUPLICATE') countDuplicate++;
+  });
+
+  let countSelected = 0;
+  const checkboxes = elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox');
+  checkboxes.forEach(cb => {
+    if (cb.checked) countSelected++;
+  });
+
+  if (elements.pdfReviewStatTotal) elements.pdfReviewStatTotal.textContent = `${entries.length} Total`;
+  if (elements.pdfReviewStatNew) elements.pdfReviewStatNew.textContent = `${countNew} New`;
+  if (elements.pdfReviewStatMerge) elements.pdfReviewStatMerge.textContent = `${countMerge} Merge`;
+  if (elements.pdfReviewStatCapped) elements.pdfReviewStatCapped.textContent = `${countCapped} Capped`;
+  if (elements.pdfReviewStatDuplicate) elements.pdfReviewStatDuplicate.textContent = `${countDuplicate} Duplicate`;
+  if (elements.pdfReviewStatSelected) elements.pdfReviewStatSelected.textContent = `${countSelected} Selected`;
+
+  if (elements.pdfReviewSummaryText) {
+    elements.pdfReviewSummaryText.textContent = `${entries.length} entries found — review and select which to import`;
+  }
+}
+
+async function handlePdfIndexImportSelected() {
+  const checkboxes = elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox');
+  let countNew = 0, countMerge = 0, countSkipped = 0;
+
+  checkboxes.forEach((cb) => {
+    if (!cb.checked) return;
+    const realIdx = parseInt(cb.getAttribute('data-idx'), 10);
+    const entry = pdfIndexParsedEntries[realIdx];
+    if (!entry || !entry.bookId) { countSkipped++; return; }
+
+    const { topic, pages, bookId, existingEntry, mergedPages, action } = entry;
+
+    if (action === 'NEW') {
+      state.entries.push({
+        id: 'entry-' + Date.now() + '-pdfidx-' + realIdx,
+        courseId: state.currentCourseId,
+        bookId,
+        topic,
+        pages: compressPageList(pages),
+        notes: '',
+        source: 'pdf-index-import',
+        createdAt: new Date().toISOString()
+      });
+      countNew++;
+    } else if (action === 'MERGE' && existingEntry && mergedPages) {
+      existingEntry.pages = mergedPages;
+      countMerge++;
+    } else if (action === 'CAPPED' || action === 'DUPLICATE') {
+      // User force-selected a capped/duplicate item
+      if (existingEntry) {
+        const result = pdfIndexBypassCap
+          ? mergePageStrings(existingEntry.pages, pages)
+          : mergePageStringsWithCap(existingEntry.pages, pages, 8);
+        if (result.wasChanged) { existingEntry.pages = result.merged; countMerge++; }
+        else countSkipped++;
+      } else {
+        countSkipped++;
+      }
+    } else {
+      countSkipped++;
+    }
+  });
+
+  if (countNew + countMerge === 0) {
+    showToast('No changes made.');
+    closePdfIndexReviewDialog();
+    return;
+  }
+
+  await saveState();
+  renderAll();
+  closePdfIndexReviewDialog();
+  showToast(`PDF import complete: ${countNew} new, ${countMerge} merged, ${countSkipped} skipped.`, 3000);
+}
+
+function closePdfIndexReviewDialog(e) {
+  if (e) {
+    if (typeof e.preventDefault === 'function') e.preventDefault();
+    if (typeof e.stopPropagation === 'function') e.stopPropagation();
+  }
+  const dialog = elements.pdfIndexReviewDialog || document.getElementById('pdf-index-review-dialog');
+  if (dialog) {
+    try { dialog.close(); } catch {}
+  }
+  pdfIndexRawParsedEntries = [];
+  pdfIndexParsedEntries = [];
+  pdfIndexFilePath = null;
+  pdfIndexBypassCap = false;
+  pdfFilterTypes = new Set(['NEW', 'MERGE']);
+
+  // Reset checkboxes
+  if (elements.pdfReviewBypassCapToggle) elements.pdfReviewBypassCapToggle.checked = false;
+  document.querySelectorAll('.pdf-filter-cb').forEach(cb => {
+    cb.checked = (cb.value === 'NEW' || cb.value === 'MERGE');
+  });
+  if (elements.pdfReviewFilterMenu) elements.pdfReviewFilterMenu.style.display = 'none';
+
+  if (elements.pdfIndexFileDisplay) elements.pdfIndexFileDisplay.textContent = 'No file selected';
+  if (elements.pdfIndexKeyRow) elements.pdfIndexKeyRow.style.display = 'none';
+}
+
+// Initialize PDF index import event bindings (called from initEventBindings)
+function initPdfIndexImportBindings() {
+  // Browse button
+  if (elements.pdfIndexBrowseBtn) {
+    elements.pdfIndexBrowseBtn.addEventListener('click', async () => {
+      const filePath = await window.api.selectPdfFile();
+      if (filePath) {
+        pdfIndexFilePath = filePath;
+        const fileName = filePath.split(/[\\/]/).pop();
+        if (elements.pdfIndexFileDisplay) elements.pdfIndexFileDisplay.textContent = fileName;
+        // Check mode and key
+        const parseModeEl = document.querySelector('input[name="pdf-parse-mode"]:checked');
+        const parseMode = parseModeEl ? parseModeEl.value : 'sans-fast';
+        const storedKey = localStorage.getItem('gemini_api_key') || '';
+        if (parseMode === 'ai-generic' && !storedKey && elements.pdfIndexKeyRow) {
+          elements.pdfIndexKeyRow.style.display = 'block';
+        }
+      }
+    });
+  }
+
+  // Parse mode radio change handlers
+  document.querySelectorAll('input[name="pdf-parse-mode"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const storedKey = localStorage.getItem('gemini_api_key') || '';
+      const warnBox = document.getElementById('pdf-ai-warning-box');
+      if (e.target.value === 'ai-generic') {
+        if (!storedKey && elements.pdfIndexKeyRow) elements.pdfIndexKeyRow.style.display = 'block';
+        if (warnBox) warnBox.style.display = 'block';
+      } else {
+        if (elements.pdfIndexKeyRow) elements.pdfIndexKeyRow.style.display = 'none';
+        if (warnBox) warnBox.style.display = 'none';
+      }
+    });
+  });
+
+  // Filter Dropdown Toggle & Popover
+  if (elements.pdfReviewFilterDropdownBtn && elements.pdfReviewFilterMenu) {
+    elements.pdfReviewFilterDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = elements.pdfReviewFilterMenu.style.display === 'block';
+      elements.pdfReviewFilterMenu.style.display = isOpen ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', (e) => {
+      if (elements.pdfReviewFilterMenu && !elements.pdfReviewFilterMenu.contains(e.target) && e.target !== elements.pdfReviewFilterDropdownBtn) {
+        elements.pdfReviewFilterMenu.style.display = 'none';
+      }
+    });
+
+    document.querySelectorAll('.pdf-filter-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) {
+          pdfFilterTypes.add(cb.value);
+        } else {
+          pdfFilterTypes.delete(cb.value);
+        }
+        renderPdfIndexReviewTable(pdfIndexParsedEntries);
+      });
+    });
+  }
+
+  // Bypass Reference Caps Toggle Switch
+  if (elements.pdfReviewBypassCapToggle) {
+    elements.pdfReviewBypassCapToggle.addEventListener('change', (e) => {
+      pdfIndexBypassCap = e.target.checked;
+
+      // Update CAPPED filter checkbox state
+      const cappedCb = document.querySelector('.pdf-filter-cb[value="CAPPED"]');
+      if (pdfIndexBypassCap) {
+        if (cappedCb) cappedCb.checked = true;
+        pdfFilterTypes.add('CAPPED');
+      } else {
+        if (cappedCb) cappedCb.checked = false;
+        pdfFilterTypes.delete('CAPPED');
+      }
+
+      // Re-build data with updated bypass flag & re-render
+      pdfIndexParsedEntries = buildPdfReviewData(pdfIndexRawParsedEntries, pdfIndexBypassCap);
+      renderPdfIndexReviewTable(pdfIndexParsedEntries);
+    });
+  }
+
+  // Review dialog buttons & close handlers
+  if (elements.pdfReviewImportBtn) {
+    elements.pdfReviewImportBtn.addEventListener('click', handlePdfIndexImportSelected);
+  }
+  if (elements.pdfReviewCancelBtn) {
+    elements.pdfReviewCancelBtn.addEventListener('click', closePdfIndexReviewDialog);
+  }
+  const closeXBtn = document.getElementById('pdf-review-close-x-btn');
+  if (closeXBtn) {
+    closeXBtn.addEventListener('click', closePdfIndexReviewDialog);
+  }
+  if (elements.pdfIndexReviewDialog) {
+    elements.pdfIndexReviewDialog.addEventListener('click', (e) => {
+      if (e.target === elements.pdfIndexReviewDialog) {
+        closePdfIndexReviewDialog(e);
+      }
+    });
+    elements.pdfIndexReviewDialog.addEventListener('cancel', (e) => {
+      closePdfIndexReviewDialog(e);
+    });
+  }
+  if (elements.pdfReviewSelectAllBtn) {
+    elements.pdfReviewSelectAllBtn.addEventListener('click', () => {
+      elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox').forEach(cb => { cb.checked = true; });
+      updatePdfReviewStats(pdfIndexParsedEntries);
+    });
+  }
+  if (elements.pdfReviewDeselectAllBtn) {
+    elements.pdfReviewDeselectAllBtn.addEventListener('click', () => {
+      elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox').forEach(cb => { cb.checked = false; });
+      updatePdfReviewStats(pdfIndexParsedEntries);
+    });
   }
 }
 
@@ -2753,6 +3443,9 @@ function parseCSVRows(text) {
 // EVENT BINDINGS REGISTER
 // ==========================================================================
 function initEventBindings() {
+  // Initialize PDF Index Import bindings
+  initPdfIndexImportBindings();
+
   elements.sidebarToggleBtn.addEventListener('click', () => {
     document.querySelector('.app-layout').classList.toggle('sidebar-collapsed');
   });
@@ -3751,9 +4444,13 @@ function startFunFactsRotation() {
   if (funFactsIntervalId) clearInterval(funFactsIntervalId);
   
   const showRandomFact = () => {
+    const randIdx = Math.floor(Math.random() * CYBER_FACTS.length);
+    const fact = CYBER_FACTS[randIdx];
     if (elements.funFactText) {
-      const randIdx = Math.floor(Math.random() * CYBER_FACTS.length);
-      elements.funFactText.textContent = CYBER_FACTS[randIdx];
+      elements.funFactText.textContent = fact;
+    }
+    if (elements.pdfFunFactText) {
+      elements.pdfFunFactText.textContent = fact;
     }
   };
   
