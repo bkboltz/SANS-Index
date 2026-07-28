@@ -4904,7 +4904,7 @@ function renderPrintPreview() {
 
   const totalIndexPages = includeIndex ? indexPageSheets.length : 0;
 
-  // Acronym pagination — dynamically measured to fill maxColumnHeight (903px in 2-column mode, 950px in 1-column mode)
+  // Acronym pagination — dynamically measured using 2-column max page height (878px) all the time
   const sortedAcronyms = includeAcronyms
     ? [...activeAcronyms].sort((a, b) => String(a.acronym || '').localeCompare(String(b.acronym || ''), undefined, { sensitivity: 'base', numeric: true }))
     : [];
@@ -4929,12 +4929,14 @@ function renderPrintPreview() {
     return { acronym: ac, html, pixelHeight: 25 };
   });
 
+  const acronymColWidthPt = Math.floor((containerWidthPt - 4) / 2);
+
   if (measureContainer && measuredAcronyms.length > 0) {
     measureContainer.style.setProperty('padding', isBindingFriendly ? '18pt 18pt 18pt 36pt' : '18pt 18pt 18pt 18pt', 'important');
     measureContainer.innerHTML = `
       <div class="print-preview-2col-grid" style="width: ${containerWidthPt}pt !important; gap: 4pt !important;">
-        <div class="print-preview-2col-col" style="width: ${colWidthPt}pt !important; box-sizing: border-box !important;">
-          <table class="print-acronyms-table" style="table-layout: fixed; width: ${colWidthPt}pt !important;">
+        <div class="print-preview-2col-col" style="width: ${acronymColWidthPt}pt !important; box-sizing: border-box !important;">
+          <table class="print-acronyms-table" style="table-layout: fixed; width: ${acronymColWidthPt}pt !important;">
             ${acronymHeaderHtml}
             <tbody id="print-measure-ac-tbody"></tbody>
           </table>
@@ -4954,7 +4956,7 @@ function renderPrintPreview() {
     measureContainer.innerHTML = '';
   }
 
-  // Group acronym items into 2-column page sheets using 878px target column height
+  // Group acronym items into 2-column page sheets using 2-column max page height (878px) ALL THE TIME, regardless of index column setting
   const maxAcronymColumnHeight = 878;
   const acronymPageSheets = [];
   let acIdx = 0;
