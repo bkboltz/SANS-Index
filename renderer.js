@@ -84,8 +84,12 @@ const elements = {
   printColumnsSelect: document.getElementById('print-columns-select'),
   printOnlyContainer: document.getElementById('print-only-container'),
   printIncludeNotes: document.getElementById('print-include-notes'),
+  printIncludeNotesLabel: document.getElementById('print-include-notes-label'),
   printIncludeIndex: document.getElementById('print-include-index'),
   printIncludeAcronyms: document.getElementById('print-include-acronyms'),
+  printBindingFriendly: document.getElementById('print-binding-friendly'),
+  printMirrorMargins: document.getElementById('print-mirror-margins'),
+  printMirrorMarginsLabel: document.getElementById('print-mirror-margins-label'),
 
   // Delete confirmation dialog
   deleteConfirmDialog: document.getElementById('delete-confirm-dialog'),
@@ -4354,19 +4358,40 @@ function initEventBindings() {
 
   if (elements.printColumnsSelect) {
     elements.printColumnsSelect.value = localStorage.getItem('print_columns_count') || '1';
+    updateNotesColumnControlState();
     elements.printColumnsSelect.addEventListener('change', () => {
       localStorage.setItem('print_columns_count', elements.printColumnsSelect.value);
+      updateNotesColumnControlState();
       renderPrintPreview();
     });
   }
 
-  // Include Notes checkbox — persist and re-render preview when toggled
+  // Add Notes Column checkbox — persist and re-render preview when toggled (disabled in 2-column mode)
   if (elements.printIncludeNotes) {
     elements.printIncludeNotes.checked = localStorage.getItem('print_include_notes') !== 'false';
+    updateNotesColumnControlState();
     elements.printIncludeNotes.addEventListener('change', () => {
       localStorage.setItem('print_include_notes', elements.printIncludeNotes.checked);
       renderPrintPreview();
     });
+  }
+
+  function updateNotesColumnControlState() {
+    if (!elements.printColumnsSelect || !elements.printIncludeNotes || !elements.printIncludeNotesLabel) return;
+    const isTwoCol = elements.printColumnsSelect.value === '2';
+    if (isTwoCol) {
+      elements.printIncludeNotes.checked = false;
+      elements.printIncludeNotes.disabled = true;
+      elements.printIncludeNotesLabel.style.cursor = 'not-allowed';
+      elements.printIncludeNotesLabel.style.opacity = '0.5';
+      elements.printIncludeNotesLabel.style.color = 'var(--text-muted)';
+    } else {
+      elements.printIncludeNotes.disabled = false;
+      elements.printIncludeNotes.checked = localStorage.getItem('print_include_notes') !== 'false';
+      elements.printIncludeNotesLabel.style.cursor = 'pointer';
+      elements.printIncludeNotesLabel.style.opacity = '1';
+      elements.printIncludeNotesLabel.style.color = 'var(--text-primary)';
+    }
   }
 
   // Include Index checkbox — persist and re-render preview when toggled
@@ -4385,6 +4410,44 @@ function initEventBindings() {
       localStorage.setItem('print_include_acronyms', elements.printIncludeAcronyms.checked);
       renderPrintPreview();
     });
+  }
+
+  // 3-Hole Punch / Binding Friendly checkbox — persist, update mirror margin state, re-render preview
+  if (elements.printBindingFriendly) {
+    elements.printBindingFriendly.checked = localStorage.getItem('print_binding_friendly') === 'true';
+    updateMirrorMarginControlState();
+    elements.printBindingFriendly.addEventListener('change', () => {
+      localStorage.setItem('print_binding_friendly', elements.printBindingFriendly.checked);
+      updateMirrorMarginControlState();
+      renderPrintPreview();
+    });
+  }
+
+  // Double-sided Mirror Margins checkbox — persist and re-render preview
+  if (elements.printMirrorMargins) {
+    elements.printMirrorMargins.checked = localStorage.getItem('print_mirror_margins') === 'true';
+    elements.printMirrorMargins.addEventListener('change', () => {
+      localStorage.setItem('print_mirror_margins', elements.printMirrorMargins.checked);
+      renderPrintPreview();
+    });
+  }
+
+  function updateMirrorMarginControlState() {
+    if (!elements.printBindingFriendly || !elements.printMirrorMargins || !elements.printMirrorMarginsLabel) return;
+    const isBindingOn = elements.printBindingFriendly.checked;
+    if (isBindingOn) {
+      elements.printMirrorMargins.disabled = false;
+      elements.printMirrorMarginsLabel.style.cursor = 'pointer';
+      elements.printMirrorMarginsLabel.style.opacity = '1';
+      elements.printMirrorMarginsLabel.style.color = 'var(--text-primary)';
+    } else {
+      elements.printMirrorMargins.checked = false;
+      elements.printMirrorMargins.disabled = true;
+      elements.printMirrorMarginsLabel.style.cursor = 'not-allowed';
+      elements.printMirrorMarginsLabel.style.opacity = '0.5';
+      elements.printMirrorMarginsLabel.style.color = 'var(--text-muted)';
+      localStorage.setItem('print_mirror_margins', 'false');
+    }
   }
 
   // Confirm Deletion checkbox — persist state in localStorage
@@ -4556,7 +4619,10 @@ function openPrintPreview() {
 function renderPrintPreview() {
   const format = elements.printFormatSelect ? elements.printFormatSelect.value : 'standard';
   const cols = elements.printColumnsSelect ? elements.printColumnsSelect.value : (localStorage.getItem('print_columns_count') || '1');
-  const includeNotes = elements.printIncludeNotes ? elements.printIncludeNotes.checked : true;
+  
+  updateNotesColumnControlState();
+
+  const includeNotes = cols === '2' ? false : (elements.printIncludeNotes ? elements.printIncludeNotes.checked : true);
   const includeIndex = elements.printIncludeIndex ? elements.printIncludeIndex.checked : true;
   const activeEntries = state.entries.filter(entry => entry && entry.courseId === state.currentCourseId);
   const activeAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym && a.term);
@@ -4685,6 +4751,61 @@ function renderPrintPreview() {
     `;
   }
 
+  const isBindingFriendly = elements.printBindingFriendly ? elements.printBindingFriendly.checked : false;
+  const isMirrorMargins = isBindingFriendly && elements.printMirrorMargins ? elements.printMirrorMargins.checked : false;
+
+  // Inject or update dynamic @page margin stylesheet for window.print() and webContents.printToPDF
+  let dynamicStyle = document.getElementById('dynamic-print-page-style');
+  if (!dynamicStyle) {
+    dynamicStyle = document.createElement('style');
+    dynamicStyle.id = 'dynamic-print-page-style';
+    document.head.appendChild(dynamicStyle);
+  }
+
+  if (isBindingFriendly) {
+    if (isMirrorMargins) {
+      dynamicStyle.textContent = `
+        @media print {
+          @page:right {
+            size: Letter portrait !important;
+            margin-top: 0.25in !important;
+            margin-right: 0.25in !important;
+            margin-bottom: 0.25in !important;
+            margin-left: 0.5in !important;
+          }
+          @page:left {
+            size: Letter portrait !important;
+            margin-top: 0.25in !important;
+            margin-right: 0.5in !important;
+            margin-bottom: 0.25in !important;
+            margin-left: 0.25in !important;
+          }
+        }
+      `;
+    } else {
+      dynamicStyle.textContent = `
+        @media print {
+          @page {
+            size: Letter portrait !important;
+            margin-top: 0.25in !important;
+            margin-right: 0.25in !important;
+            margin-bottom: 0.25in !important;
+            margin-left: 0.5in !important;
+          }
+        }
+      `;
+    }
+  } else {
+    dynamicStyle.textContent = `
+      @media print {
+        @page {
+          size: Letter portrait !important;
+          margin: 0.25in !important;
+        }
+      }
+    `;
+  }
+
   // 2. Off-screen DOM Measurement Pass for 100% Pixel-Accurate Row Heights
   let measureContainer = document.getElementById('print-measure-container');
   if (!measureContainer) {
@@ -4693,12 +4814,18 @@ function renderPrintPreview() {
     document.body.appendChild(measureContainer);
   }
 
+  // Set measureContainer padding dynamically so inner printable width is 558pt (0.5in left margin) when binding friendly, or 576pt (0.25in margin) when standard
+  measureContainer.style.setProperty('padding', isBindingFriendly ? '18pt 18pt 18pt 36pt' : '18pt 18pt 18pt 18pt', 'important');
+
   const baseRowHeight = cols === '2' ? 15.5 : 17.5;
+  const containerWidthPt = isBindingFriendly ? 558 : 576;
+  const colWidthPt = cols === '2' ? Math.floor((containerWidthPt - 4) / 2) : containerWidthPt;
+
   if (cols === '2') {
     measureContainer.innerHTML = `
-      <div class="print-preview-2col-grid" style="width: 576pt !important; gap: 4pt !important;">
-        <div class="print-preview-2col-col" style="width: 286pt !important; box-sizing: border-box !important;">
-          <table class="index-table print-2col-table" style="table-layout: fixed; width: 286pt !important;">
+      <div class="print-preview-2col-grid" style="width: ${containerWidthPt}pt !important; gap: 4pt !important;">
+        <div class="print-preview-2col-col" style="width: ${colWidthPt}pt !important; box-sizing: border-box !important;">
+          <table class="index-table print-2col-table" style="table-layout: fixed; width: ${colWidthPt}pt !important;">
             ${tableHeaderHtml}
             <tbody id="print-measure-tbody"></tbody>
           </table>
@@ -4708,7 +4835,7 @@ function renderPrintPreview() {
   } else {
     measureContainer.innerHTML = `
       <div class="print-preview-page-container">
-        <table class="index-table" style="table-layout: fixed; width: 576pt !important;">
+        <table class="index-table" style="table-layout: fixed; width: ${containerWidthPt}pt !important;">
           ${tableHeaderHtml}
           <tbody id="print-measure-tbody"></tbody>
         </table>
@@ -4803,10 +4930,11 @@ function renderPrintPreview() {
   });
 
   if (measureContainer && measuredAcronyms.length > 0) {
+    measureContainer.style.setProperty('padding', isBindingFriendly ? '18pt 18pt 18pt 36pt' : '18pt 18pt 18pt 18pt', 'important');
     measureContainer.innerHTML = `
-      <div class="print-preview-2col-grid">
-        <div class="print-preview-2col-col">
-          <table class="print-acronyms-table" style="table-layout: fixed; width: 100%;">
+      <div class="print-preview-2col-grid" style="width: ${containerWidthPt}pt !important; gap: 4pt !important;">
+        <div class="print-preview-2col-col" style="width: ${colWidthPt}pt !important; box-sizing: border-box !important;">
+          <table class="print-acronyms-table" style="table-layout: fixed; width: ${colWidthPt}pt !important;">
             ${acronymHeaderHtml}
             <tbody id="print-measure-ac-tbody"></tbody>
           </table>
@@ -4914,8 +5042,12 @@ function renderPrintPreview() {
       `;
     }
 
+    let sheetClasses = 'print-preview-page-sheet';
+    if (isBindingFriendly) sheetClasses += ' binding-friendly';
+    if (isMirrorMargins) sheetClasses += ' mirror-margins';
+
     pagesHtml += `
-      <div class="print-preview-page-sheet">
+      <div class="${sheetClasses}">
         ${headerHtml}
         ${bodyHtml}
       </div>
@@ -4961,8 +5093,12 @@ function renderPrintPreview() {
       </div>
     `;
 
+    let sheetClasses = 'print-preview-page-sheet';
+    if (isBindingFriendly) sheetClasses += ' binding-friendly';
+    if (isMirrorMargins) sheetClasses += ' mirror-margins';
+
     pagesHtml += `
-      <div class="print-preview-page-sheet">
+      <div class="${sheetClasses}">
         ${headerHtml}
         ${bodyHtml}
       </div>

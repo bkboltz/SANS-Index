@@ -297,12 +297,6 @@ ipcMain.handle('save-pdf', async (event, options = {}) => {
     const pdfData = await mainWindow.webContents.printToPDF({
       pageSize: 'Letter',
       printBackground: true,
-      margin: {
-        top: 0.25,
-        bottom: 0.25,
-        left: 0.25,
-        right: 0.25
-      },
       preferCSSPageSize: true
     });
 
