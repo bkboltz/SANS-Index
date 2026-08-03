@@ -4399,6 +4399,79 @@ tr.auto-row:hover {
   break-inside: avoid !important;
 }
 
+/* ==========================================================================
+   AUTO UPDATE SYSTEM STYLING
+   ========================================================================== */
+.update-bell {
+  position: relative !important;
+  border-color: rgba(234, 179, 8, 0.4) !important;
+  background-color: rgba(234, 179, 8, 0.1) !important;
+  color: #eab308 !important;
+  animation: update-bell-pulse 2s infinite ease-in-out;
+  padding: 8px 12px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.update-bell:hover {
+  background-color: rgba(234, 179, 8, 0.2) !important;
+  border-color: rgba(234, 179, 8, 0.6) !important;
+  transform: translateY(-1px);
+}
+
+.update-bell:active {
+  transform: translateY(0);
+}
+
+.update-bell .bell-icon {
+  width: 18px;
+  height: 18px;
+  animation: update-bell-ring 3s infinite ease-in-out;
+}
+
+.update-bell .bell-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--bg-sidebar);
+}
+
+@keyframes update-bell-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(234, 179, 8, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
+  }
+}
+
+@keyframes update-bell-ring {
+  0%, 100% { transform: rotate(0); }
+  2% { transform: rotate(15deg); }
+  4% { transform: rotate(-13deg); }
+  6% { transform: rotate(11deg); }
+  8% { transform: rotate(-9deg); }
+  10% { transform: rotate(7deg); }
+  12% { transform: rotate(-5deg); }
+  14% { transform: rotate(3deg); }
+  16% { transform: rotate(-1deg); }
+  18% { transform: rotate(0); }
+}
+
+/* Helper to override display in dialog states */
+.hidden {
+  display: none !important;
+}
+
 
 
 

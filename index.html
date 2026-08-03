@@ -175,6 +175,10 @@
           <div id="quiz-new-questions-toast" class="bounce-tag hidden">
             New questions added!
           </div>
+          <button id="update-bell-btn" class="btn btn-secondary update-bell hidden" title="New Update Available" style="margin-right: 8px;">
+            <i data-lucide="bell" class="bell-icon"></i>
+            <span class="bell-badge"></span>
+          </button>
           <button id="print-index-btn" class="btn btn-primary" onclick="openPrintPreview()">
             <i data-lucide="printer"></i>
             <span>Print Index</span>
@@ -2355,6 +2359,74 @@
         <button type="button" id="confirm-acronym-review-btn" class="btn btn-accent">
           <span>Add Selected Acronyms</span>
         </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Update Dialog -->
+  <dialog id="update-dialog" class="custom-dialog" style="max-width: 500px;">
+    <div class="dialog-content">
+      <!-- Title Area -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #eab308; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="sparkles"></i>
+          <span>Update Available</span>
+        </h3>
+        <button type="button" id="update-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">&times;</button>
+      </div>
+
+      <!-- Update Initial View -->
+      <div id="update-info-view">
+        <p style="margin: 0 0 12px 0; font-size: 0.9rem; color: var(--text-primary); line-height: 1.45;">
+          A new version of <strong>SANS Study Indexer</strong> is available. Would you like to update now?
+        </p>
+
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px; font-weight: 600;">Recent changes:</div>
+          <div id="update-changes-list" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; max-height: 150px; overflow-y: auto; font-size: 0.8rem; line-height: 1.4; color: var(--text-secondary);">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" id="update-later-btn" class="btn btn-secondary">Remind Me Later</button>
+          <button type="button" id="update-now-btn" class="btn btn-accent">Update Now</button>
+        </div>
+      </div>
+
+      <!-- Update Warning View (Hidden by default) -->
+      <div id="update-warning-view" class="hidden">
+        <div style="background: rgba(234, 179, 8, 0.1); border-left: 4px solid #eab308; padding: 12px; border-radius: var(--radius-sm); margin-bottom: 16px;">
+          <div style="font-weight: bold; color: #eab308; font-size: 0.9rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i>
+            <span>Restart Warning</span>
+          </div>
+          <p style="margin: 0; font-size: 0.82rem; color: var(--text-primary); line-height: 1.4;">
+            The program will temporarily close and restart automatically to apply the update.
+          </p>
+        </div>
+
+        <p style="margin: 0 0 20px 0; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45;">
+          <strong>All your data is completely safe.</strong> SANS Study Indexer automatically saves your courses, books, entries, and acronyms locally in real-time, so no data will be lost during the restart.
+        </p>
+
+        <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" id="update-warning-back-btn" class="btn btn-secondary">Back</button>
+          <button type="button" id="update-confirm-btn" class="btn btn-accent">Confirm & Restart</button>
+        </div>
+      </div>
+
+      <!-- Update Progress View (Hidden by default) -->
+      <div id="update-progress-view" class="hidden">
+        <p id="update-progress-text" style="margin: 0 0 12px 0; font-size: 0.85rem; color: var(--text-primary); line-height: 1.45; text-align: center;">
+          Downloading and installing updates...
+        </p>
+        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 16px;">
+          <div id="update-progress-bar" style="width: 0%; height: 100%; background: #2dd4bf; transition: width 0.3s ease;"></div>
+        </div>
+        <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted); text-align: center;">
+          Please do not close the application.
+        </p>
       </div>
     </div>
   </dialog>

@@ -351,7 +351,22 @@ const elements = {
   wizardPrevBtn: document.getElementById('wizard-prev-btn'),
   wizardNextBtn: document.getElementById('wizard-next-btn'),
   wizardProgressBar: document.getElementById('wizard-progress-bar'),
-  autoIndexAddBookBtn: document.getElementById('auto-index-add-book-btn')
+  autoIndexAddBookBtn: document.getElementById('auto-index-add-book-btn'),
+
+  // Auto update dialog and bell elements
+  updateDialog: document.getElementById('update-dialog'),
+  updateCloseX: document.getElementById('update-close-x'),
+  updateInfoView: document.getElementById('update-info-view'),
+  updateChangesList: document.getElementById('update-changes-list'),
+  updateLaterBtn: document.getElementById('update-later-btn'),
+  updateNowBtn: document.getElementById('update-now-btn'),
+  updateWarningView: document.getElementById('update-warning-view'),
+  updateWarningBackBtn: document.getElementById('update-warning-back-btn'),
+  updateConfirmBtn: document.getElementById('update-confirm-btn'),
+  updateProgressView: document.getElementById('update-progress-view'),
+  updateProgressText: document.getElementById('update-progress-text'),
+  updateProgressBar: document.getElementById('update-progress-bar'),
+  updateBellBtn: document.getElementById('update-bell-btn')
 };
 
 // Application State Store
@@ -448,6 +463,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initial Render
   renderAll();
   checkExamDateAlerts();
+
+  // Initialize Auto-Update functionality
+  initUpdateEvents();
+  checkForUpdatesOnStartup();
 });
 
 // Save state to disk
@@ -458,6 +477,144 @@ async function saveState() {
     elements.lastSaveTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   } else {
     alert("Error saving data locally: " + (result ? result.error : 'Unknown error'));
+  }
+}
+
+// ==========================================================================
+// GITHUB AUTO-UPDATE SYSTEM FLOW
+// ==========================================================================
+let updateChanges = [];
+
+async function checkForUpdatesOnStartup() {
+  try {
+    // False passes the testMode flag to check for real updates on GitHub.
+    const updateInfo = await window.api.checkForUpdates(false);
+    if (updateInfo && updateInfo.updateAvailable) {
+      updateChanges = updateInfo.recentChanges || [];
+      showUpdateDialog();
+    }
+  } catch (err) {
+    console.error("Failed to check for updates on startup:", err);
+  }
+}
+
+function showUpdateDialog() {
+  if (!elements.updateDialog) return;
+
+  // Reset dialogue state to step 1
+  elements.updateInfoView.classList.remove('hidden');
+  elements.updateWarningView.classList.add('hidden');
+  elements.updateProgressView.classList.add('hidden');
+  
+  // Populate the changes list
+  if (elements.updateChangesList) {
+    elements.updateChangesList.innerHTML = '';
+    if (updateChanges.length > 0) {
+      const ul = document.createElement('ul');
+      ul.style.margin = '0';
+      ul.style.paddingLeft = '18px';
+      updateChanges.forEach(change => {
+        const li = document.createElement('li');
+        li.textContent = change;
+        li.style.marginBottom = '4px';
+        ul.appendChild(li);
+      });
+      elements.updateChangesList.appendChild(ul);
+    } else {
+      elements.updateChangesList.textContent = 'No changelog details available.';
+    }
+  }
+
+  // Open the native HTML dialog
+  elements.updateDialog.showModal();
+  lucide.createIcons(); // Initialize dialog icons
+}
+
+function initUpdateEvents() {
+  // Close buttons
+  if (elements.updateCloseX) {
+    elements.updateCloseX.addEventListener('click', () => {
+      elements.updateDialog.close();
+      showUpdateBell();
+    });
+  }
+  if (elements.updateLaterBtn) {
+    elements.updateLaterBtn.addEventListener('click', () => {
+      elements.updateDialog.close();
+      showUpdateBell();
+    });
+  }
+
+  // Info view -> Warning view
+  if (elements.updateNowBtn) {
+    elements.updateNowBtn.addEventListener('click', () => {
+      elements.updateInfoView.classList.add('hidden');
+      elements.updateWarningView.classList.remove('hidden');
+      lucide.createIcons();
+    });
+  }
+
+  // Warning view -> Info view (Back)
+  if (elements.updateWarningBackBtn) {
+    elements.updateWarningBackBtn.addEventListener('click', () => {
+      elements.updateWarningView.classList.add('hidden');
+      elements.updateInfoView.classList.remove('hidden');
+    });
+  }
+
+  // Confirm update execution
+  if (elements.updateConfirmBtn) {
+    elements.updateConfirmBtn.addEventListener('click', async () => {
+      elements.updateWarningView.classList.add('hidden');
+      elements.updateProgressView.classList.remove('hidden');
+      
+      let progress = 0;
+      if (elements.updateProgressBar) elements.updateProgressBar.style.width = '0%';
+      if (elements.updateProgressText) elements.updateProgressText.textContent = "Downloading updates from GitHub...";
+
+      const progressInterval = setInterval(() => {
+        progress += 10;
+        if (progress <= 90) {
+          if (elements.updateProgressBar) elements.updateProgressBar.style.width = `${progress}%`;
+          if (progress === 40 && elements.updateProgressText) {
+            elements.updateProgressText.textContent = "Applying changes and verifying build...";
+          } else if (progress === 70 && elements.updateProgressText) {
+            elements.updateProgressText.textContent = "Finalizing update installation...";
+          }
+        }
+      }, 250);
+
+      try {
+        const result = await window.api.performUpdate(false);
+        clearInterval(progressInterval);
+        
+        if (result && result.success) {
+          if (elements.updateProgressBar) elements.updateProgressBar.style.width = '100%';
+          if (elements.updateProgressText) elements.updateProgressText.textContent = "Restarting app...";
+        } else {
+          alert("Update failed: " + (result ? result.error : "Unknown error"));
+          showUpdateDialog();
+        }
+      } catch (err) {
+        clearInterval(progressInterval);
+        console.error("Failed during update:", err);
+        alert("Update error: " + err.message);
+        showUpdateDialog();
+      }
+    });
+  }
+
+  // Bell icon click -> reopen dialog
+  if (elements.updateBellBtn) {
+    elements.updateBellBtn.addEventListener('click', () => {
+      showUpdateDialog();
+    });
+  }
+}
+
+function showUpdateBell() {
+  if (elements.updateBellBtn) {
+    elements.updateBellBtn.classList.remove('hidden');
   }
 }
 

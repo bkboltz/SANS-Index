@@ -2160,3 +2160,82 @@ ${JSON.stringify(batchEntries, null, 2)}
     return { success: false, error: err.message };
   }
 });
+
+// ==========================================================================
+// GITHUB UPDATE & AUTO-RESTART SYSTEM
+// ==========================================================================
+const FORCE_TEST_UPDATE = false; // Switch to false for actual remote git checks
+
+ipcMain.handle('check-for-updates', async (event, testMode = false) => {
+  const isTest = testMode || FORCE_TEST_UPDATE;
+  if (isTest) {
+    return {
+      updateAvailable: true,
+      recentChanges: [
+        "Feature: Seamless automatic updates via Git (simulated)",
+        "UI: Native blurred backdrop dialog centering for update prompt",
+        "UI: Beautiful glowing notification bell if update is postponed",
+        "System: Auto-restart and app relaunch sequence"
+      ]
+    };
+  }
+
+  try {
+    // 1. Fetch remote changes
+    // Check if git is available
+    await execPromise('git --version');
+    
+    // Fetch from origin
+    await execPromise('git fetch origin main');
+
+    // 2. Check if we are behind remote branch
+    const { stdout: localHead } = await execPromise('git rev-parse HEAD');
+    const { stdout: remoteHead } = await execPromise('git rev-parse origin/main');
+
+    if (localHead.trim() !== remoteHead.trim()) {
+      // 3. Get list of recent changes (remote commits since local HEAD)
+      const { stdout: diffLog } = await execPromise('git log HEAD..origin/main --oneline');
+      const recentChanges = diffLog.trim().split('\n').filter(Boolean).map(line => {
+        // Strip out SHA from start of line
+        return line.replace(/^[a-f0-9]+\s+/, '');
+      });
+
+      return {
+        updateAvailable: true,
+        recentChanges: recentChanges.length > 0 ? recentChanges : ["Miscellaneous updates"]
+      };
+    }
+
+    return { updateAvailable: false };
+  } catch (error) {
+    logDebug(`[Update Checker] Git update check failed: ${error.message}`);
+    return { updateAvailable: false, error: error.message };
+  }
+});
+
+ipcMain.handle('perform-update', async (event, testMode = false) => {
+  const isTest = testMode || FORCE_TEST_UPDATE;
+  if (isTest) {
+    // Simulate update taking 2.5 seconds
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    // Relaunch app
+    app.relaunch();
+    app.exit(0);
+    return { success: true };
+  }
+
+  try {
+    // Run git pull
+    const { stdout, stderr } = await execPromise('git pull');
+    logDebug(`[Update Pull] Git pull output: ${stdout}\nStderr: ${stderr}`);
+    
+    // Relaunch app
+    app.relaunch();
+    app.exit(0);
+    return { success: true };
+  } catch (error) {
+    logDebug(`[Update Pull] Failed to pull changes: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+});
+

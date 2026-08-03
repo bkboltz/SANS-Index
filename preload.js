@@ -36,6 +36,8 @@ contextBridge.exposeInMainWorld('api', {
   onAutoIndexProgress: (callback) => {
     ipcRenderer.on('auto-index-progress', (event, progress) => callback(progress));
   },
+  checkForUpdates: (testMode) => ipcRenderer.invoke('check-for-updates', testMode),
+  performUpdate: (testMode) => ipcRenderer.invoke('perform-update', testMode),
   removeListener: (channel) => {
     ipcRenderer.removeAllListeners(channel);
   }
