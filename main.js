@@ -840,128 +840,249 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
   });
 });
 
-// Helper: Curate Index with Gemini AI
-async function curateIndexWithGemini(entries, geminiApiKey, event, geminiModel) {
-  logDebug(`[Gemini Curation] Initiating with ${entries.length} candidate terms... Model: ${geminiModel || 'gemini-flash-latest'}, Key length: ${geminiApiKey ? geminiApiKey.length : 0}`);
+// Helper: Curate Index with Gemini AI (Chunked Dynamic Concurrency Engine)
+async function curateIndexWithGemini(entries, geminiApiKey, event, geminiModel, customPrompt, options = {}) {
+  const isRetry = options && options.isRetry && Array.isArray(options.failedChunks) && options.failedChunks.length > 0;
+  logDebug(`[Gemini Curation] Initiating with ${entries ? entries.length : 0} candidate terms... Model: ${geminiModel || 'gemini-3.7-flash'}, Key length: ${geminiApiKey ? geminiApiKey.length : 0}, isRetry: ${isRetry}`);
 
-  const prompt = `You are a SANS Cybersecurity course index curator. Your job is to filter a list of candidate index terms extracted from a SANS textbook.
+  const defaultInstruction = `You are a SANS Cybersecurity course index curator. Your job is to filter a list of candidate index terms extracted from a SANS textbook.
 Review the JSON array of terms below. Filter out noise terms (generic English words, verbs, adjectives, prepositions, numbers, and adverbs on their own). Keep only distinct technical terms, security concepts, tools, protocols, registry paths, specific command line utilities, file names, ports, and important techniques.
-Also, if there are minor spelling/capitalization variations of the same term (e.g. "active directory", "Active Directory"), merge them by keeping the capitalized proper noun form and combining their pages into a single comma-separated list of pages (remove duplicates and sort pages in ascending numeric order).
+Also, if there are minor spelling/capitalization variations of the same term (e.g. "active directory", "Active Directory"), merge them by keeping the capitalized proper noun form and combining their pages into a single comma-separated list of pages (remove duplicates and sort pages in ascending numeric order).`;
+
+  const systemInstruction = (customPrompt && customPrompt.trim()) ? customPrompt.trim() : defaultInstruction;
+
+  const chunks = [];
+  const chunkPreviousAttempts = [];
+
+  if (isRetry) {
+    options.failedChunks.forEach((fc) => {
+      if (fc.rawEntries && Array.isArray(fc.rawEntries)) {
+        chunks.push(fc.rawEntries);
+        const prev = typeof fc.attemptsCompleted === 'number' ? fc.attemptsCompleted : 5;
+        chunkPreviousAttempts.push(prev);
+      }
+    });
+  } else {
+    if (!entries || entries.length === 0) {
+      return { entries: [], failedChunks: [], error: null };
+    }
+    const chunkSize = 400;
+    for (let i = 0; i < entries.length; i += chunkSize) {
+      chunks.push(entries.slice(i, i + chunkSize));
+      chunkPreviousAttempts.push(0);
+    }
+  }
+
+  if (chunks.length === 0) {
+    return { entries: [], failedChunks: [], error: null };
+  }
+
+  logDebug(`[Gemini Curation] Split candidate terms into ${chunks.length} batch(es) (size: 400).`);
+
+  const chunkStatuses = chunks.map((c, idx) => {
+    const prevAttempts = chunkPreviousAttempts[idx];
+    const chunkMaxAttempts = prevAttempts + 5;
+    const origIndex = (isRetry && options.failedChunks[idx]) ? options.failedChunks[idx].chunkIndex : (idx + 1);
+    const origTotal = (isRetry && options.failedChunks[idx]) ? options.failedChunks[idx].totalChunks : chunks.length;
+    return {
+      chunkIndex: origIndex,
+      totalChunks: origTotal,
+      termCount: c.length,
+      status: 'pending',
+      attempt: prevAttempts,
+      maxAttempts: chunkMaxAttempts,
+      message: 'Waiting in queue...'
+    };
+  });
+
+  const allCuratedEntries = [];
+  const failedChunks = [];
+  const selectedModel = geminiModel || 'gemini-3.7-flash';
+  const concurrencyLimit = 3;
+
+  const emitApiDebugLog = (msg) => {
+    logDebug(msg);
+    if (event && event.sender) {
+      const timeStr = new Date().toLocaleTimeString();
+      try {
+        event.sender.send('api-debug-log', `[${timeStr}] ${msg}`);
+      } catch (e) {}
+    }
+  };
+
+  emitApiDebugLog(`[Curation Init] Model: ${selectedModel} | Batches: ${chunks.length} | Retry Mode: ${isRetry}`);
+
+  const emitProgress = () => {
+    if (event) {
+      const completedCount = chunkStatuses.filter(s => s.status === 'success' || s.status === 'failed').length;
+      event.sender.send('auto-index-progress', {
+        step: 'curating',
+        currentChunk: completedCount,
+        totalChunks: chunks.length,
+        chunkStatuses: chunkStatuses,
+        message: `Curating candidate terms in parallel batches (${concurrencyLimit} parallel max)...`
+      });
+    }
+  };
+
+  const processSingleChunk = async (cIdx) => {
+    const chunkEntries = chunks[cIdx];
+    const statusObj = chunkStatuses[cIdx];
+    const prevAttempts = chunkPreviousAttempts[cIdx];
+    const chunkMaxAttempts = prevAttempts + 5;
+
+    statusObj.status = 'processing';
+    emitProgress();
+
+    const prompt = `${systemInstruction}
 
 Input list:
-${JSON.stringify(entries)}
+${JSON.stringify(chunkEntries)}
 
 Return a JSON array of objects with the exact same structure as the input:
 [
   { "topic": "...", "pages": "...", "notes": "", "source": "auto" }
 ]`;
 
-  const maxAttempts = 5;
-  let attempt = 0;
+    let chunkSuccess = false;
 
-  while (attempt < maxAttempts) {
-    attempt++;
-    logDebug(`[Gemini Curation] Attempt ${attempt}/${maxAttempts}...`);
+    for (let attempt = prevAttempts + 1; attempt <= chunkMaxAttempts; attempt++) {
+      statusObj.attempt = attempt;
+      statusObj.maxAttempts = chunkMaxAttempts;
+      statusObj.message = `Retrying (${selectedModel})... Attempt ${attempt}/${chunkMaxAttempts}`;
+      emitProgress();
 
-    if (event) {
-      event.sender.send('auto-index-progress', { 
-        step: 'curating', 
-        attempt: attempt, 
-        maxAttempts: maxAttempts,
-        isOverloaded: attempt > 1
-      });
-    }
+      emitApiDebugLog(`[POST] Calling models/${selectedModel}:generateContent (Batch ${statusObj.chunkIndex}/${statusObj.totalChunks}, Attempt ${attempt}/${chunkMaxAttempts})...`);
 
-    try {
-      logDebug(`[Gemini Curation] Posting to Gemini model API...`);
-      const model = geminiModel || 'gemini-flash-latest';
-      const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { 
-            responseMimeType: "application/json"
-          }
-        })
-      });
+      try {
+        const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          })
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        logDebug(`[Gemini Curation] API returned error: ${response.status} - ${errorText}`);
-        let parsedError = errorText;
-        try {
-          const errorJson = JSON.parse(errorText);
-          if (errorJson.error && errorJson.error.message) {
-            parsedError = errorJson.error.message;
-          }
-        } catch (e) {}
-        throw new Error(`Gemini API Error: ${parsedError}`);
-      }
+        if (!response.ok) {
+          const errorText = await response.text();
+          let parsedError = errorText;
+          try {
+            const errorJson = JSON.parse(errorText);
+            if (errorJson.error && errorJson.error.message) {
+              parsedError = errorJson.error.message;
+            }
+          } catch (e) {}
 
-      const resData = await response.json();
-      if (!resData.candidates || resData.candidates.length === 0) {
-        logDebug(`[Gemini Curation] API returned empty candidates array`);
-        throw new Error('Gemini API returned empty response candidates.');
-      }
-
-      const responseText = resData.candidates[0].content.parts[0].text;
-      logDebug(`[Gemini Curation] Received content response text length: ${responseText ? responseText.length : 0}`);
-      const curatedEntries = JSON.parse(responseText);
-
-      if (Array.isArray(curatedEntries)) {
-        logDebug(`[Gemini Curation] Curation successful! Returned ${curatedEntries.length} curated terms.`);
-        return { entries: curatedEntries, error: null };
-      } else if (curatedEntries && Array.isArray(curatedEntries.filtered_terms)) {
-        logDebug(`[Gemini Curation] Curation successful (filtered_terms)! Returned ${curatedEntries.filtered_terms.length} curated terms.`);
-        return { entries: curatedEntries.filtered_terms, error: null };
-      } else {
-        logDebug(`[Gemini Curation] Warning: Unexpected Gemini JSON structure: ${JSON.stringify(curatedEntries).substring(0, 200)}`);
-        return { entries: entries, error: "Unexpected JSON structure returned from AI." };
-      }
-
-    } catch (error) {
-      logDebug(`[Gemini Curation] Attempt ${attempt} failed: ${error.message}`);
-      
-      const errLower = error.message.toLowerCase();
-      const isHighDemand = errLower.includes("high demand") || 
-                           errLower.includes("quota exceeded") || 
-                           errLower.includes("resource has been exhausted") || 
-                           errLower.includes("429") || 
-                           errLower.includes("503") || 
-                           errLower.includes("rate limit") || 
-                           errLower.includes("volume of traffic");
-
-      if (isHighDemand && attempt < maxAttempts) {
-        const waitTimeSeconds = 15 * Math.pow(2, attempt - 1);
-        logDebug(`[Gemini Curation] High demand detected. Waiting ${waitTimeSeconds} seconds before retrying (Attempt ${attempt + 1}/${maxAttempts})...`);
-        
-        for (let remaining = waitTimeSeconds; remaining > 0; remaining--) {
-          if (event) {
-            event.sender.send('auto-index-progress', { 
-              step: 'curating', 
-              attempt: attempt + 1, 
-              maxAttempts: maxAttempts,
-              isOverloaded: true,
-              message: `Gemini models are experiencing high volumes of traffic right now. Retrying in ${remaining}s... 🤙` 
-            });
-          }
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          const errSummary = `HTTP ${response.status}: ${parsedError}`;
+          emitApiDebugLog(`❌ [API Error] Batch ${statusObj.chunkIndex}/${statusObj.totalChunks} returned ${errSummary}`);
+          throw new Error(errSummary);
         }
-        continue;
-      }
 
-      let finalErrorMessage = error.message;
-      if (attempt === maxAttempts && isHighDemand) {
-        finalErrorMessage = "We couldn't query Gemini at this time, try again later when there is less traffic.";
-      }
+        const resData = await response.json();
+        if (!resData.candidates || resData.candidates.length === 0) {
+          emitApiDebugLog(`⚠️ [API Warning] Batch ${statusObj.chunkIndex}/${statusObj.totalChunks} returned 200 OK but empty candidates array.`);
+          throw new Error('Gemini API returned empty response candidates.');
+        }
 
-      if (event) {
-        event.sender.send('auto-index-progress', { step: 'warning', message: `AI Curation failed: ${finalErrorMessage}. Returning raw list...` });
+        const responseText = resData.candidates[0].content.parts[0].text;
+        const parsedResult = JSON.parse(responseText);
+        let items = Array.isArray(parsedResult) ? parsedResult : (parsedResult && Array.isArray(parsedResult.filtered_terms) ? parsedResult.filtered_terms : null);
+
+        if (Array.isArray(items)) {
+          allCuratedEntries.push(...items);
+          chunkSuccess = true;
+          statusObj.status = 'success';
+          statusObj.message = `Completed (${items.length} kept)`;
+          statusObj.lastErrorMessage = null;
+          emitApiDebugLog(`✅ [HTTP 200] Batch ${statusObj.chunkIndex}/${statusObj.totalChunks} succeeded on Attempt ${attempt}/${chunkMaxAttempts}! Returned ${items.length} curated terms.`);
+          emitProgress();
+          break;
+        } else {
+          throw new Error("Unexpected JSON structure returned from AI.");
+        }
+
+      } catch (error) {
+        statusObj.lastErrorMessage = error.message;
+        const errLower = error.message.toLowerCase();
+        const isHighDemand = errLower.includes("high demand") || 
+                             errLower.includes("quota exceeded") || 
+                             errLower.includes("resource has been exhausted") || 
+                             errLower.includes("429") || 
+                             errLower.includes("503") || 
+                             errLower.includes("rate limit") || 
+                             errLower.includes("volume of traffic");
+
+        if (isHighDemand && attempt < chunkMaxAttempts) {
+          const waitTimeSeconds = Math.min(15 * Math.pow(2, (attempt - prevAttempts) - 1), 60);
+          for (let remaining = waitTimeSeconds; remaining > 0; remaining--) {
+            statusObj.message = `Rate Limit/Traffic Wait (${remaining}s)... (Attempt ${attempt + 1}/${chunkMaxAttempts})`;
+            emitProgress();
+            await new Promise(r => setTimeout(r, 1000));
+          }
+        } else if (attempt < chunkMaxAttempts) {
+          await new Promise(r => setTimeout(r, 3000));
+        }
       }
-      return { entries: entries, error: finalErrorMessage };
     }
+
+    if (!chunkSuccess) {
+      statusObj.status = 'failed';
+      statusObj.message = statusObj.lastErrorMessage || `Failed after ${chunkMaxAttempts} attempts.`;
+      const originalFc = isRetry ? options.failedChunks[cIdx] : null;
+      failedChunks.push({
+        chunkIndex: originalFc ? originalFc.chunkIndex : (cIdx + 1),
+        totalChunks: originalFc ? originalFc.totalChunks : chunks.length,
+        rawEntries: chunkEntries,
+        error: statusObj.lastErrorMessage,
+        attemptsCompleted: chunkMaxAttempts
+      });
+      emitApiDebugLog(`⛔ [BATCH FAILED] Batch ${statusObj.chunkIndex}/${statusObj.totalChunks} failed after ${chunkMaxAttempts} attempts: ${statusObj.lastErrorMessage}`);
+      emitProgress();
+    }
+  };
+
+  // True Dynamic Concurrency Worker Pool (max concurrencyLimit active workers)
+  let nextChunkIndex = 0;
+
+  const worker = async () => {
+    while (nextChunkIndex < chunks.length) {
+      const currentIndex = nextChunkIndex++;
+      await processSingleChunk(currentIndex);
+    }
+  };
+
+  const activeWorkerPool = [];
+  const workerCount = Math.min(concurrencyLimit, chunks.length);
+  for (let w = 0; w < workerCount; w++) {
+    activeWorkerPool.push((async () => {
+      // Stagger initial worker launch by 250ms to prevent API collisions
+      await new Promise(r => setTimeout(r, w * 250));
+      await worker();
+    })());
   }
+
+  await Promise.all(activeWorkerPool);
+
+  if (event) {
+    event.sender.send('auto-index-progress', {
+      step: 'curating',
+      currentChunk: chunks.length,
+      totalChunks: chunks.length,
+      chunkStatuses: chunkStatuses,
+      message: failedChunks.length > 0 
+        ? `Curation finished with ${failedChunks.length} failed batch(es).` 
+        : `Curation complete! All ${chunks.length} batches succeeded.`
+    });
+  }
+
+  return {
+    entries: allCuratedEntries,
+    failedChunks: failedChunks,
+    error: failedChunks.length > 0 ? `${failedChunks.length} of ${chunks.length} batch(es) failed to curate due to rate limits or API errors.` : null
+  };
 }
 
 // Helper: Curate Index with Local SLM Engine
@@ -1432,9 +1553,10 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         finalEntries = curationResult.entries;
         curationError = curationResult.error;
       } else if (geminiApiKey) {
-        const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
+        const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel, settings.geminiPrompt || null);
         finalEntries = curationResult.entries;
         curationError = curationResult.error;
+        var failedChunks = curationResult.failedChunks || [];
       }
     }
 
@@ -1481,7 +1603,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
       }
     } catch (e) {}
     
-    return { success: true, entries: finalEntries, curationError, quizQuestions, quizError, quizGenerated };
+    return { success: true, entries: finalEntries, curationError, failedChunks: typeof failedChunks !== 'undefined' ? failedChunks : [], quizQuestions, quizError, quizGenerated };
     
   } catch (error) {
     console.error('Auto-indexing pipeline error:', error);

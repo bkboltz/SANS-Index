@@ -198,6 +198,8 @@ const elements = {
   dlModalCloseX: document.getElementById('dl-modal-close-x'),
   localSlmCustomPrompt: document.getElementById('local-slm-custom-prompt'),
   resetLocalPromptBtn: document.getElementById('reset-local-prompt-btn'),
+  geminiCustomPrompt: document.getElementById('gemini-custom-prompt'),
+  resetGeminiPromptBtn: document.getElementById('reset-gemini-prompt-btn'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
@@ -216,6 +218,12 @@ const elements = {
   aiCurationConfirmModal: document.getElementById('ai-curation-confirm-modal'),
   aiCurationCancelBtn: document.getElementById('ai-curation-cancel-btn'),
   aiCurationContinueBtn: document.getElementById('ai-curation-continue-btn'),
+  partialCurationAlert: document.getElementById('partial-curation-alert'),
+  partialSuccessCount: document.getElementById('partial-success-count'),
+  partialFailedCount: document.getElementById('partial-failed-count'),
+  partialAcceptCleanedBtn: document.getElementById('partial-accept-cleaned-btn'),
+  partialIncludeRawBtn: document.getElementById('partial-include-raw-btn'),
+  partialRetryFailedBtn: document.getElementById('partial-retry-failed-btn'),
   funFactText: document.getElementById('fun-fact-text'),
   autoIndexFname: document.getElementById('auto-index-fname'),
   autoIndexLname: document.getElementById('auto-index-lname'),
@@ -404,6 +412,7 @@ let pendingAcronymCandidates = [];
 // Global temporary variables for generated quizzes
 let lastGeneratedQuiz = null;
 let lastQuizError = null;
+let lastFailedChunks = [];
 
 // ==========================================================================
 // APP INITIALIZATION & SYNC
@@ -438,7 +447,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     if (state.courses.length > 0) {
-      state.currentCourseId = state.courses[0].id;
+      const savedCourseId = localStorage.getItem('last_active_course_id') || loadedData.currentCourseId;
+      const validCourse = state.courses.find(c => c && c.id === savedCourseId);
+      if (validCourse) {
+        state.currentCourseId = validCourse.id;
+      } else {
+        state.currentCourseId = state.courses[0].id;
+      }
     }
   }
 
@@ -618,6 +633,59 @@ function showUpdateBell() {
   }
 }
 
+const DEFAULT_GEMINI_PROMPT = `You are a SANS Cybersecurity course index curator. Your job is to filter a list of candidate index terms extracted from a SANS textbook.
+Review the JSON array of terms below. Filter out noise terms (generic English words, verbs, adjectives, prepositions, numbers, and adverbs on their own). Keep only distinct technical terms, security concepts, tools, protocols, registry paths, specific command line utilities, file names, ports, and important techniques.
+Also, if there are minor spelling/capitalization variations of the same term (e.g. "active directory", "Active Directory"), merge them by keeping the capitalized proper noun form and combining their pages into a single comma-separated list of pages (remove duplicates and sort pages in ascending numeric order).`;
+
+function loadCourseGeminiPrompt() {
+  if (!elements.geminiCustomPrompt) return;
+
+  const currentCourse = state.courses.find(c => c && c.id === state.currentCourseId);
+  if (!currentCourse) {
+    elements.geminiCustomPrompt.value = DEFAULT_GEMINI_PROMPT;
+    return;
+  }
+
+  if (typeof currentCourse.geminiPrompt === 'string' && currentCourse.geminiPrompt.trim() !== '') {
+    elements.geminiCustomPrompt.value = currentCourse.geminiPrompt;
+    return;
+  }
+
+  const savedCoursePrompt = localStorage.getItem(`gemini_prompt_${currentCourse.id}`);
+  if (savedCoursePrompt !== null && savedCoursePrompt.trim() !== '') {
+    currentCourse.geminiPrompt = savedCoursePrompt;
+    elements.geminiCustomPrompt.value = savedCoursePrompt;
+    return;
+  }
+
+  elements.geminiCustomPrompt.value = DEFAULT_GEMINI_PROMPT;
+}
+
+function saveCourseGeminiPrompt(promptValue) {
+  const currentCourse = state.courses.find(c => c && c.id === state.currentCourseId);
+  if (!currentCourse) return;
+
+  currentCourse.geminiPrompt = promptValue;
+  if (currentCourse.id) {
+    localStorage.setItem(`gemini_prompt_${currentCourse.id}`, promptValue);
+  }
+  saveState();
+}
+
+function resetCourseGeminiPrompt() {
+  const currentCourse = state.courses.find(c => c && c.id === state.currentCourseId);
+  if (currentCourse) {
+    delete currentCourse.geminiPrompt;
+    if (currentCourse.id) {
+      localStorage.removeItem(`gemini_prompt_${currentCourse.id}`);
+    }
+  }
+  if (elements.geminiCustomPrompt) {
+    elements.geminiCustomPrompt.value = DEFAULT_GEMINI_PROMPT;
+  }
+  saveState();
+}
+
 // ==========================================================================
 // RENDERING FUNCTIONS (DASHBOARD & SIDEBAR)
 // ==========================================================================
@@ -628,6 +696,7 @@ function renderAll() {
   renderAcronyms();
   renderStats();
   renderTodos();
+  loadCourseGeminiPrompt();
 }
 
 function renderCourses() {
@@ -1192,12 +1261,14 @@ function renderEntries() {
           </div>
         </td>
         <td class="col-actions no-print">
-          <button class="icon-btn-small success save-inline-entry" data-id="${entry.id}" title="Save Changes" style="color: var(--accent-light); background: none; border: none; cursor: pointer; padding: 4px;">
-            <i data-lucide="check"></i>
-          </button>
-          <button class="icon-btn-small secondary cancel-inline-entry" data-id="${entry.id}" title="Cancel Edit" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
-            <i data-lucide="x"></i>
-          </button>
+          <div class="action-buttons-wrapper">
+            <button class="icon-btn-small success save-inline-entry" data-id="${entry.id}" title="Save Changes" style="color: var(--accent-light); background: none; border: none; cursor: pointer; padding: 4px;">
+              <i data-lucide="check"></i>
+            </button>
+            <button class="icon-btn-small secondary cancel-inline-entry" data-id="${entry.id}" title="Cancel Edit" style="background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
         </td>
       `;
     } else {
@@ -1252,12 +1323,14 @@ function renderEntries() {
         <td class="col-topic">${highlightText(entry.topic, query)}${autoBadgeHtml}</td>
         <td class="col-notes">${entry.notes ? highlightText(formatNoteMarkup(entry.notes), query) : ''}</td>
         <td class="col-actions no-print">
-          <button class="icon-btn-small edit-entry" data-id="${entry.id}" title="Edit Entry">
-            <i data-lucide="edit-3"></i>
-          </button>
-          <button class="icon-btn-small danger delete-entry" data-id="${entry.id}" title="Delete Entry">
-            <i data-lucide="trash-2"></i>
-          </button>
+          <div class="action-buttons-wrapper">
+            <button class="icon-btn-small edit-entry" data-id="${entry.id}" title="Edit Entry">
+              <i data-lucide="edit-3"></i>
+            </button>
+            <button class="icon-btn-small danger delete-entry" data-id="${entry.id}" title="Delete Entry">
+              <i data-lucide="trash-2"></i>
+            </button>
+          </div>
         </td>
       `;
     }
@@ -4177,9 +4250,76 @@ function parseCSVRows(text) {
   return result.filter(r => r.length > 0 && r.some(cell => cell.trim() !== ''));
 }
 
-// ==========================================================================
-// EVENT BINDINGS REGISTER
-// ==========================================================================
+function updateChunkProgressConsole(progress) {
+  const container = document.getElementById('chunk-progress-container');
+  const summaryBadge = document.getElementById('chunk-progress-summary-badge');
+  const listView = document.getElementById('chunk-list-view');
+
+  if (!container || !listView) return;
+
+  if (progress.chunkStatuses && Array.isArray(progress.chunkStatuses) && progress.chunkStatuses.length > 0) {
+    container.classList.remove('hidden');
+    const total = progress.chunkStatuses.length;
+    const completed = progress.chunkStatuses.filter(s => s.status === 'success').length;
+    const failed = progress.chunkStatuses.filter(s => s.status === 'failed').length;
+
+    if (summaryBadge) {
+      summaryBadge.textContent = `${completed} of ${total} Batch(es) Completed${failed > 0 ? ` (${failed} failed)` : ''}`;
+      summaryBadge.style.color = failed > 0 ? '#f87171' : (completed === total ? '#4ade80' : '#38bdf8');
+    }
+
+    listView.innerHTML = '';
+    progress.chunkStatuses.forEach(s => {
+      const card = document.createElement('div');
+      card.style.cssText = `
+        padding: 7px 12px;
+        border-radius: 6px;
+        font-size: 0.76rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: ${s.status === 'success' ? 'rgba(34, 197, 94, 0.08)' : (s.status === 'failed' ? 'rgba(239, 68, 68, 0.1)' : (s.status === 'processing' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(255, 255, 255, 0.03)'))};
+        border: 1px solid ${s.status === 'success' ? 'rgba(34, 197, 94, 0.25)' : (s.status === 'failed' ? 'rgba(239, 68, 68, 0.3)' : (s.status === 'processing' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.05)'))};
+      `;
+
+      let iconHtml = '⋯';
+      let statusColor = 'var(--text-muted)';
+      if (s.status === 'success') {
+        iconHtml = '✓';
+        statusColor = '#4ade80';
+      } else if (s.status === 'failed') {
+        iconHtml = '⚠️';
+        statusColor = '#f87171';
+      } else if (s.status === 'processing') {
+        iconHtml = '⏳';
+        statusColor = '#38bdf8';
+      }
+
+      card.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 700; color: ${statusColor};">${iconHtml}</span>
+          <span style="color: var(--text-primary); font-weight: 500;">Batch ${s.chunkIndex}/${s.totalChunks} (${s.termCount} terms)</span>
+        </div>
+        <div style="text-align: right; max-width: 60%;">
+          <div style="color: ${statusColor}; font-size: 0.72rem; font-weight: 500;">${s.message}</div>
+          ${s.lastErrorMessage ? `<div style="color: #f87171; font-size: 0.68rem; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;" title="${s.lastErrorMessage.replace(/"/g, '&quot;')}">${s.lastErrorMessage}</div>` : ''}
+        </div>
+      `;
+      listView.appendChild(card);
+    });
+  }
+}
+
+// Register Real-Time API Debug Log Listener
+if (window.api && window.api.onApiDebugLog) {
+  window.api.onApiDebugLog((logLine) => {
+    const term = document.getElementById('dev-api-log-terminal');
+    if (term) {
+      term.textContent += `\n${logLine}`;
+      term.scrollTop = term.scrollHeight;
+    }
+  });
+}
 function initEventBindings() {
   // Initialize PDF Index Import bindings
   initPdfIndexImportBindings();
@@ -4191,6 +4331,8 @@ function initEventBindings() {
   // Course Switch
   elements.courseSelect.addEventListener('change', (e) => {
     state.currentCourseId = e.target.value;
+    localStorage.setItem('last_active_course_id', state.currentCourseId);
+    saveState();
     selectedEntryIds.clear();
     endEditEntry();
     renderAll();
@@ -4426,7 +4568,10 @@ function initEventBindings() {
 
   // Sort Table Headers
   elements.tableHeaders.forEach(th => {
-    th.addEventListener('click', () => {
+    th.addEventListener('click', (e) => {
+      if (window.isColumnResizing || e.target.classList.contains('resizer') || e.target.closest('.resizer')) {
+        return;
+      }
       const field = th.getAttribute('data-sort');
       
       if (sortField === field) {
@@ -5829,7 +5974,18 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       });
     }
 
-    let selectedLocalModel = localStorage.getItem('local_slm_model') || '1.5b';
+    if (elements.geminiCustomPrompt) {
+      loadCourseGeminiPrompt();
+      elements.geminiCustomPrompt.addEventListener('input', () => {
+        saveCourseGeminiPrompt(elements.geminiCustomPrompt.value);
+      });
+    }
+
+    if (elements.resetGeminiPromptBtn && elements.geminiCustomPrompt) {
+      elements.resetGeminiPromptBtn.addEventListener('click', () => {
+        resetCourseGeminiPrompt();
+      });
+    }
 
     const checkModelStatusAndBadge = async (modelKey) => {
       const meta = LOCAL_SLM_METADATA[modelKey];
@@ -6207,6 +6363,76 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
     elements.previewImportCheckedBtn.addEventListener('click', handleImportCheckedEntries);
   }
 
+  if (elements.partialAcceptCleanedBtn) {
+    elements.partialAcceptCleanedBtn.addEventListener('click', () => {
+      if (elements.partialCurationAlert) elements.partialCurationAlert.classList.add('hidden');
+    });
+  }
+
+  if (elements.partialIncludeRawBtn) {
+    elements.partialIncludeRawBtn.addEventListener('click', () => {
+      if (lastFailedChunks && lastFailedChunks.length > 0) {
+        const rawToMerge = [];
+        lastFailedChunks.forEach(fc => {
+          if (fc.rawEntries && Array.isArray(fc.rawEntries)) {
+            rawToMerge.push(...fc.rawEntries);
+          }
+        });
+        autoExtractedEntries.push(...rawToMerge);
+        renderVerificationTable();
+        alert(`Merged ${rawToMerge.length} raw uncleaned term(s) into the index table. 0% page references lost!`);
+      }
+      if (elements.partialCurationAlert) elements.partialCurationAlert.classList.add('hidden');
+    });
+  }
+
+  if (elements.partialRetryFailedBtn) {
+    elements.partialRetryFailedBtn.addEventListener('click', async () => {
+      if (!lastFailedChunks || lastFailedChunks.length === 0) return;
+      const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
+      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-3.7-flash';
+      const geminiPrompt = elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '';
+      if (!geminiApiKey) {
+        alert("Please enter a valid Gemini API key first to retry AI curation.");
+        return;
+      }
+
+      elements.verificationPreviewSection.classList.add('hidden');
+      elements.indexingProgressSection.classList.remove('hidden');
+      elements.indexingProgressStatus.textContent = `Retrying ${lastFailedChunks.length} Failed Batch(es)...`;
+
+      startFunFactsRotation();
+
+      try {
+        const result = await window.api.retryFailedChunks({ failedChunks: lastFailedChunks, geminiApiKey, geminiModel, geminiPrompt });
+        elements.indexingProgressSection.classList.add('hidden');
+        stopFunFactsRotation();
+
+        if (result.entries && result.entries.length > 0) {
+          autoExtractedEntries.push(...result.entries);
+          lastFailedChunks = result.failedChunks || [];
+          renderVerificationTable();
+          if (lastFailedChunks.length === 0) {
+            if (elements.partialCurationAlert) elements.partialCurationAlert.classList.add('hidden');
+            alert(`Targeted retry succeeded! Curated ${result.entries.length} additional terms. Your index is now 100% AI cleaned.`);
+          } else {
+            if (elements.partialSuccessCount) elements.partialSuccessCount.textContent = autoExtractedEntries.length;
+            if (elements.partialFailedCount) elements.partialFailedCount.textContent = lastFailedChunks.length;
+            alert(`Retry partially completed. Curated ${result.entries.length} terms, but ${lastFailedChunks.length} chunk(s) still failed.`);
+          }
+        } else {
+          alert("Retry failed to curate remaining chunks. You can choose Option 1 or 2 below.");
+        }
+      } catch (err) {
+        alert("Error retrying failed chunks: " + err.message);
+      } finally {
+        elements.indexingProgressSection.classList.add('hidden');
+        elements.verificationPreviewSection.classList.remove('hidden');
+        stopFunFactsRotation();
+      }
+    });
+  }
+
   if (elements.aiCurationRetryBtn) {
     elements.aiCurationRetryBtn.addEventListener('click', async () => {
       const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
@@ -6557,6 +6783,7 @@ async function handleAutoIndexSubmit(e) {
     curationEngine: useAi ? curationEngine : 'none',
     localSlmModel: selectedLocalModel,
     localSlmPrompt: elements.localSlmCustomPrompt ? elements.localSlmCustomPrompt.value.trim() : '',
+    geminiPrompt: elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '',
     offset: parseInt(elements.autoIndexOffset.value) || 0,
     minLength: parseInt(elements.autoIndexMinLen.value) || 2,
     maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
@@ -6578,6 +6805,7 @@ async function handleAutoIndexSubmit(e) {
     startFunFactsRotation();
 
     window.api.onAutoIndexProgress((progress) => {
+      updateChunkProgressConsole(progress);
       // Dynamic loading warnings for AI curation/quiz step
       if (progress.step === 'curating-slm') {
         elements.indexingProgressStatus.innerHTML = `
@@ -6666,6 +6894,16 @@ async function handleAutoIndexSubmit(e) {
               } else {
                 elements.aiCurationErrorAlert.classList.add('hidden');
               }
+            }
+
+            // Display Partial AI Curation Alert if some chunks failed
+            lastFailedChunks = result.failedChunks || [];
+            if (lastFailedChunks.length > 0 && elements.partialCurationAlert) {
+              if (elements.partialSuccessCount) elements.partialSuccessCount.textContent = autoExtractedEntries.length;
+              if (elements.partialFailedCount) elements.partialFailedCount.textContent = lastFailedChunks.length;
+              elements.partialCurationAlert.classList.remove('hidden');
+            } else if (elements.partialCurationAlert) {
+              elements.partialCurationAlert.classList.add('hidden');
             }
 
             // Display Quiz generation error if it occurred
