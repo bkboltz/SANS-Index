@@ -36,6 +36,10 @@ contextBridge.exposeInMainWorld('api', {
   onAutoIndexProgress: (callback) => {
     ipcRenderer.on('auto-index-progress', (event, progress) => callback(progress));
   },
+  retryFailedChunks: (args) => ipcRenderer.invoke('retry-failed-chunks', args),
+  onApiDebugLog: (callback) => {
+    ipcRenderer.on('api-debug-log', (event, log) => callback(log));
+  },
   checkForUpdates: (testMode) => ipcRenderer.invoke('check-for-updates', testMode),
   performUpdate: (testMode) => ipcRenderer.invoke('perform-update', testMode),
   removeListener: (channel) => {

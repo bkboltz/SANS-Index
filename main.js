@@ -1633,6 +1633,31 @@ ipcMain.handle('retry-gemini-curation', async (event, args) => {
   }
 });
 
+ipcMain.handle('retry-failed-chunks', async (event, args) => {
+  const { failedChunks, geminiApiKey, geminiModel, geminiPrompt } = args;
+  logDebug(`[Auto-Index Handler] Received retry-failed-chunks request for ${failedChunks ? failedChunks.length : 0} chunks. Model: ${geminiModel}`);
+  
+  if (!failedChunks || failedChunks.length === 0) {
+    return { success: true, entries: [], failedChunks: [] };
+  }
+
+  try {
+    const curationResult = await curateIndexWithGemini([], geminiApiKey, event, geminiModel, geminiPrompt || null, {
+      isRetry: true,
+      failedChunks: failedChunks
+    });
+    return {
+      success: curationResult.failedChunks && curationResult.failedChunks.length > 0 ? false : true,
+      entries: curationResult.entries,
+      failedChunks: curationResult.failedChunks || [],
+      error: curationResult.error
+    };
+  } catch (error) {
+    logDebug(`[Auto-Index Handler] Retry failed chunks failed: ${error.message}`);
+    return { success: false, entries: [], failedChunks: failedChunks, error: error.message };
+  }
+});
+
 ipcMain.handle('check-local-model-status', async (event, modelKey) => {
   try {
     const pythonExe = await getSystemPythonCommand();
