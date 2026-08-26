@@ -4250,6 +4250,23 @@ function parseCSVRows(text) {
   return result.filter(r => r.length > 0 && r.some(cell => cell.trim() !== ''));
 }
 
+function resetIndexingProgressConsole() {
+  const container = document.getElementById('chunk-progress-container');
+  const summaryBadge = document.getElementById('chunk-progress-summary-badge');
+  const listView = document.getElementById('chunk-list-view');
+  const devTerminal = document.getElementById('dev-api-log-terminal');
+
+  if (container) container.classList.add('hidden');
+  if (summaryBadge) {
+    summaryBadge.textContent = '0 of 0 Chunks';
+    summaryBadge.style.color = '#38bdf8';
+  }
+  if (listView) listView.innerHTML = '';
+  if (devTerminal) {
+    devTerminal.textContent = '[Ready] Developer Debugger active. Real-time API calls, HTTP status codes, and model responses will stream here...';
+  }
+}
+
 function updateChunkProgressConsole(progress) {
   const container = document.getElementById('chunk-progress-container');
   const summaryBadge = document.getElementById('chunk-progress-summary-badge');
@@ -6401,6 +6418,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       elements.indexingProgressSection.classList.remove('hidden');
       elements.indexingProgressStatus.textContent = `Retrying ${lastFailedChunks.length} Failed Batch(es)...`;
 
+      resetIndexingProgressConsole();
       startFunFactsRotation();
 
       try {
@@ -6446,6 +6464,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       elements.indexingProgressSection.classList.remove('hidden');
       elements.indexingProgressStatus.textContent = 'Retrying Gemini AI Curation...';
       
+      resetIndexingProgressConsole();
       startFunFactsRotation();
 
       const removeProgressListener = window.api.onAutoIndexProgress((progress) => {
@@ -6801,6 +6820,9 @@ async function handleAutoIndexSubmit(e) {
     elements.indexingProgressSection.classList.remove('hidden');
     elements.indexingProgressStatus.textContent = 'Initializing Auto-Indexer...';
     
+    // Reset batch progress visualizer and developer console from previous runs
+    resetIndexingProgressConsole();
+
     // Start fun facts rotation
     startFunFactsRotation();
 
