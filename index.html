@@ -455,6 +455,12 @@
               <span>Parse Index for Acronyms</span>
             </button>
 
+            <!-- Apply Acronym Definitions Button -->
+            <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Search course index topics matching all course acronym definitions (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')">
+              <i data-lucide="book-open" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+              <span>Apply Acronym Definitions To Index</span>
+            </button>
+
             <div class="filters-wrapper">
               <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;" title="Require confirmation before deleting an acronym">
                 <input type="checkbox" id="acronyms-confirm-delete" checked>
@@ -471,10 +477,6 @@
                 <span id="acronyms-multi-delete-count-text">0 items selected</span>
               </div>
               <div style="display: flex; gap: 8px;">
-                <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" title="Search course index topics matching selected acronyms (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')" style="background-color: #2dd4bf; color: #0f172a; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                  <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
-                  <span>Apply Acronym Definitions To Index</span>
-                </button>
                 <button type="button" id="acronyms-cancel-selection-btn" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">Clear Selection</button>
                 <button type="button" id="acronyms-delete-selected-btn" class="btn btn-sm" style="background-color: var(--danger); color: white; padding: 4px 10px; font-size: 0.78rem; font-weight: 600;">Delete Selected Items</button>
               </div>

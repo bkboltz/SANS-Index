@@ -8627,21 +8627,19 @@ function performDeleteAcronyms(acronymIds) {
 let pendingApplyAcronymProposals = [];
 
 function applyAcronymDefinitionsToIndex() {
-  const count = selectedAcronymIds.size;
-  if (count === 0) return;
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.term && a.term.trim().length > 0);
 
-  const selectedAcronyms = state.acronyms.filter(a => a && selectedAcronymIds.has(a.id) && a.courseId === state.currentCourseId);
-  const acronymsWithTerms = selectedAcronyms.filter(a => a.term && a.term.trim().length > 0);
-
-  if (acronymsWithTerms.length === 0) {
-    alert("None of the selected acronyms have associated full terms/definitions to apply.");
+  if (courseAcronyms.length === 0) {
+    alert("No acronyms with associated full terms/definitions exist for this course.");
     return;
   }
 
   // Create lookup map of normalized acronym code -> full term
   const acronymMap = new Map();
-  acronymsWithTerms.forEach(a => {
-    acronymMap.set(a.acronym.trim().toUpperCase(), { code: a.acronym.trim(), term: a.term.trim() });
+  courseAcronyms.forEach(a => {
+    if (a.acronym && a.acronym.trim()) {
+      acronymMap.set(a.acronym.trim().toUpperCase(), { code: a.acronym.trim(), term: a.term.trim() });
+    }
   });
 
   pendingApplyAcronymProposals = [];
