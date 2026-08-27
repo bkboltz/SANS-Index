@@ -2159,27 +2159,50 @@
         </div>
       </div>
 
-      <!-- Row 2: Format & Column Dropdowns -->
-      <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.15); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Format:</label>
-          <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.82rem; cursor: pointer; outline: none;">
-            <option value="standard">Topic Sorted Format</option>
-            <option value="topic-by-book">Topic Sorted By Book</option>
-            <option value="booklet">Chronologically Sorted Format</option>
-          </select>
+      <!-- Row 2: Format, Column Dropdowns & Book Filter Dropdown -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.15); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Format:</label>
+            <select id="print-format-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.82rem; cursor: pointer; outline: none;">
+              <option value="standard">Topic Sorted Format</option>
+              <option value="topic-by-book">Topic Sorted By Book</option>
+              <option value="booklet">Chronologically Sorted Format</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Columns:</label>
+            <select id="print-columns-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.82rem; cursor: pointer; outline: none; min-width: 110px;">
+              <option value="1">1 Column</option>
+              <option value="2">2 Columns</option>
+            </select>
+          </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Columns:</label>
-          <select id="print-columns-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.82rem; cursor: pointer; outline: none; min-width: 110px;">
-            <option value="1">1 Column</option>
-            <option value="2">2 Columns</option>
-          </select>
+        <!-- Book Selection Multi-Select Dropdown -->
+        <div id="print-books-dropdown-container" class="print-books-dropdown-container" style="position: relative; display: inline-block;">
+          <button type="button" id="print-books-dropdown-btn" class="print-books-dropdown-btn" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500; cursor: pointer; outline: none; display: inline-flex; align-items: center; gap: 8px; user-select: none; transition: border-color 0.15s ease, background-color 0.15s ease;">
+            <i data-lucide="book-open" style="width: 14px; height: 14px; color: var(--text-secondary);"></i>
+            <span id="print-books-dropdown-label">Filter Books (All)</span>
+            <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--text-secondary);"></i>
+          </button>
+
+          <div id="print-books-dropdown-menu" class="print-books-dropdown-menu" style="display: none; position: absolute; top: calc(100% + 6px); right: 0; z-index: 1100; min-width: 240px; max-width: 280px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.5); padding: 8px 0; max-height: 280px; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 4px 12px 8px 12px; border-bottom: 1px solid var(--border-color); margin-bottom: 4px;">
+              <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.5px;">Include Books</span>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" id="print-books-select-all" style="background: none; border: none; color: var(--accent-color, #3b82f6); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;">All</button>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">|</span>
+                <button type="button" id="print-books-select-none" style="background: none; border: none; color: var(--accent-color, #3b82f6); font-size: 0.75rem; font-weight: 600; cursor: pointer; padding: 0;">None</button>
+              </div>
+            </div>
+            <div id="print-books-dropdown-list" style="display: flex; flex-direction: column;"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Row 3: Option Checkboxes & Binding Margin Controls -->
+      <!-- Row 3: Option Checkboxes -->
       <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.1); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
         <label id="print-include-index-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Index topics in printed document">
           <input type="checkbox" id="print-include-index" checked>

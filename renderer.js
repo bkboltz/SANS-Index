@@ -90,6 +90,13 @@ const elements = {
   printBindingFriendly: document.getElementById('print-binding-friendly'),
   printMirrorMargins: document.getElementById('print-mirror-margins'),
   printMirrorMarginsLabel: document.getElementById('print-mirror-margins-label'),
+  printBooksDropdownContainer: document.getElementById('print-books-dropdown-container'),
+  printBooksDropdownBtn: document.getElementById('print-books-dropdown-btn'),
+  printBooksDropdownLabel: document.getElementById('print-books-dropdown-label'),
+  printBooksDropdownMenu: document.getElementById('print-books-dropdown-menu'),
+  printBooksDropdownList: document.getElementById('print-books-dropdown-list'),
+  printBooksSelectAll: document.getElementById('print-books-select-all'),
+  printBooksSelectNone: document.getElementById('print-books-select-none'),
 
   // Delete confirmation dialog
   deleteConfirmDialog: document.getElementById('delete-confirm-dialog'),
@@ -403,6 +410,7 @@ let promptedCourses = new Set();
 let pendingDeleteEntryId = null;
 let selectedEntryIds = new Set();
 let pendingDeleteEntryIds = null;
+let printSelectedBookIds = null;
 
 // Acronym runtime helpers
 let editAcronymId = null;
@@ -4769,6 +4777,47 @@ function initEventBindings() {
     }
   }
 
+  // Print Preview Book Filter Dropdown Wiring
+  if (elements.printBooksDropdownBtn) {
+    elements.printBooksDropdownBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (elements.printBooksDropdownMenu) {
+        const isVisible = elements.printBooksDropdownMenu.style.display === 'block';
+        elements.printBooksDropdownMenu.style.display = isVisible ? 'none' : 'block';
+      }
+    });
+  }
+
+  // Close book dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (elements.printBooksDropdownContainer && !elements.printBooksDropdownContainer.contains(e.target)) {
+      if (elements.printBooksDropdownMenu) {
+        elements.printBooksDropdownMenu.style.display = 'none';
+      }
+    }
+  });
+
+  // Select All books button
+  if (elements.printBooksSelectAll) {
+    elements.printBooksSelectAll.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+      printSelectedBookIds = new Set(activeBooks.map(b => b.id));
+      updatePrintBooksDropdownUI(true);
+      renderPrintPreview();
+    });
+  }
+
+  // Select None books button
+  if (elements.printBooksSelectNone) {
+    elements.printBooksSelectNone.addEventListener('click', (e) => {
+      e.stopPropagation();
+      printSelectedBookIds = new Set();
+      updatePrintBooksDropdownUI(true);
+      renderPrintPreview();
+    });
+  }
+
   // Confirm Deletion checkbox — persist state in localStorage
   if (elements.settingsConfirmDelete) {
     elements.settingsConfirmDelete.checked = localStorage.getItem('confirm_delete') !== 'false';
@@ -4907,6 +4956,57 @@ function initEventBindings() {
     });
   }
 
+function updatePrintBooksDropdownUI(rebuildList = true) {
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  if (!printSelectedBookIds) {
+    printSelectedBookIds = new Set(activeBooks.map(b => b.id));
+  }
+
+  if (elements.printBooksDropdownLabel) {
+    if (activeBooks.length === 0) {
+      elements.printBooksDropdownLabel.textContent = 'Filter Books (0)';
+    } else if (printSelectedBookIds.size === activeBooks.length) {
+      elements.printBooksDropdownLabel.textContent = 'Filter Books (All)';
+    } else {
+      elements.printBooksDropdownLabel.textContent = `Filter Books (${printSelectedBookIds.size}/${activeBooks.length})`;
+    }
+  }
+
+  if (rebuildList && elements.printBooksDropdownList) {
+    if (activeBooks.length === 0) {
+      elements.printBooksDropdownList.innerHTML = `<div style="padding: 8px 12px; font-size: 0.8rem; color: var(--text-secondary); font-style: italic;">No books in course</div>`;
+      return;
+    }
+
+    elements.printBooksDropdownList.innerHTML = activeBooks.map(book => {
+      const isChecked = printSelectedBookIds.has(book.id);
+      const bookName = book.name || 'Untitled Book';
+      const bookColor = book.color || '#4b5563';
+      return `
+        <label class="print-book-item">
+          <input type="checkbox" class="print-book-checkbox" data-book-id="${book.id}" ${isChecked ? 'checked' : ''}>
+          <span style="width: 10px; height: 10px; border-radius: 50%; background-color: ${bookColor}; flex-shrink: 0; display: inline-block;"></span>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(bookName)}">${escapeHtml(bookName)}</span>
+        </label>
+      `;
+    }).join('');
+
+    elements.printBooksDropdownList.querySelectorAll('.print-book-checkbox').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const bookId = cb.getAttribute('data-book-id');
+        if (cb.checked) {
+          printSelectedBookIds.add(bookId);
+        } else {
+          printSelectedBookIds.delete(bookId);
+        }
+        updatePrintBooksDropdownUI(false);
+        renderPrintPreview();
+      });
+    });
+  }
+}
+
 function openPrintPreview() {
   if (elements.printFormatSelect) {
     elements.printFormatSelect.value = 'standard';
@@ -4916,6 +5016,12 @@ function openPrintPreview() {
     elements.printColumnsSelect.value = localStorage.getItem('print_columns_count') || '1';
     syncCustomSelect(elements.printColumnsSelect);
   }
+
+  // Populate book dropdown & initialize selections to all course books
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  printSelectedBookIds = new Set(activeBooks.map(b => b.id));
+  updatePrintBooksDropdownUI(true);
+
   try {
     renderPrintPreview();
   } catch (err) {
@@ -4943,7 +5049,17 @@ function renderPrintPreview() {
 
   const includeNotes = cols === '2' ? false : (elements.printIncludeNotes ? elements.printIncludeNotes.checked : true);
   const includeIndex = elements.printIncludeIndex ? elements.printIncludeIndex.checked : true;
-  const activeEntries = state.entries.filter(entry => entry && entry.courseId === state.currentCourseId);
+  
+  const activeCourseBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  if (!printSelectedBookIds) {
+    printSelectedBookIds = new Set(activeCourseBooks.map(b => b.id));
+  }
+
+  const activeEntries = state.entries.filter(entry => 
+    entry && 
+    entry.courseId === state.currentCourseId && 
+    printSelectedBookIds.has(entry.bookId)
+  );
   const activeAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym && a.term);
   const includeAcronyms = elements.printIncludeAcronyms && elements.printIncludeAcronyms.checked && activeAcronyms.length > 0;
   
@@ -5427,9 +5543,15 @@ function renderPrintPreview() {
   }
 
   if (!pagesHtml) {
+    let emptyReason = 'No sections selected for printing. Please enable "Include Index" or "Include Acronyms" in print options.';
+    if (includeIndex && printSelectedBookIds && printSelectedBookIds.size === 0) {
+      emptyReason = 'No books selected for printing. Please check at least one book in the "Filter Books" dropdown.';
+    } else if (includeIndex && activeEntries.length === 0) {
+      emptyReason = 'No entries found for the selected book(s).';
+    }
     pagesHtml = `
       <div style="text-align: center; padding: 80px 20px; color: var(--text-secondary); font-size: 1rem; font-family: var(--font-sans);">
-        No sections selected for printing. Please enable "Include Index" or "Include Acronyms" in print options.
+        ${emptyReason}
       </div>
     `;
   }

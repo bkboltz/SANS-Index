@@ -4518,6 +4518,56 @@ tr.auto-row:hover {
   display: none !important;
 }
 
+/* Print Preview Book Filter Dropdown */
+.print-books-dropdown-btn:hover {
+  border-color: var(--accent-color, #3b82f6) !important;
+  background-color: var(--bg-hover) !important;
+}
+
+.print-books-dropdown-menu {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+  max-width: calc(90vw - 48px);
+}
+
+@media (max-width: 768px) {
+  .print-books-dropdown-menu {
+    right: auto !important;
+    left: 0 !important;
+  }
+}
+
+.print-books-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.print-books-dropdown-menu::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.print-book-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.12s ease;
+}
+
+.print-book-item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.print-book-item input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-color, #3b82f6);
+}
+
+
 
 
 
