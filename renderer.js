@@ -143,6 +143,15 @@ const elements = {
   acronymReviewTableBody: document.getElementById('acronym-review-table-body'),
   confirmAcronymReviewBtn: document.getElementById('confirm-acronym-review-btn'),
 
+  // Apply Acronym Definitions Review Dialog
+  applyAcronymsConfirmDialog: document.getElementById('apply-acronyms-confirm-dialog'),
+  applyAcronymsCount: document.getElementById('apply-acronyms-count'),
+  applyAcronymsSelectAllBtn: document.getElementById('apply-acronyms-select-all-btn'),
+  applyAcronymsDeselectAllBtn: document.getElementById('apply-acronyms-deselect-all-btn'),
+  applyAcronymsHeaderCheckbox: document.getElementById('apply-acronyms-header-checkbox'),
+  applyAcronymsTableBody: document.getElementById('apply-acronyms-table-body'),
+  confirmApplyAcronymsBtn: document.getElementById('confirm-apply-acronyms-btn'),
+
   // Sidebar To-Do
   todoInput: document.getElementById('todo-input'),
   addTodoBtn: document.getElementById('add-todo-btn'),
@@ -8615,6 +8624,8 @@ function performDeleteAcronyms(acronymIds) {
   renderAcronyms();
 }
 
+let pendingApplyAcronymProposals = [];
+
 function applyAcronymDefinitionsToIndex() {
   const count = selectedAcronymIds.size;
   if (count === 0) return;
@@ -8633,7 +8644,7 @@ function applyAcronymDefinitionsToIndex() {
     acronymMap.set(a.acronym.trim().toUpperCase(), { code: a.acronym.trim(), term: a.term.trim() });
   });
 
-  let updatedCount = 0;
+  pendingApplyAcronymProposals = [];
   const activeEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
 
   activeEntries.forEach(entry => {
@@ -8645,19 +8656,104 @@ function applyAcronymDefinitionsToIndex() {
       const match = acronymMap.get(upperTopic);
       const newTopic = `${match.term} (${match.code})`;
       if (entry.topic !== newTopic) {
-        entry.topic = newTopic;
-        updatedCount++;
+        const book = state.books.find(b => b && b.id === entry.bookId);
+        const bookName = book ? book.name : '';
+        const bookShort = bookName ? (bookName.includes(':') ? bookName.split(':')[0].trim() : bookName) : '';
+        const pageRef = entry.pages ? ` (p. ${entry.pages})` : '';
+        const bookRef = bookShort ? `${bookShort}${pageRef}` : (entry.pages ? `p. ${entry.pages}` : '');
+
+        pendingApplyAcronymProposals.push({
+          entryId: entry.id,
+          originalTopic: entry.topic,
+          newTopic: newTopic,
+          bookRef: bookRef
+        });
       }
     }
   });
+
+  if (pendingApplyAcronymProposals.length === 0) {
+    alert("No matching index topics found for the selected acronyms.");
+    return;
+  }
+
+  // Populate review table & open review dialog
+  renderApplyAcronymsReviewTable(pendingApplyAcronymProposals);
+
+  if (elements.applyAcronymsConfirmDialog) {
+    elements.applyAcronymsConfirmDialog.showModal();
+    if (window.lucide) {
+      lucide.createIcons({
+        attrs: { class: 'lucide-icon' },
+        nameAttr: 'data-lucide',
+        nodeList: elements.applyAcronymsConfirmDialog.querySelectorAll('[data-lucide]')
+      });
+    }
+  }
+}
+
+function renderApplyAcronymsReviewTable(proposals) {
+  if (!elements.applyAcronymsTableBody) return;
+  elements.applyAcronymsTableBody.innerHTML = '';
+
+  if (elements.applyAcronymsCount) {
+    elements.applyAcronymsCount.textContent = `${proposals.length} proposed rename(s) found`;
+  }
+  if (elements.applyAcronymsHeaderCheckbox) {
+    elements.applyAcronymsHeaderCheckbox.checked = true;
+  }
+
+  proposals.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border-color)';
+    tr.innerHTML = `
+      <td style="text-align: center; padding: 8px 12px; vertical-align: middle;">
+        <input type="checkbox" class="apply-acronym-row-checkbox" data-index="${idx}" checked>
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono, monospace);">
+        ${escapeHtml(p.originalTopic)}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; font-weight: 600; color: #2dd4bf;">
+        ${escapeHtml(p.newTopic)}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.8rem; color: var(--text-muted);">
+        ${escapeHtml(p.bookRef || '-')}
+      </td>
+    `;
+    elements.applyAcronymsTableBody.appendChild(tr);
+  });
+}
+
+function confirmApplyAcronymDefinitions() {
+  if (!elements.applyAcronymsTableBody) return;
+  const checkboxes = elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox');
+  let updatedCount = 0;
+
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = parseInt(cb.getAttribute('data-index'), 10);
+      const item = pendingApplyAcronymProposals[idx];
+      if (item) {
+        const entry = state.entries.find(e => e && e.id === item.entryId);
+        if (entry) {
+          entry.topic = item.newTopic;
+          updatedCount++;
+        }
+      }
+    }
+  });
+
+  if (elements.applyAcronymsConfirmDialog) {
+    elements.applyAcronymsConfirmDialog.close();
+  }
 
   if (updatedCount > 0) {
     saveState();
     renderEntries();
     renderStats();
-    alert(`Successfully applied acronym definitions! Renamed ${updatedCount} index topic(s) to include full terms.`);
+    alert(`Successfully applied acronym definitions! Renamed ${updatedCount} index topic(s).`);
   } else {
-    alert("No matching index topics found for the selected acronyms.");
+    alert("No topics were selected to rename.");
   }
 }
 
@@ -9012,6 +9108,34 @@ if (elements.acronymReviewHeaderCheckbox) {
       elements.acronymReviewTableBody.querySelectorAll('.acronym-review-row-checkbox').forEach(cb => cb.checked = elements.acronymReviewHeaderCheckbox.checked);
     }
   });
+}
+
+// Apply Acronym Definitions Review Dialog listeners
+if (elements.applyAcronymsSelectAllBtn) {
+  elements.applyAcronymsSelectAllBtn.addEventListener('click', () => {
+    if (elements.applyAcronymsTableBody) {
+      elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox').forEach(cb => cb.checked = true);
+    }
+    if (elements.applyAcronymsHeaderCheckbox) elements.applyAcronymsHeaderCheckbox.checked = true;
+  });
+}
+if (elements.applyAcronymsDeselectAllBtn) {
+  elements.applyAcronymsDeselectAllBtn.addEventListener('click', () => {
+    if (elements.applyAcronymsTableBody) {
+      elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox').forEach(cb => cb.checked = false);
+    }
+    if (elements.applyAcronymsHeaderCheckbox) elements.applyAcronymsHeaderCheckbox.checked = false;
+  });
+}
+if (elements.applyAcronymsHeaderCheckbox) {
+  elements.applyAcronymsHeaderCheckbox.addEventListener('change', () => {
+    if (elements.applyAcronymsTableBody) {
+      elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox').forEach(cb => cb.checked = elements.applyAcronymsHeaderCheckbox.checked);
+    }
+  });
+}
+if (elements.confirmApplyAcronymsBtn) {
+  elements.confirmApplyAcronymsBtn.addEventListener('click', confirmApplyAcronymDefinitions);
 }
 
 // Sort acronym headers
