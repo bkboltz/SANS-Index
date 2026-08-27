@@ -1398,7 +1398,11 @@ input[type="color"]::-webkit-color-swatch {
     overflow: visible !important;
   }
 
-  .print-only .print-preview-page-sheet {
+  .print-only .print-preview-page-sheet,
+  .print-only .print-preview-page-sheet.binding-friendly,
+  .print-only .print-preview-page-sheet.mirror-margins,
+  .print-only .print-preview-page-sheet.binding-friendly.mirror-margins:nth-child(even),
+  .print-only .print-preview-page-sheet.binding-friendly.mirror-margins:nth-child(odd) {
     display: block !important;
     background: #ffffff !important;
     color: #000000 !important;
@@ -1415,7 +1419,10 @@ input[type="color"]::-webkit-color-swatch {
     break-inside: avoid !important;
   }
 
-  .print-only .print-preview-page-sheet:last-child {
+  .print-only .print-preview-page-sheet:last-child,
+  .print-only .print-preview-page-sheet.binding-friendly:last-child,
+  .print-only .print-preview-page-sheet.mirror-margins:last-child,
+  .print-only .print-preview-page-sheet.binding-friendly.mirror-margins:last-child {
     page-break-after: avoid !important;
     break-after: avoid !important;
   }
@@ -1559,12 +1566,6 @@ input[type="color"]::-webkit-color-swatch {
   /* Starred row highlights in print */
   .print-only tr.starred-row {
     background-color: #fffbeb !important;
-  }
-
-  /* Custom Page margins */
-  @page {
-    size: Letter portrait !important;
-    margin: 0.25in !important;
   }
 }
 
@@ -1890,6 +1891,41 @@ input[type="color"]::-webkit-color-swatch {
   position: relative;
   page-break-after: always !important;
   break-after: page !important;
+}
+
+/* 3-Hole Punch & Binding Friendly On-Screen Preview Margins (0.5in = 36pt) */
+.print-preview-page-sheet.binding-friendly {
+  padding: 18pt 18pt 18pt 36pt !important; /* 0.5in Left Margin */
+}
+
+/* Double-sided Mirror Margins: Even Pages shift 0.5in margin to Right side */
+.print-preview-page-sheet.binding-friendly.mirror-margins:nth-child(even) {
+  padding: 18pt 36pt 18pt 18pt !important; /* 0.5in Right Margin on Even pages */
+}
+
+/* Question mark tooltip trigger styling */
+.print-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-app, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  cursor: help;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.print-tooltip-trigger:hover {
+  background: var(--accent-primary, #0d9488);
+  color: #ffffff;
+  border-color: var(--accent-primary, #0d9488);
 }
 
 /* Off-screen DOM Measurement Container for Pt-Accurate Print Pagination */

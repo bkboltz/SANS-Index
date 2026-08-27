@@ -2179,22 +2179,41 @@
         </div>
       </div>
 
-      <!-- Row 3: All 3 Option Checkboxes on a Dedicated Single Line -->
+      <!-- Row 3: Option Checkboxes & Binding Margin Controls -->
       <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; background: rgba(0, 0, 0, 0.1); padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border-color); width: 100%; box-sizing: border-box;">
         <label id="print-include-index-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Index topics in printed document">
           <input type="checkbox" id="print-include-index" checked>
           <span>Include Index</span>
         </label>
 
-        <label id="print-include-notes-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Notes/Reference Details column in printed index">
-          <input type="checkbox" id="print-include-notes" checked>
-          <span>Include notes column</span>
-        </label>
+        <div style="display: inline-flex; align-items: center; gap: 6px;">
+          <label id="print-include-notes-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;">
+            <input type="checkbox" id="print-include-notes" checked>
+            <span>Add Notes Column</span>
+          </label>
+          <span class="print-tooltip-trigger" title="Includes the Notes / Reference Details column in the printed index. Available in 1-Column mode only.">?</span>
+        </div>
 
         <label id="print-include-acronyms-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;" title="Include Acronyms List at the end of printed document">
           <input type="checkbox" id="print-include-acronyms" checked>
           <span>Include Acronyms</span>
         </label>
+
+        <div style="display: inline-flex; align-items: center; gap: 6px;">
+          <label id="print-binding-friendly-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-primary); cursor: pointer; user-select: none;">
+            <input type="checkbox" id="print-binding-friendly">
+            <span>Binding Friendly</span>
+          </label>
+          <span class="print-tooltip-trigger" title="Expands the binding margin to 0.5 inches to protect text from 3-hole punches and spiral/wire bindings.">?</span>
+        </div>
+
+        <div style="display: inline-flex; align-items: center; gap: 6px;">
+          <label id="print-mirror-margins-label" class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--text-muted); cursor: not-allowed; opacity: 0.5; user-select: none;">
+            <input type="checkbox" id="print-mirror-margins" disabled>
+            <span>Mirror Margins</span>
+          </label>
+          <span class="print-tooltip-trigger" title="Recommended for double-sided (duplex) printing. Shifts the 0.5&quot; margin to the left on odd pages and right on even pages so the binding gutter is always on the inside edge.">?</span>
+        </div>
       </div>
     </div>
     <div class="print-preview-modal-body">
