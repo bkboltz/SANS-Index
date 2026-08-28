@@ -8435,8 +8435,7 @@ function renderAcronyms() {
   }
 
   // Update Stats
-  if (elements.statTotalAcronyms) elements.statTotalAcronyms.textContent = (state.acronyms || []).length;
-  if (elements.statAcronymsCourse) elements.statAcronymsCourse.textContent = courseAcronyms.length;
+  if (elements.statTotalAcronyms) elements.statTotalAcronyms.textContent = courseAcronyms.length;
   if (elements.statLastAcronym) {
     const last = courseAcronyms[courseAcronyms.length - 1];
     elements.statLastAcronym.textContent = last ? last.acronym : '-';
