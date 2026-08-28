@@ -2322,22 +2322,31 @@ ipcMain.handle('check-for-updates', async (event, testMode = false) => {
   }
 
   try {
-    // 1. Fetch remote changes
-    // Check if git is available
+    // 1. Verify git is installed
     await execPromise('git --version');
     
-    // Fetch from origin
-    await execPromise('git fetch origin main');
+    // 2. Determine target remote (prefer 'upstream' if available, otherwise 'origin')
+    const { stdout: remotes } = await execPromise('git remote');
+    const remoteList = remotes.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+    const targetRemote = remoteList.includes('upstream') ? 'upstream' : (remoteList.includes('origin') ? 'origin' : null);
 
-    // 2. Check if we are behind remote branch
-    const { stdout: localHead } = await execPromise('git rev-parse HEAD');
-    const { stdout: remoteHead } = await execPromise('git rev-parse origin/main');
+    if (!targetRemote) {
+      return { updateAvailable: false };
+    }
 
-    if (localHead.trim() !== remoteHead.trim()) {
-      // 3. Get list of recent changes (remote commits since local HEAD)
-      const { stdout: diffLog } = await execPromise('git log HEAD..origin/main --oneline');
+    // 3. Fetch latest from target remote
+    await execPromise(`git fetch ${targetRemote} main`);
+
+    const remoteBranch = `${targetRemote}/main`;
+
+    // 4. Check if local HEAD is behind remote branch (count of incoming commits in HEAD..remoteBranch)
+    const { stdout: behindCountStr } = await execPromise(`git rev-list --count HEAD..${remoteBranch}`);
+    const behindCount = parseInt(behindCountStr.trim(), 10) || 0;
+
+    if (behindCount > 0) {
+      // 5. Get list of incoming remote commits
+      const { stdout: diffLog } = await execPromise(`git log HEAD..${remoteBranch} --oneline`);
       const recentChanges = diffLog.trim().split('\n').filter(Boolean).map(line => {
-        // Strip out SHA from start of line
         return line.replace(/^[a-f0-9]+\s+/, '');
       });
 
@@ -2366,8 +2375,12 @@ ipcMain.handle('perform-update', async (event, testMode = false) => {
   }
 
   try {
-    // Run git pull
-    const { stdout, stderr } = await execPromise('git pull');
+    const { stdout: remotes } = await execPromise('git remote');
+    const remoteList = remotes.split(/\r?\n/).map(r => r.trim()).filter(Boolean);
+    const targetRemote = remoteList.includes('upstream') ? 'upstream' : (remoteList.includes('origin') ? 'origin' : 'origin');
+
+    // Run git pull from target remote
+    const { stdout, stderr } = await execPromise(`git pull ${targetRemote} main`);
     logDebug(`[Update Pull] Git pull output: ${stdout}\nStderr: ${stderr}`);
     
     // Relaunch app

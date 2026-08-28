@@ -455,6 +455,12 @@
               <span>Parse Index for Acronyms</span>
             </button>
 
+            <!-- Apply Acronym Definitions Button -->
+            <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Search course index topics matching all course acronym definitions (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')">
+              <i data-lucide="book-open" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+              <span>Apply Acronym Definitions To Index</span>
+            </button>
+
             <div class="filters-wrapper">
               <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;" title="Require confirmation before deleting an acronym">
                 <input type="checkbox" id="acronyms-confirm-delete" checked>
@@ -471,10 +477,6 @@
                 <span id="acronyms-multi-delete-count-text">0 items selected</span>
               </div>
               <div style="display: flex; gap: 8px;">
-                <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" title="Search course index topics matching selected acronyms (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')" style="background-color: #2dd4bf; color: #0f172a; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                  <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
-                  <span>Apply Acronym Definitions To Index</span>
-                </button>
                 <button type="button" id="acronyms-cancel-selection-btn" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">Clear Selection</button>
                 <button type="button" id="acronyms-delete-selected-btn" class="btn btn-sm" style="background-color: var(--danger); color: white; padding: 4px 10px; font-size: 0.78rem; font-weight: 600;">Delete Selected Items</button>
               </div>
@@ -2603,6 +2605,55 @@
         <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted); text-align: center;">
           Please do not close the application.
         </p>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Apply Acronym Definitions Review Dialog -->
+  <dialog id="apply-acronyms-confirm-dialog" class="custom-dialog" style="max-width: 820px; width: 90vw;">
+    <div class="dialog-content" style="display: flex; flex-direction: column; max-height: 75vh;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #2dd4bf; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="book-open"></i>
+          <span>Review Acronym Index Renames</span>
+        </h3>
+        <button type="button" class="close-dialog-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">&times;</button>
+      </div>
+
+      <p style="margin: 0 0 14px 0; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45;">
+        The following course index topics match your selected acronym definitions. Review the proposed topic renames and select or deselect items before applying them to your index.
+      </p>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 6px 12px; background: rgba(30, 41, 59, 0.5); border-radius: var(--radius-sm);">
+        <span id="apply-acronyms-count" style="font-size: 0.8rem; color: var(--text-primary); font-weight: 500;">0 proposed renames found</span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="apply-acronyms-select-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Select All</button>
+          <button type="button" id="apply-acronyms-deselect-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Deselect All</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Review Table -->
+      <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 16px; max-height: 380px;">
+        <table class="index-table" style="width: 100%; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; background: var(--bg-sidebar); z-index: 10;">
+            <tr>
+              <th style="width: 5%; text-align: center;"><input type="checkbox" id="apply-acronyms-header-checkbox" checked></th>
+              <th style="width: 25%;">Original Topic</th>
+              <th style="width: 45%;">Proposed New Topic</th>
+              <th style="width: 25%;">Book & Pages</th>
+            </tr>
+          </thead>
+          <tbody id="apply-acronyms-table-body">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="confirm-apply-acronyms-btn" class="btn btn-accent">
+          <span>Apply Selected Renames</span>
+        </button>
       </div>
     </div>
   </dialog>
