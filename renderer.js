@@ -152,6 +152,18 @@ const elements = {
   applyAcronymsTableBody: document.getElementById('apply-acronyms-table-body'),
   confirmApplyAcronymsBtn: document.getElementById('confirm-apply-acronyms-btn'),
 
+  // Import Class Acronyms Dialog
+  importClassAcronymsBtn: document.getElementById('import-class-acronyms-btn'),
+  importClassAcronymsDialog: document.getElementById('import-class-acronyms-dialog'),
+  importAcronymsSourceCourseSelect: document.getElementById('import-acronyms-source-course-select'),
+  importAcronymsSkipDuplicates: document.getElementById('import-acronyms-skip-duplicates'),
+  importClassAcronymsCount: document.getElementById('import-class-acronyms-count'),
+  importClassAcronymsSelectAllBtn: document.getElementById('import-class-acronyms-select-all-btn'),
+  importClassAcronymsDeselectAllBtn: document.getElementById('import-class-acronyms-deselect-all-btn'),
+  importClassAcronymsHeaderCheckbox: document.getElementById('import-class-acronyms-header-checkbox'),
+  importClassAcronymsTableBody: document.getElementById('import-class-acronyms-table-body'),
+  confirmImportClassAcronymsBtn: document.getElementById('confirm-import-class-acronyms-btn'),
+
   // Sidebar To-Do
   todoInput: document.getElementById('todo-input'),
   addTodoBtn: document.getElementById('add-todo-btn'),
@@ -8755,6 +8767,177 @@ function confirmApplyAcronymDefinitions() {
 }
 
 // --------------------------------------------------------------------------
+// IMPORT ACRONYMS FROM CLASS
+// --------------------------------------------------------------------------
+let pendingImportClassAcronymsList = [];
+
+function openImportClassAcronymsModal() {
+  const otherCourses = (state.courses || []).filter(c => c && c.id !== state.currentCourseId);
+
+  if (otherCourses.length === 0) {
+    alert("No other classes/courses exist in your project to import acronyms from.");
+    return;
+  }
+
+  if (elements.importAcronymsSourceCourseSelect) {
+    elements.importAcronymsSourceCourseSelect.innerHTML = otherCourses.map(c => 
+      `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name || 'Untitled Class')}</option>`
+    ).join('');
+  }
+
+  if (elements.importAcronymsSkipDuplicates) {
+    elements.importAcronymsSkipDuplicates.checked = true;
+  }
+
+  renderImportClassAcronymsReviewTable();
+
+  if (elements.importClassAcronymsDialog) {
+    elements.importClassAcronymsDialog.showModal();
+    if (window.lucide) {
+      lucide.createIcons({
+        attrs: { class: 'lucide-icon' },
+        nameAttr: 'data-lucide',
+        nodeList: elements.importClassAcronymsDialog.querySelectorAll('[data-lucide]')
+      });
+    }
+  }
+}
+
+function renderImportClassAcronymsReviewTable() {
+  if (!elements.importClassAcronymsTableBody) return;
+  elements.importClassAcronymsTableBody.innerHTML = '';
+
+  const sourceCourseId = elements.importAcronymsSourceCourseSelect ? elements.importAcronymsSourceCourseSelect.value : null;
+  if (!sourceCourseId) {
+    elements.importClassAcronymsTableBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          No source class selected.
+        </td>
+      </tr>
+    `;
+    if (elements.importClassAcronymsCount) elements.importClassAcronymsCount.textContent = '0 acronyms available';
+    return;
+  }
+
+  const sourceAcronyms = (state.acronyms || []).filter(a => a && a.courseId === sourceCourseId && a.acronym);
+  const targetExistingAcronyms = new Set(
+    (state.acronyms || [])
+      .filter(a => a && a.courseId === state.currentCourseId && a.acronym)
+      .map(a => a.acronym.trim().toUpperCase())
+  );
+
+  pendingImportClassAcronymsList = sourceAcronyms;
+
+  if (elements.importClassAcronymsCount) {
+    elements.importClassAcronymsCount.textContent = `${sourceAcronyms.length} acronym(s) available in selected class`;
+  }
+  if (elements.importClassAcronymsHeaderCheckbox) {
+    elements.importClassAcronymsHeaderCheckbox.checked = true;
+  }
+
+  if (sourceAcronyms.length === 0) {
+    elements.importClassAcronymsTableBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          The selected class does not contain any acronym entries.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const skipDuplicates = elements.importAcronymsSkipDuplicates ? elements.importAcronymsSkipDuplicates.checked : true;
+
+  sourceAcronyms.forEach((ac, idx) => {
+    const codeUpper = (ac.acronym || '').trim().toUpperCase();
+    const isDuplicate = targetExistingAcronyms.has(codeUpper);
+    const shouldCheck = skipDuplicates ? !isDuplicate : true;
+
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border-color)';
+    if (isDuplicate) {
+      tr.style.opacity = '0.75';
+    }
+
+    tr.innerHTML = `
+      <td style="text-align: center; padding: 8px 12px; vertical-align: middle;">
+        <input type="checkbox" class="import-class-acronym-row-checkbox" data-index="${idx}" ${shouldCheck ? 'checked' : ''}>
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">
+        ${escapeHtml(ac.acronym)}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; color: var(--text-secondary);">
+        ${escapeHtml(ac.term || '-')}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.78rem;">
+        ${isDuplicate 
+          ? '<span style="display: inline-block; padding: 2px 8px; background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 4px; font-weight: 600;">Already in class</span>'
+          : '<span style="display: inline-block; padding: 2px 8px; background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; font-weight: 600;">New</span>'
+        }
+      </td>
+    `;
+    elements.importClassAcronymsTableBody.appendChild(tr);
+  });
+}
+
+function confirmImportClassAcronyms() {
+  if (!elements.importClassAcronymsTableBody) return;
+  const checkboxes = elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox');
+  const skipDuplicates = elements.importAcronymsSkipDuplicates ? elements.importAcronymsSkipDuplicates.checked : true;
+
+  const targetExistingAcronyms = new Set(
+    (state.acronyms || [])
+      .filter(a => a && a.courseId === state.currentCourseId && a.acronym)
+      .map(a => a.acronym.trim().toUpperCase())
+  );
+
+  let addedCount = 0;
+  let skippedDuplicateCount = 0;
+
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = parseInt(cb.getAttribute('data-index'), 10);
+      const item = pendingImportClassAcronymsList[idx];
+      if (item && item.acronym) {
+        const codeUpper = item.acronym.trim().toUpperCase();
+        if (skipDuplicates && targetExistingAcronyms.has(codeUpper)) {
+          skippedDuplicateCount++;
+        } else {
+          state.acronyms.push({
+            id: `acronym-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            courseId: state.currentCourseId,
+            acronym: item.acronym,
+            term: item.term || '',
+            createdAt: new Date().toISOString()
+          });
+          targetExistingAcronyms.add(codeUpper);
+          addedCount++;
+        }
+      }
+    }
+  });
+
+  if (elements.importClassAcronymsDialog) {
+    elements.importClassAcronymsDialog.close();
+  }
+
+  if (addedCount > 0) {
+    saveState();
+    renderAcronyms();
+    let msg = `Successfully imported ${addedCount} acronym(s) into current class!`;
+    if (skippedDuplicateCount > 0) {
+      msg += ` (${skippedDuplicateCount} duplicate(s) skipped)`;
+    }
+    showToast(msg);
+  } else if (skippedDuplicateCount > 0) {
+    alert(`No new acronyms were imported because all selected items (${skippedDuplicateCount}) already exist in your current class.`);
+  } else {
+    alert("No acronyms were selected to import.");
+  }
+}
+
+// --------------------------------------------------------------------------
 // AUTOMATED INDEX ACRONYM PARSER
 // --------------------------------------------------------------------------
 function parseIndexForAcronyms() {
@@ -9133,6 +9316,43 @@ if (elements.applyAcronymsHeaderCheckbox) {
 }
 if (elements.confirmApplyAcronymsBtn) {
   elements.confirmApplyAcronymsBtn.addEventListener('click', confirmApplyAcronymDefinitions);
+}
+
+// Import Acronyms from Class Dialog listeners
+if (elements.importClassAcronymsBtn) {
+  elements.importClassAcronymsBtn.addEventListener('click', openImportClassAcronymsModal);
+}
+if (elements.importAcronymsSourceCourseSelect) {
+  elements.importAcronymsSourceCourseSelect.addEventListener('change', renderImportClassAcronymsReviewTable);
+}
+if (elements.importAcronymsSkipDuplicates) {
+  elements.importAcronymsSkipDuplicates.addEventListener('change', renderImportClassAcronymsReviewTable);
+}
+if (elements.importClassAcronymsSelectAllBtn) {
+  elements.importClassAcronymsSelectAllBtn.addEventListener('click', () => {
+    if (elements.importClassAcronymsTableBody) {
+      elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox').forEach(cb => cb.checked = true);
+    }
+    if (elements.importClassAcronymsHeaderCheckbox) elements.importClassAcronymsHeaderCheckbox.checked = true;
+  });
+}
+if (elements.importClassAcronymsDeselectAllBtn) {
+  elements.importClassAcronymsDeselectAllBtn.addEventListener('click', () => {
+    if (elements.importClassAcronymsTableBody) {
+      elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox').forEach(cb => cb.checked = false);
+    }
+    if (elements.importClassAcronymsHeaderCheckbox) elements.importClassAcronymsHeaderCheckbox.checked = false;
+  });
+}
+if (elements.importClassAcronymsHeaderCheckbox) {
+  elements.importClassAcronymsHeaderCheckbox.addEventListener('change', () => {
+    if (elements.importClassAcronymsTableBody) {
+      elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox').forEach(cb => cb.checked = elements.importClassAcronymsHeaderCheckbox.checked);
+    }
+  });
+}
+if (elements.confirmImportClassAcronymsBtn) {
+  elements.confirmImportClassAcronymsBtn.addEventListener('click', confirmImportClassAcronyms);
 }
 
 // Sort acronym headers
