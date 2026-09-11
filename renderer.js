@@ -4705,20 +4705,10 @@ function initEventBindings() {
 
   function updateNotesColumnControlState() {
     if (!elements.printColumnsSelect || !elements.printIncludeNotes || !elements.printIncludeNotesLabel) return;
-    const isTwoCol = elements.printColumnsSelect.value === '2';
-    if (isTwoCol) {
-      elements.printIncludeNotes.checked = false;
-      elements.printIncludeNotes.disabled = true;
-      elements.printIncludeNotesLabel.style.cursor = 'not-allowed';
-      elements.printIncludeNotesLabel.style.opacity = '0.5';
-      elements.printIncludeNotesLabel.style.color = 'var(--text-muted)';
-    } else {
-      elements.printIncludeNotes.disabled = false;
-      elements.printIncludeNotes.checked = localStorage.getItem('print_include_notes') !== 'false';
-      elements.printIncludeNotesLabel.style.cursor = 'pointer';
-      elements.printIncludeNotesLabel.style.opacity = '1';
-      elements.printIncludeNotesLabel.style.color = 'var(--text-primary)';
-    }
+    elements.printIncludeNotes.disabled = false;
+    elements.printIncludeNotesLabel.style.cursor = 'pointer';
+    elements.printIncludeNotesLabel.style.opacity = '1';
+    elements.printIncludeNotesLabel.style.color = 'var(--text-primary)';
   }
 
   // Include Index checkbox — persist and re-render preview when toggled
@@ -5047,7 +5037,7 @@ function renderPrintPreview() {
   
   updateNotesColumnControlState();
 
-  const includeNotes = cols === '2' ? false : (elements.printIncludeNotes ? elements.printIncludeNotes.checked : true);
+  const includeNotes = elements.printIncludeNotes ? elements.printIncludeNotes.checked : true;
   const includeIndex = elements.printIncludeIndex ? elements.printIncludeIndex.checked : true;
   
   const activeCourseBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
@@ -5071,9 +5061,22 @@ function renderPrintPreview() {
   let groupedItems = [];
   let tableHeaderHtml = '';
 
-  const topicW = includeNotes ? '25%' : '40%';
-  const refsW  = includeNotes ? '35%' : '60%';
-  const notesW = '40%';
+  let topicW, refsW, notesW;
+  if (includeNotes) {
+    if (cols === '2') {
+      topicW = '25%';
+      refsW = '35%';
+      notesW = '40%';
+    } else {
+      topicW = '25%';
+      refsW = '35%';
+      notesW = '40%';
+    }
+  } else {
+    topicW = '40%';
+    refsW = '60%';
+    notesW = '';
+  }
   const topicWordWrap = 'overflow-wrap: break-word; word-break: normal;';
 
   const notesHeaderCell = includeNotes ? `<th class="col-notes" style="width: ${notesW};">Notes / Reference Details</th>` : '';
@@ -5240,6 +5243,17 @@ function renderPrintPreview() {
       }
     `;
   }
+  
+  dynamicStyle.textContent += `
+    .print-2col-notes-table {
+      font-size: 6.5pt !important;
+    }
+    .print-2col-notes-table th,
+    .print-2col-notes-table td {
+      font-size: 6.5pt !important;
+      padding: 1.5px 3px !important;
+    }
+  `;
 
   // 2. Off-screen DOM Measurement Pass for 100% Pixel-Accurate Row Heights
   let measureContainer = document.getElementById('print-measure-container');
@@ -5257,10 +5271,11 @@ function renderPrintPreview() {
   const colWidthPt = cols === '2' ? Math.floor((containerWidthPt - 4) / 2) : containerWidthPt;
 
   if (cols === '2') {
+    const twoColClass = includeNotes ? 'print-2col-table print-2col-notes-table' : 'print-2col-table';
     measureContainer.innerHTML = `
       <div class="print-preview-2col-grid" style="width: ${containerWidthPt}pt !important; gap: 4pt !important;">
         <div class="print-preview-2col-col" style="width: ${colWidthPt}pt !important; box-sizing: border-box !important;">
-          <table class="index-table print-2col-table" style="table-layout: fixed; width: ${colWidthPt}pt !important;">
+          <table class="index-table ${twoColClass}" style="table-layout: fixed; width: ${colWidthPt}pt !important;">
             ${tableHeaderHtml}
             <tbody id="print-measure-tbody"></tbody>
           </table>
@@ -5450,18 +5465,19 @@ function renderPrintPreview() {
     if (cols === '2') {
       const col1Rows = sheetData.col1Items.map(i => i.html).join('');
       const col2Rows = sheetData.col2Items.map(i => i.html).join('');
+      const twoColClass = includeNotes ? 'print-2col-table print-2col-notes-table' : 'print-2col-table';
 
       bodyHtml = `
         <div class="print-preview-2col-grid">
           <div class="print-preview-2col-col">
-            <table class="index-table print-2col-table" style="table-layout: fixed; width: 100%;">
+            <table class="index-table ${twoColClass}" style="table-layout: fixed; width: 100%;">
               ${tableHeaderHtml}
               <tbody>${col1Rows}</tbody>
             </table>
           </div>
           <div class="print-preview-2col-col">
             ${col2Rows.length > 0 ? `
-              <table class="index-table print-2col-table" style="table-layout: fixed; width: 100%;">
+              <table class="index-table ${twoColClass}" style="table-layout: fixed; width: 100%;">
                 ${tableHeaderHtml}
                 <tbody>${col2Rows}</tbody>
               </table>
