@@ -2538,7 +2538,7 @@ function compressPageList(pagesStr) {
 
   for (let i = 1; i < sortedPages.length; i++) {
     const current = sortedPages[i];
-    if (current <= rangeEnd + 3) {
+    if (current === rangeEnd + 1) {
       rangeEnd = current;
     } else {
       if (rangeStart === rangeEnd) {
