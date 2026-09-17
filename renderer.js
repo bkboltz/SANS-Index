@@ -5248,6 +5248,12 @@ function renderPrintPreview() {
     .print-2col-notes-table {
       font-size: 6.5pt !important;
     }
+    .print-only .print-2col-notes-table th,
+    .print-only .print-2col-notes-table td,
+    .print-preview-page-container .print-2col-notes-table th,
+    .print-preview-page-container .print-2col-notes-table td,
+    #print-measure-container .print-2col-notes-table th,
+    #print-measure-container .print-2col-notes-table td,
     .print-2col-notes-table th,
     .print-2col-notes-table td {
       font-size: 6.5pt !important;
