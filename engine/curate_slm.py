@@ -4,6 +4,12 @@ Supports dynamic local model selection (0.5B, 1.5B, 3B), custom system prompts, 
 """
 
 import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    try: sys.stdout.reconfigure(encoding='utf-8')
+    except Exception: pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try: sys.stderr.reconfigure(encoding='utf-8')
+    except Exception: pass
 import os
 import json
 import argparse

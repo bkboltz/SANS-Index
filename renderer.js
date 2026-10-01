@@ -313,6 +313,10 @@ const elements = {
   pdfReviewFilterMenu: document.getElementById('pdf-review-filter-menu'),
   pdfReviewBypassCapToggle: document.getElementById('pdf-review-bypass-cap-toggle'),
   pdfIndexLoadingDialog: document.getElementById('pdf-index-loading-dialog'),
+  pdfIndexProgressContainer: document.getElementById('pdf-index-progress-container'),
+  pdfIndexProgressStatus: document.getElementById('pdf-index-progress-status'),
+  pdfIndexProgressPercent: document.getElementById('pdf-index-progress-percent'),
+  pdfIndexProgressBar: document.getElementById('pdf-index-progress-bar'),
   pdfFunFactText: document.getElementById('pdf-fun-fact-text'),
 
   // AI Same Items & Double Confirmation elements
@@ -1211,14 +1215,7 @@ function renderEntries() {
   const query = elements.tableSearchInput.value.toLowerCase().trim();
   if (query) {
     activeEntries = activeEntries.filter(entry => {
-      const book = state.books.find(b => b && b.id === entry.bookId);
-      const bookName = book ? book.name.toLowerCase() : '';
-      return (
-        entry.topic.toLowerCase().includes(query) ||
-        (entry.notes && entry.notes.toLowerCase().includes(query)) ||
-        isPageMatch(entry.pages, query) ||
-        bookName.includes(query)
-      );
+      return entry.topic && entry.topic.toLowerCase().includes(query);
     });
   }
   
@@ -1505,14 +1502,7 @@ function updateMultiDeleteBarState(activeEntries) {
     const query = elements.tableSearchInput.value.toLowerCase().trim();
     if (query) {
       currentActive = currentActive.filter(entry => {
-        const book = state.books.find(b => b && b.id === entry.bookId);
-        const bookName = book ? book.name.toLowerCase() : '';
-        return (
-          entry.topic.toLowerCase().includes(query) ||
-          (entry.notes && entry.notes.toLowerCase().includes(query)) ||
-          isPageMatch(entry.pages, query) ||
-          bookName.includes(query)
-        );
+        return entry.topic && entry.topic.toLowerCase().includes(query);
       });
     }
     activeEntries = currentActive;
@@ -3339,12 +3329,24 @@ async function initiatePdfIndexParse() {
   }
   startFunFactsRotation();
 
+  // Reset and prepare progress elements
+  if (elements.pdfIndexProgressStatus) elements.pdfIndexProgressStatus.textContent = parseMode === 'sans-fast' ? 'Reading PDF locally...' : 'Initializing AI Parser...';
+  if (elements.pdfIndexProgressPercent) elements.pdfIndexProgressPercent.textContent = '0%';
+  if (elements.pdfIndexProgressBar) elements.pdfIndexProgressBar.style.width = '0%';
+
   // Listen for live parsing progress
   let removeProgressListener = null;
-  if (window.api && typeof window.api.onPdfParseProgress === 'function') {
-    removeProgressListener = window.api.onPdfParseProgress((event, data) => {
-      if (elements.pdfFunFactText && data.message) {
-        elements.pdfFunFactText.textContent = `${data.message} (${data.percent}%)`;
+  if (window.api && typeof window.api.onPdfImportProgress === 'function') {
+    removeProgressListener = window.api.onPdfImportProgress((data) => {
+      if (!data) return;
+      if (elements.pdfIndexProgressStatus && data.message) {
+        elements.pdfIndexProgressStatus.textContent = data.message;
+      }
+      if (elements.pdfIndexProgressPercent && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressPercent.textContent = `${data.percent}%`;
+      }
+      if (elements.pdfIndexProgressBar && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressBar.style.width = `${Math.min(100, Math.max(0, data.percent))}%`;
       }
     });
   }
@@ -3688,6 +3690,26 @@ async function startCombineSameItemsAI() {
   }
   startFunFactsRotation();
 
+  if (elements.pdfIndexProgressStatus) elements.pdfIndexProgressStatus.textContent = 'Initializing AI Analysis...';
+  if (elements.pdfIndexProgressPercent) elements.pdfIndexProgressPercent.textContent = '0%';
+  if (elements.pdfIndexProgressBar) elements.pdfIndexProgressBar.style.width = '0%';
+
+  let removeProgressListener = null;
+  if (window.api && typeof window.api.onPdfImportProgress === 'function') {
+    removeProgressListener = window.api.onPdfImportProgress((data) => {
+      if (!data) return;
+      if (elements.pdfIndexProgressStatus && data.message) {
+        elements.pdfIndexProgressStatus.textContent = data.message;
+      }
+      if (elements.pdfIndexProgressPercent && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressPercent.textContent = `${data.percent}%`;
+      }
+      if (elements.pdfIndexProgressBar && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressBar.style.width = `${Math.min(100, Math.max(0, data.percent))}%`;
+      }
+    });
+  }
+
   const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
   const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
 
@@ -3717,6 +3739,7 @@ async function startCombineSameItemsAI() {
       elements.pdfIndexLoadingDialog.close();
     }
     stopFunFactsRotation();
+    if (removeProgressListener && typeof removeProgressListener === 'function') removeProgressListener();
 
     if (!result.success) {
       alert(`AI consolidation failed: ${result.error}`);

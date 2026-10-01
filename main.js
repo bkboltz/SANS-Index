@@ -1564,7 +1564,7 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         event.sender.send('auto-index-progress', { step: 'converting', message: 'Extracting text for quiz generation...' });
         const pythonTextExtractCode = `import sys; from pdfminer.high_level import extract_text; open(sys.argv[2], "w", encoding="utf-8").write(extract_text(sys.argv[1]))`;
         await new Promise((resolve) => {
-          const proc = spawn(pythonExe, ['-c', pythonTextExtractCode, sourceFile, textFile]);
+          const proc = spawn(pythonExe, ['-c', pythonTextExtractCode, sourceFile, textFile], { env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
           proc.on('close', () => resolve());
         });
       }
@@ -1907,15 +1907,16 @@ for topic, pages_raw in all_entries:
             'pages': ', '.join(p_list)
         })
 
-print(json.dumps(result_entries))
+import sys
+sys.stdout.buffer.write(json.dumps(result_entries).encode('utf-8'))
 `;
 
       let scriptOut = '';
       let scriptErr = '';
       await new Promise((resolve, reject) => {
-        const proc = spawn(pythonExe, ['-c', fastScript, pdfPath]);
-        proc.stdout.on('data', d => { scriptOut += d.toString(); });
-        proc.stderr.on('data', d => { scriptErr += d.toString(); });
+        const proc = spawn(pythonExe, ['-c', fastScript, pdfPath], { env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
+        proc.stdout.on('data', d => { scriptOut += d.toString('utf-8'); });
+        proc.stderr.on('data', d => { scriptErr += d.toString('utf-8'); });
         proc.on('close', code => {
           if (code !== 0) reject(new Error(`Local PDF parse failed: ${scriptErr || 'Unknown error'}`));
           else resolve();
@@ -1942,14 +1943,14 @@ print(json.dumps(result_entries))
       return { success: false, error: 'A Gemini API key is required to use AI-Powered PDF parsing.' };
     }
 
-    const extractCode = `import sys; from pdfminer.high_level import extract_text; text=extract_text(sys.argv[1]); print(text)`;
+    const extractCode = `import sys; from pdfminer.high_level import extract_text; sys.stdout.buffer.write(extract_text(sys.argv[1]).encode('utf-8'))`;
     let pdfText = '';
     await new Promise((resolve, reject) => {
-      const proc = spawn(pythonExe, ['-c', extractCode, pdfPath]);
+      const proc = spawn(pythonExe, ['-c', extractCode, pdfPath], { env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
       let out = '';
       let err = '';
-      proc.stdout.on('data', d => { out += d.toString(); });
-      proc.stderr.on('data', d => { err += d.toString(); });
+      proc.stdout.on('data', d => { out += d.toString('utf-8'); });
+      proc.stderr.on('data', d => { err += d.toString('utf-8'); });
       proc.on('close', code => {
         if (code !== 0) reject(new Error(`PDF text extraction failed: ${err || 'Unknown error'}`));
         else resolve();
@@ -1986,18 +1987,11 @@ print(json.dumps(result_entries))
 
     const model = geminiModel || 'gemini-flash-latest';
     const allRawParsedEntries = [];
+    const totalChunks = chunks.length;
+    let completedChunks = 0;
+    const concurrencyLimit = 5;
 
-    for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
-      const chunkText = chunks[cIdx];
-      const progressPercent = Math.round(((cIdx + 1) / chunks.length) * 100);
-
-      event.sender.send('pdf-import-progress', {
-        chunkIndex: cIdx + 1,
-        totalChunks: chunks.length,
-        percent: progressPercent,
-        message: `Parsing index chunk ${cIdx + 1} of ${chunks.length} (${progressPercent}%)...`
-      });
-
+    const processPdfChunk = async (chunkText, cIdx) => {
       const prompt = `You are an expert index parser. The following text is a slice of a book index PDF.
 Your task is to extract EVERY SINGLE index entry and its page references. The page references always include a BOOK NUMBER and a PAGE NUMBER.
 
@@ -2027,9 +2021,10 @@ Index text slice:
 ${chunkText}`;
 
       const maxAttempts = 3;
+      let chunkEntries = [];
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        logDebug(`[PDF Index Parser] Chunk ${cIdx + 1}/${chunks.length}, attempt ${attempt}/${maxAttempts}...`);
+        logDebug(`[PDF Index Parser] Chunk ${cIdx + 1}/${totalChunks}, attempt ${attempt}/${maxAttempts}...`);
         try {
           const response = await net.fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`,
@@ -2056,14 +2051,14 @@ ${chunkText}`;
             const errText = await response.text();
             logDebug(`[PDF Index Parser] Chunk ${cIdx + 1} API error ${response.status}: ${errText}`);
             if ((response.status === 429 || response.status === 503) && attempt < maxAttempts) {
-              // Rate limit hit (Free Tier 15 RPM). Emit user-facing status message before pausing.
+              const currentPercent = Math.round((completedChunks / totalChunks) * 100);
               event.sender.send('pdf-import-progress', {
                 chunkIndex: cIdx + 1,
-                totalChunks: chunks.length,
-                percent: progressPercent,
-                message: `Waiting for API request per minute to refresh. Pausing for maximum of 1 minute...`
+                totalChunks: totalChunks,
+                percent: currentPercent,
+                message: `Rate limit hit (429). Pausing 15s before retrying chunk ${cIdx + 1}...`
               });
-              await new Promise(r => setTimeout(r, 16000));
+              await new Promise(r => setTimeout(r, 15000));
               continue;
             }
             break;
@@ -2072,9 +2067,9 @@ ${chunkText}`;
           const resData = await response.json();
           if (resData.candidates && resData.candidates.length > 0) {
             const responseText = resData.candidates[0].content.parts[0].text;
-            const chunkEntries = tryParseJSONArray(responseText);
-            if (Array.isArray(chunkEntries) && chunkEntries.length > 0) {
-              allRawParsedEntries.push(...chunkEntries);
+            const parsed = tryParseJSONArray(responseText);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              chunkEntries = parsed;
               logDebug(`[PDF Index Parser] Chunk ${cIdx + 1} succeeded: ${chunkEntries.length} entries.`);
               break;
             }
@@ -2084,6 +2079,24 @@ ${chunkText}`;
           if (attempt < maxAttempts) await new Promise(r => setTimeout(r, 5000));
         }
       }
+
+      completedChunks++;
+      const progressPercent = Math.round((completedChunks / totalChunks) * 100);
+      event.sender.send('pdf-import-progress', {
+        chunkIndex: cIdx + 1,
+        totalChunks: totalChunks,
+        percent: progressPercent,
+        message: `Parsing index in parallel [Completed ${completedChunks} of ${totalChunks} (${progressPercent}%)]...`
+      });
+
+      return chunkEntries;
+    };
+
+    // Run parallel chunk processing with concurrency limit of 5
+    for (let i = 0; i < chunks.length; i += concurrencyLimit) {
+      const batchPromises = chunks.slice(i, i + concurrencyLimit).map((chunkText, index) => processPdfChunk(chunkText, i + index));
+      const batchResults = await Promise.all(batchPromises);
+      batchResults.forEach(entries => allRawParsedEntries.push(...entries));
     }
 
     if (allRawParsedEntries.length === 0) {

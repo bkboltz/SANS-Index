@@ -2128,9 +2128,16 @@
       <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: #38bdf8; line-height: 1.4;">
         Parsing PDF Index with Gemini AI...
       </h3>
-      <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 8px 0 0 0; line-height: 1.45; max-width: 400px;">
-        Extracting topics, book numbers, and page references across all books. This can take a few minutes.
-      </p>
+      <!-- Live Progress Bar & Status -->
+      <div id="pdf-index-progress-container" style="width: 100%; margin-top: 18px; text-align: left;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
+          <span id="pdf-index-progress-status" style="font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px;">Initializing AI Parser...</span>
+          <span id="pdf-index-progress-percent" style="font-weight: 600; color: #38bdf8;">0%</span>
+        </div>
+        <div style="width: 100%; height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden;">
+          <div id="pdf-index-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #818cf8); transition: width 0.3s ease;"></div>
+        </div>
+      </div>
 
       <!-- Fun Facts Display during loading -->
       <div style="margin-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px; width: 100%; text-align: center;">
