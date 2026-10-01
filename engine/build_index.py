@@ -1146,7 +1146,7 @@ def compress_pages(pages:list) -> str:
     start = prev = pages[0]
 
     for p in pages[1:]:
-        if p <= prev + 3:
+        if p == prev + 1:
             prev = p
         else:
             ranges.append((start, prev))
