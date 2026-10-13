@@ -37,6 +37,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('auto-index-progress', (event, progress) => callback(progress));
   },
   retryFailedChunks: (args) => ipcRenderer.invoke('retry-failed-chunks', args),
+  fetchGeminiModels: (apiKey) => ipcRenderer.invoke('fetch-gemini-models', apiKey),
   onApiDebugLog: (callback) => {
     ipcRenderer.on('api-debug-log', (event, log) => callback(log));
   },

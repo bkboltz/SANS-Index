@@ -631,10 +631,6 @@
                 </div>
                 <div class="wizard-step-indicator" data-step="4">
                   <div class="step-num">4</div>
-                  <div class="step-text">Quiz Setup</div>
-                </div>
-                <div class="wizard-step-indicator" data-step="5">
-                  <div class="step-num">5</div>
                   <div class="step-text">Review</div>
                 </div>
                 <!-- Connector Line -->
@@ -973,33 +969,58 @@
 
                     <!-- Gemini Model Selection -->
                     <div class="form-group">
-                      <label for="auto-index-model-select">Gemini Model Selection</label>
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <label for="auto-index-model-select" style="margin-bottom: 0;">Gemini Model Selection</label>
+                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                          <span id="gemini-models-sync-status" style="font-size: 0.7rem; color: var(--text-muted);"></span>
+                          <button type="button" id="refresh-gemini-models-btn" class="btn btn-xs btn-secondary" title="Fetch latest models directly from Google AI" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer;">
+                            <i data-lucide="refresh-cw" id="refresh-gemini-models-icon" style="width: 11px; height: 11px;"></i>
+                            <span>Check for New Models</span>
+                          </button>
+                        </div>
+                      </div>
                       <select id="auto-index-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
-                        <optgroup label="✨ Gemini 3.x Series (Latest Generation)">
-                          <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash (Recommended - Fastest & Most Capable)</option>
-                          <option value="gemini-3.6-flash">Gemini 3.6 Flash (High Performance)</option>
-                          <option value="gemini-3.5-flash">Gemini 3.5 Flash (Preview)</option>
-                          <option value="gemini-3.1-pro">Gemini 3.1 Pro (Deep Reasoning)</option>
-                        </optgroup>
-
-                        <optgroup label="⚡ Gemini 2.x Series (High Speed & High Quotas)">
-                          <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Stable)</option>
-                          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight, Highest RPM)</option>
-                          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced Pro Reasoning)</option>
-                        </optgroup>
-
                         <optgroup label="🔄 Auto-Updating Production Aliases">
-                          <option value="gemini-flash-latest">Gemini Flash Latest (Auto-Updated by Google)</option>
+                          <option value="gemini-flash-latest" selected>Gemini Flash Latest (Auto-Updated by Google)</option>
                           <option value="gemini-pro-latest">Gemini Pro Latest (Auto-Updated by Google)</option>
                         </optgroup>
-
+                        <optgroup label="⚡ Gemini 2.x Series (High Speed)">
+                          <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                          <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Stable)</option>
+                          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight)</option>
+                          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced Pro Reasoning)</option>
+                        </optgroup>
+                        <optgroup label="✨ Gemini 3.x Series (Preview)">
+                          <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                          <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                          <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                          <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                        </optgroup>
                         <optgroup label="🏛️ Gemini 1.5 Legacy Series">
                           <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
                           <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
                         </optgroup>
+                        <optgroup label="⚙️ Custom">
+                          <option value="__custom__">+ Enter Custom Model Name...</option>
+                        </optgroup>
                       </select>
                       <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
-                        * Upgrade to paid billing in Google AI Studio for higher quotas, or switch models if you encounter rate limits during peak traffic.
+                        * Models update dynamically from Google Generative AI when your API key is active.
+                      </div>
+                    </div>
+
+                    <!-- Gemini API Quota Tier Selection -->
+                    <div class="form-group" style="margin-top: 14px;">
+                      <label for="auto-index-gemini-tier-select" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span>Google API Quota Tier</span>
+                        <span id="gemini-tier-badge" style="font-size: 0.68rem; padding: 2px 7px; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.3);">Safe Mode (15 RPM)</span>
+                      </label>
+                      <select id="auto-index-gemini-tier-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
+                        <option value="free" selected>🛡️ Free Tier (Safe Mode — 15 RPM Pacing)</option>
+                        <option value="paid">⚡ Paid Tier (Turbo Mode — Parallel Multi-Batch)</option>
+                      </select>
+                      <div id="gemini-tier-description" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
+                        • <strong>Free Tier:</strong> Paces requests (~4.5s intervals, 1 batch at a time) to stay safely under Google's 15 requests/min quota. Prevents 429 quota exhaustion and failed chunks.
                       </div>
                     </div>
 
@@ -1018,7 +1039,7 @@
                           Customize system instructions sent to Gemini AI. You can fine-tune inclusion/exclusion rules or add specific terms relevant to your course.
                         </div>
 
-                        <textarea id="gemini-custom-prompt" rows="8" style="width: 100%; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: monospace; font-size: 0.75rem; padding: 10px; line-height: 1.45; resize: vertical; outline: none;"></textarea>
+                        <textarea id="gemini-custom-prompt" class="prompt-editor-textarea" rows="10" placeholder="Customize system instructions sent to Gemini AI..." style="width: 100%; height: 220px; min-height: 180px; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-mono, monospace); font-size: 0.82rem; padding: 12px 14px; line-height: 1.5; resize: vertical; overflow-y: auto; outline: none; box-sizing: border-box;"></textarea>
 
                         <div style="display: flex; justify-content: flex-end;">
                           <button type="button" id="reset-gemini-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
@@ -1054,7 +1075,7 @@
                           Customize system instructions sent to your local model. You can fine-tune inclusion/exclusion rules or add specific terms relevant to your course.
                         </div>
 
-                        <textarea id="local-slm-custom-prompt" rows="8" style="width: 100%; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: monospace; font-size: 0.75rem; padding: 10px; line-height: 1.45; resize: vertical; outline: none;"></textarea>
+                        <textarea id="local-slm-custom-prompt" class="prompt-editor-textarea" rows="10" placeholder="Customize system instructions sent to your local model..." style="width: 100%; height: 220px; min-height: 180px; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-mono, monospace); font-size: 0.82rem; padding: 12px 14px; line-height: 1.5; resize: vertical; overflow-y: auto; outline: none; box-sizing: border-box;"></textarea>
 
                         <div style="display: flex; justify-content: flex-end;">
                           <button type="button" id="reset-local-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
@@ -1068,63 +1089,10 @@
                 </div>
               </div>
 
-              <!-- Step 4: Practice Quiz Setup (Optional) -->
+              <!-- Step 4: Review & API Warnings -->
               <div class="wizard-step-panel hidden" id="step-panel-4">
                 <div style="margin-bottom: 20px;">
-                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 4: Practice Quiz Setup (Optional)</h3>
-                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Automatically generate mock questions based on the PDF content.</p>
-                </div>
-                
-                <div style="background: rgba(124, 58, 237, 0.04); border: 1px dashed rgba(124, 58, 237, 0.25); opacity: 0.75; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                  <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-weight: 600; color: #a78bfa; font-size: 0.9rem;">Generate Practice Quiz</span>
-                      <span style="font-size: 0.7rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: 10px; font-weight: 600;">Feature Coming Soon</span>
-                    </div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">Create multiple-choice questions for the quiz hub</span>
-                  </div>
-                  <label class="switch-toggle" style="cursor: not-allowed;" title="Feature coming soon">
-                    <input type="checkbox" id="auto-index-generate-quiz" disabled>
-                    <span class="slider-toggle" style="cursor: not-allowed; opacity: 0.5;"></span>
-                  </label>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #f87171; border-radius: 4px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 20px;">
-                  <i data-lucide="clock" style="width: 18px; height: 18px; color: #f87171; flex-shrink: 0;"></i>
-                  <span><strong>Feature Coming Soon:</strong> AI Practice Quiz generation is temporarily locked while we optimize the engine for reduced token consumption and local model support.</span>
-                </div>
-
-                <!-- Quiz parameters (Visible only when toggle checked) -->
-                <div id="quiz-generation-settings" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
-                  <div class="form-group">
-                    <label for="auto-index-quiz-count">Number of Questions</label>
-                    <select id="auto-index-quiz-count" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
-                      <option value="10" selected>10 Questions</option>
-                      <option value="20">20 Questions</option>
-                      <option value="50">50 Questions</option>
-                    </select>
-                  </div>
-                  
-                  <div class="form-group">
-                    <label for="auto-index-quiz-difficulty">Difficulty Level</label>
-                    <select id="auto-index-quiz-difficulty" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
-                      <option value="Conceptual" selected>Conceptual (Definitions, Architecture)</option>
-                      <option value="Practical">Practical (Commands, Tool Syntax, Logs)</option>
-                      <option value="Advanced">Advanced (Scenarios, Attack Vector Analysis)</option>
-                    </select>
-                  </div>
-                  
-                  <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; padding: 10px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                    <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--color-accent); flex-shrink: 0; margin-top: 1px;"></i>
-                    <span>This runs a separate AI generation pass that scans the textbook text, creating tailored cyber-security multiple choice questions.</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Step 5: Review & API Warnings -->
-              <div class="wizard-step-panel hidden" id="step-panel-5">
-                <div style="margin-bottom: 20px;">
-                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 5: Review & API Warnings</h3>
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 4: Review & API Warnings</h3>
                   <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Confirm your setup before initiating the extraction pipeline.</p>
                 </div>
                 
@@ -1152,10 +1120,6 @@
                     <div>
                       <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Gemini Model:</span>
                       <strong id="summary-gemini-model" style="color: var(--text-primary);">-</strong>
-                    </div>
-                    <div>
-                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Practice Quiz:</span>
-                      <strong id="summary-quiz-status" style="color: var(--text-primary);">Disabled</strong>
                     </div>
                   </div>
                 </div>
@@ -1321,20 +1285,21 @@
                 <div style="display: inline-flex; align-items: center; gap: 6px;">
                   <span style="font-size: 0.75rem; color: var(--text-secondary);">using</span>
                   <select id="ai-curation-retry-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.78rem; cursor: pointer; outline: none;">
-                    <optgroup label="✨ Gemini 3.x Series">
-                      <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash</option>
-                      <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
-                      <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                      <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                    <optgroup label="🔄 Production Aliases">
+                      <option value="gemini-flash-latest" selected>Gemini Flash Latest</option>
+                      <option value="gemini-pro-latest">Gemini Pro Latest</option>
                     </optgroup>
                     <optgroup label="⚡ Gemini 2.x Series">
+                      <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                       <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                       <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
                       <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                     </optgroup>
-                    <optgroup label="🔄 Production Aliases">
-                      <option value="gemini-flash-latest">Gemini Flash Latest</option>
-                      <option value="gemini-pro-latest">Gemini Pro Latest</option>
+                    <optgroup label="✨ Gemini 3.x Series">
+                      <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                      <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                      <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                      <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
                     </optgroup>
                     <optgroup label="🏛️ Gemini 1.5 Series">
                       <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
@@ -1342,8 +1307,15 @@
                     </optgroup>
                   </select>
                 </div>
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">in</span>
+                  <select id="ai-curation-retry-tier-select" title="API Quota Tier" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.78rem; cursor: pointer; outline: none;">
+                    <option value="free" selected>🛡️ Free Tier (15 RPM Safe)</option>
+                    <option value="paid">⚡ Paid Tier (Turbo)</option>
+                  </select>
+                </div>
                 <span style="font-size: 0.72rem; color: var(--text-muted);">
-                  <strong>Rate Limit Hint:</strong> Google's free tier has a limit of 15 requests per minute.
+                  <strong>Rate Limit Hint:</strong> Free tier safe mode paces requests at ~13 RPM to prevent quota exhaustion.
                 </span>
               </div>
             </div>

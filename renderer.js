@@ -212,6 +212,12 @@ const elements = {
   geminiCustomPrompt: document.getElementById('gemini-custom-prompt'),
   resetGeminiPromptBtn: document.getElementById('reset-gemini-prompt-btn'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
+  refreshGeminiModelsBtn: document.getElementById('refresh-gemini-models-btn'),
+  refreshGeminiModelsIcon: document.getElementById('refresh-gemini-models-icon'),
+  geminiModelsSyncStatus: document.getElementById('gemini-models-sync-status'),
+  autoIndexGeminiTierSelect: document.getElementById('auto-index-gemini-tier-select'),
+  geminiTierBadge: document.getElementById('gemini-tier-badge'),
+  geminiTierDescription: document.getElementById('gemini-tier-description'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
   getFreeKeyBtn: document.getElementById('get-free-key-btn'),
@@ -226,6 +232,7 @@ const elements = {
   aiCurationErrorText: document.getElementById('ai-curation-error-text'),
   aiCurationRetryBtn: document.getElementById('ai-curation-retry-btn'),
   aiCurationRetryModelSelect: document.getElementById('ai-curation-retry-model-select'),
+  aiCurationRetryTierSelect: document.getElementById('ai-curation-retry-tier-select'),
   aiCurationConfirmModal: document.getElementById('ai-curation-confirm-modal'),
   aiCurationCancelBtn: document.getElementById('ai-curation-cancel-btn'),
   aiCurationContinueBtn: document.getElementById('ai-curation-continue-btn'),
@@ -359,10 +366,6 @@ const elements = {
   scorecardRetryBtn: document.getElementById('scorecard-retry-btn'),
   scorecardCloseBtn: document.getElementById('scorecard-close-btn'),
 
-  autoIndexGenerateQuiz: document.getElementById('auto-index-generate-quiz'),
-  quizGenerationSettings: document.getElementById('quiz-generation-settings'),
-  autoIndexQuizCount: document.getElementById('auto-index-quiz-count'),
-  autoIndexQuizDifficulty: document.getElementById('auto-index-quiz-difficulty'),
   quizGenerationErrorAlert: document.getElementById('quiz-generation-error-alert'),
   quizGenerationErrorText: document.getElementById('quiz-generation-error-text'),
 
@@ -6189,6 +6192,9 @@ function initAutoIndexingBindings() {
         localStorage.setItem('gemini_api_key', keyVal);
         isKeyLocked = !isKeyLocked;
         updateLockUi();
+        if (isKeyLocked && keyVal && typeof refreshGeminiModels === 'function') {
+          refreshGeminiModels(false);
+        }
       });
     }
 
@@ -6477,29 +6483,278 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       updateAiOptionsVisibility();
     });
 
-    // Model selection persistence and sync
-    if (elements.autoIndexModelSelect) {
-      const savedModel = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
-      elements.autoIndexModelSelect.value = savedModel;
-      if (elements.aiCurationRetryModelSelect) {
-        elements.aiCurationRetryModelSelect.value = savedModel;
-      }
-      
-      elements.autoIndexModelSelect.addEventListener('change', () => {
-        localStorage.setItem('gemini_model', elements.autoIndexModelSelect.value);
-        if (elements.aiCurationRetryModelSelect) {
-          elements.aiCurationRetryModelSelect.value = elements.autoIndexModelSelect.value;
+    // -------------------------------------------------------------------------
+    // Dynamic Gemini Model Discovery & Categorization
+    // -------------------------------------------------------------------------
+    const DEFAULT_FALLBACK_MODELS = [
+      { id: 'gemini-flash-latest', displayName: 'Gemini Flash Latest (Auto-Updated)', group: 'alias' },
+      { id: 'gemini-pro-latest', displayName: 'Gemini Pro Latest (Auto-Updated)', group: 'alias' },
+      { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash (Recommended - High Speed)', group: 'gemini-2' },
+      { id: 'gemini-2.0-flash', displayName: 'Gemini 2.0 Flash (Fast & Stable)', group: 'gemini-2' },
+      { id: 'gemini-2.0-flash-lite', displayName: 'Gemini 2.0 Flash Lite (Lightweight, High RPM)', group: 'gemini-2' },
+      { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro (Advanced Pro Reasoning)', group: 'gemini-2' },
+      { id: 'gemini-3.7-flash', displayName: 'Gemini 3.7 Flash', group: 'gemini-3' },
+      { id: 'gemini-3.6-flash', displayName: 'Gemini 3.6 Flash', group: 'gemini-3' },
+      { id: 'gemini-3.5-flash', displayName: 'Gemini 3.5 Flash', group: 'gemini-3' },
+      { id: 'gemini-3.1-pro', displayName: 'Gemini 3.1 Pro', group: 'gemini-3' },
+      { id: 'gemini-1.5-flash', displayName: 'Gemini 1.5 Flash (Legacy)', group: 'gemini-1' },
+      { id: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro (Legacy)', group: 'gemini-1' }
+    ];
+
+    function categorizeModel(modelId) {
+      const lower = modelId.toLowerCase();
+      if (lower.includes('-latest') || lower === 'gemini-flash-latest' || lower === 'gemini-pro-latest') return 'alias';
+      if (lower.startsWith('gemini-3')) return 'gemini-3';
+      if (lower.startsWith('gemini-2')) return 'gemini-2';
+      if (lower.startsWith('gemini-1')) return 'gemini-1';
+      return 'other';
+    }
+
+    function populateModelSelectElement(selectEl, modelsList, selectedValue) {
+      if (!selectEl) return;
+      selectEl.innerHTML = '';
+
+      const groups = {
+        alias: { label: '🔄 Auto-Updating Production Aliases', options: [] },
+        'gemini-3': { label: '✨ Gemini 3.x Series (Latest Generation)', options: [] },
+        'gemini-2': { label: '⚡ Gemini 2.x Series (High Speed & Quotas)', options: [] },
+        'gemini-1': { label: '🏛️ Gemini 1.5 Legacy Series', options: [] },
+        other: { label: '🧪 Other / Experimental Models', options: [] }
+      };
+
+      const aliases = [
+        { id: 'gemini-flash-latest', displayName: 'Gemini Flash Latest (Auto-Updated by Google)' },
+        { id: 'gemini-pro-latest', displayName: 'Gemini Pro Latest (Auto-Updated by Google)' }
+      ];
+      aliases.forEach(a => groups.alias.options.push(a));
+
+      const seenIds = new Set(aliases.map(a => a.id));
+
+      modelsList.forEach(m => {
+        const id = m.id || m.name || m;
+        if (seenIds.has(id)) return;
+        seenIds.add(id);
+
+        const groupKey = m.group || categorizeModel(id);
+        const targetGroup = groups[groupKey] || groups.other;
+        targetGroup.options.push({
+          id: id,
+          displayName: m.displayName || id
+        });
+      });
+
+      // Append optgroups with options
+      Object.keys(groups).forEach(gk => {
+        const g = groups[gk];
+        if (g.options.length > 0) {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = g.label;
+          g.options.forEach(opt => {
+            const optionEl = document.createElement('option');
+            optionEl.value = opt.id;
+            optionEl.textContent = opt.displayName;
+            if (opt.id === selectedValue) optionEl.selected = true;
+            optgroup.appendChild(optionEl);
+          });
+          selectEl.appendChild(optgroup);
         }
+      });
+
+      // Custom option
+      const customGroup = document.createElement('optgroup');
+      customGroup.label = '⚙️ Custom';
+
+      if (selectedValue && !seenIds.has(selectedValue) && selectedValue !== '__custom__') {
+        const customOpt = document.createElement('option');
+        customOpt.value = selectedValue;
+        customOpt.textContent = `${selectedValue} (Custom)`;
+        customOpt.selected = true;
+        customGroup.appendChild(customOpt);
+      }
+
+      const promptCustomOpt = document.createElement('option');
+      promptCustomOpt.value = '__custom__';
+      promptCustomOpt.textContent = '+ Enter Custom Model Name...';
+      customGroup.appendChild(promptCustomOpt);
+      selectEl.appendChild(customGroup);
+
+      if (!selectEl.value && selectEl.options.length > 0) {
+        selectEl.selectedIndex = 0;
+      }
+    }
+
+    function renderAllGeminiModelDropdowns() {
+      let models = DEFAULT_FALLBACK_MODELS;
+      try {
+        const cached = localStorage.getItem('cached_gemini_models');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            models = parsed;
+          }
+        }
+      } catch (e) {}
+
+      const currentModel = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
+      populateModelSelectElement(elements.autoIndexModelSelect, models, currentModel);
+      populateModelSelectElement(elements.aiCurationRetryModelSelect, models, currentModel);
+
+      const lastSync = localStorage.getItem('cached_gemini_models_time');
+      if (elements.geminiModelsSyncStatus) {
+        if (lastSync) {
+          const syncDate = new Date(parseInt(lastSync));
+          elements.geminiModelsSyncStatus.textContent = `Synced: ${syncDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          elements.geminiModelsSyncStatus.title = `Retrieved ${models.length} models from Google AI on ${syncDate.toLocaleDateString()}`;
+        } else {
+          elements.geminiModelsSyncStatus.textContent = '';
+        }
+      }
+    }
+
+    async function refreshGeminiModels(isUserTriggered = false) {
+      const apiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : (localStorage.getItem('gemini_api_key') || '');
+      if (!apiKey) {
+        if (isUserTriggered) {
+          alert('Please enter and lock your Google Gemini API key first to discover available models.');
+        }
+        return;
+      }
+
+      if (elements.refreshGeminiModelsIcon) {
+        elements.refreshGeminiModelsIcon.classList.add('spin-animation');
+      }
+      if (elements.geminiModelsSyncStatus) {
+        elements.geminiModelsSyncStatus.textContent = 'Checking Google AI...';
+      }
+
+      try {
+        const result = await window.api.fetchGeminiModels(apiKey);
+        if (result && result.success && Array.isArray(result.models) && result.models.length > 0) {
+          localStorage.setItem('cached_gemini_models', JSON.stringify(result.models));
+          localStorage.setItem('cached_gemini_models_time', Date.now().toString());
+          renderAllGeminiModelDropdowns();
+          if (isUserTriggered) {
+            alert(`Found ${result.models.length} compatible Gemini models from Google AI! Dropdown updated.`);
+          }
+        } else {
+          if (isUserTriggered) {
+            alert(`Could not fetch models: ${(result && result.error) || 'Unknown error'}`);
+          }
+          renderAllGeminiModelDropdowns();
+        }
+      } catch (err) {
+        if (isUserTriggered) {
+          alert(`Error fetching models: ${err.message}`);
+        }
+        renderAllGeminiModelDropdowns();
+      } finally {
+        if (elements.refreshGeminiModelsIcon) {
+          elements.refreshGeminiModelsIcon.classList.remove('spin-animation');
+        }
+      }
+    }
+
+    function handleModelSelectChange(selectEl, otherSelectEl) {
+      const val = selectEl.value;
+      if (val === '__custom__') {
+        const customName = prompt('Enter the exact Google Gemini model name (e.g. gemini-2.5-flash-preview):');
+        if (customName && customName.trim()) {
+          const cleaned = customName.trim().replace(/^models\//, '');
+          localStorage.setItem('gemini_model', cleaned);
+          renderAllGeminiModelDropdowns();
+        } else {
+          const previous = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
+          selectEl.value = previous;
+        }
+      } else {
+        localStorage.setItem('gemini_model', val);
+        if (otherSelectEl) otherSelectEl.value = val;
+      }
+      if (typeof updateSummaryCard === 'function') updateSummaryCard();
+    }
+
+    if (elements.autoIndexModelSelect) {
+      elements.autoIndexModelSelect.addEventListener('change', () => {
+        handleModelSelectChange(elements.autoIndexModelSelect, elements.aiCurationRetryModelSelect);
       });
     }
 
     if (elements.aiCurationRetryModelSelect) {
       elements.aiCurationRetryModelSelect.addEventListener('change', () => {
-        localStorage.setItem('gemini_model', elements.aiCurationRetryModelSelect.value);
-        if (elements.autoIndexModelSelect) {
-          elements.autoIndexModelSelect.value = elements.aiCurationRetryModelSelect.value;
-        }
+        handleModelSelectChange(elements.aiCurationRetryModelSelect, elements.autoIndexModelSelect);
       });
+    }
+
+    if (elements.refreshGeminiModelsBtn) {
+      elements.refreshGeminiModelsBtn.addEventListener('click', () => {
+        refreshGeminiModels(true);
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // API Quota Tier Management (Free Safe Pacing vs Paid Turbo Mode)
+    // -------------------------------------------------------------------------
+    function updateGeminiTierUi(tier) {
+      const activeTier = tier === 'paid' ? 'paid' : 'free';
+      localStorage.setItem('gemini_api_tier', activeTier);
+
+      if (elements.autoIndexGeminiTierSelect) elements.autoIndexGeminiTierSelect.value = activeTier;
+      if (elements.aiCurationRetryTierSelect) elements.aiCurationRetryTierSelect.value = activeTier;
+
+      if (elements.geminiTierBadge) {
+        if (activeTier === 'free') {
+          elements.geminiTierBadge.textContent = 'Safe Mode (15 RPM)';
+          elements.geminiTierBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+          elements.geminiTierBadge.style.color = '#10b981';
+          elements.geminiTierBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        } else {
+          elements.geminiTierBadge.textContent = 'Turbo Mode (High Speed)';
+          elements.geminiTierBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+          elements.geminiTierBadge.style.color = '#38bdf8';
+          elements.geminiTierBadge.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+        }
+      }
+
+      if (elements.geminiTierDescription) {
+        if (activeTier === 'free') {
+          elements.geminiTierDescription.innerHTML = '• <strong>Free Tier:</strong> Paces requests (~4.5s intervals, 1 batch at a time) to stay safely under Google\'s 15 requests/min quota. Prevents 429 quota exhaustion and failed chunks.';
+        } else {
+          elements.geminiTierDescription.innerHTML = '• <strong>Paid Tier:</strong> High-speed parallel processing (up to 3 concurrent batches). Uses your Google Cloud / AI Studio pay-as-you-go quota without throttling.';
+        }
+      }
+
+      const geminiRateLimitCard = document.getElementById('gemini-rate-limit-card');
+      if (geminiRateLimitCard) {
+        const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+        const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+        if (useAi && !isLocalSlm && activeTier === 'free') {
+          geminiRateLimitCard.classList.remove('hidden');
+        } else {
+          geminiRateLimitCard.classList.add('hidden');
+        }
+      }
+    }
+
+    if (elements.autoIndexGeminiTierSelect) {
+      elements.autoIndexGeminiTierSelect.addEventListener('change', () => {
+        updateGeminiTierUi(elements.autoIndexGeminiTierSelect.value);
+      });
+    }
+
+    if (elements.aiCurationRetryTierSelect) {
+      elements.aiCurationRetryTierSelect.addEventListener('change', () => {
+        updateGeminiTierUi(elements.aiCurationRetryTierSelect.value);
+      });
+    }
+
+    // Initial render of models and tier
+    renderAllGeminiModelDropdowns();
+    const savedTier = localStorage.getItem('gemini_api_tier') || 'free';
+    updateGeminiTierUi(savedTier);
+
+    // If an initial API key is present, silently check for updated models in background
+    if (initialKey) {
+      setTimeout(() => refreshGeminiModels(false), 600);
     }
   }
 
@@ -6689,8 +6944,9 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
     elements.partialRetryFailedBtn.addEventListener('click', async () => {
       if (!lastFailedChunks || lastFailedChunks.length === 0) return;
       const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
-      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-3.7-flash';
+      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : (localStorage.getItem('gemini_model') || 'gemini-flash-latest');
       const geminiPrompt = elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '';
+      const geminiApiTier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
       if (!geminiApiKey) {
         alert("Please enter a valid Gemini API key first to retry AI curation.");
         return;
@@ -6704,7 +6960,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       startFunFactsRotation();
 
       try {
-        const result = await window.api.retryFailedChunks({ failedChunks: lastFailedChunks, geminiApiKey, geminiModel, geminiPrompt });
+        const result = await window.api.retryFailedChunks({ failedChunks: lastFailedChunks, geminiApiKey, geminiModel, geminiPrompt, geminiApiTier });
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
 
@@ -6736,7 +6992,9 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
   if (elements.aiCurationRetryBtn) {
     elements.aiCurationRetryBtn.addEventListener('click', async () => {
       const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
-      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
+      const geminiModel = elements.aiCurationRetryModelSelect ? elements.aiCurationRetryModelSelect.value : (elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : (localStorage.getItem('gemini_model') || 'gemini-flash-latest'));
+      const geminiPrompt = elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '';
+      const geminiApiTier = elements.aiCurationRetryTierSelect ? elements.aiCurationRetryTierSelect.value : (elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free'));
       if (!geminiApiKey) {
         alert("Please enter a valid Gemini API key first to retry AI curation.");
         return;
@@ -6774,7 +7032,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       });
 
       try {
-        const result = await window.api.retryCuration({ entries: autoExtractedEntries, geminiApiKey, geminiModel });
+        const result = await window.api.retryCuration({ entries: autoExtractedEntries, geminiApiKey, geminiModel, geminiPrompt, geminiApiTier });
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
 
@@ -7074,7 +7332,8 @@ async function handleAutoIndexSubmit(e) {
   const lname = elements.autoIndexLname.value.trim();
   const email = elements.autoIndexEmail.value.trim();
   const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-  const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
+  const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : (localStorage.getItem('gemini_model') || 'gemini-flash-latest');
+  const geminiApiTier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
   const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
   const curationEngine = elements.autoIndexCurationEngine ? elements.autoIndexCurationEngine.value : 'gemini';
@@ -7085,6 +7344,7 @@ async function handleAutoIndexSubmit(e) {
     localSlmModel: selectedLocalModel,
     localSlmPrompt: elements.localSlmCustomPrompt ? elements.localSlmCustomPrompt.value.trim() : '',
     geminiPrompt: elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '',
+    geminiApiTier: geminiApiTier,
     offset: parseInt(elements.autoIndexOffset.value) || 0,
     minLength: parseInt(elements.autoIndexMinLen.value) || 2,
     maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
@@ -7092,9 +7352,9 @@ async function handleAutoIndexSubmit(e) {
     maxFrequency: parseInt(elements.autoIndexMaxFreq.value) || 10,
     zipf: parseFloat(elements.autoIndexZipf.value) || 4.0,
     useOcr: elements.autoIndexUseOcr.checked,
-    generateQuiz: elements.autoIndexGenerateQuiz ? elements.autoIndexGenerateQuiz.checked : false,
-    quizCount: parseInt(elements.autoIndexQuizCount.value) || 10,
-    quizDifficulty: elements.autoIndexQuizDifficulty.value || 'Conceptual'
+    generateQuiz: false,
+    quizCount: 10,
+    quizDifficulty: 'Conceptual'
   };
 
   const startProcess = () => {
@@ -7150,7 +7410,7 @@ async function handleAutoIndexSubmit(e) {
       }
     });
 
-    window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, geminiModel, settings })
+    window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, geminiModel, geminiApiTier, settings })
       .then((result) => {
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
@@ -7460,27 +7720,6 @@ function initAutoIndexWizard() {
       openBookDialog();
     });
   }
-
-  if (elements.autoIndexGenerateQuiz) {
-    const quizToggleClone = elements.autoIndexGenerateQuiz.cloneNode(true);
-    elements.autoIndexGenerateQuiz.parentNode.replaceChild(quizToggleClone, elements.autoIndexGenerateQuiz);
-    elements.autoIndexGenerateQuiz = quizToggleClone;
-    
-    elements.autoIndexGenerateQuiz.checked = false;
-    elements.autoIndexGenerateQuiz.disabled = true;
-    
-    elements.quizGenerationSettings = document.getElementById('quiz-generation-settings');
-    elements.autoIndexQuizCount = document.getElementById('auto-index-quiz-count');
-    elements.autoIndexQuizDifficulty = document.getElementById('auto-index-quiz-difficulty');
-    
-    const syncQuizToggle = () => {
-      elements.autoIndexGenerateQuiz.checked = false;
-      if (elements.quizGenerationSettings) elements.quizGenerationSettings.classList.add('hidden');
-    };
-    
-    elements.autoIndexGenerateQuiz.addEventListener('change', syncQuizToggle);
-    syncQuizToggle();
-  }
 }
 
 function validateWizardStep(step) {
@@ -7508,7 +7747,7 @@ function validateWizardStep(step) {
 }
 
 function updateWizardUI() {
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 4; i++) {
     const panel = document.getElementById(`step-panel-${i}`);
     if (panel) {
       if (i === wizardCurrentStep) {
@@ -7530,7 +7769,7 @@ function updateWizardUI() {
   }
 
   if (elements.wizardProgressBar) {
-    const percentage = ((wizardCurrentStep - 1) / 4) * 100;
+    const percentage = ((wizardCurrentStep - 1) / 3) * 100;
     elements.wizardProgressBar.style.width = `${percentage}%`;
   }
 
@@ -7540,7 +7779,7 @@ function updateWizardUI() {
     elements.wizardPrevBtn.classList.remove('hidden');
   }
 
-  if (wizardCurrentStep === 5) {
+  if (wizardCurrentStep === 4) {
     elements.wizardNextBtn.classList.add('hidden');
     elements.startIndexingBtn.classList.remove('hidden');
     updateWizardSummary();
@@ -7556,7 +7795,6 @@ function updateWizardSummary() {
   const summaryWatermarkStatus = document.getElementById('summary-watermark-status');
   const summaryAiCuration = document.getElementById('summary-ai-curation');
   const summaryGeminiModel = document.getElementById('summary-gemini-model');
-  const summaryQuizStatus = document.getElementById('summary-quiz-status');
 
   if (summaryTargetBook) {
     const selectedOpt = elements.autoIndexBookSelect.options[elements.autoIndexBookSelect.selectedIndex];
@@ -7588,12 +7826,16 @@ function updateWizardSummary() {
   if (summaryGeminiModel) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
     const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+    const tier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
     if (useAi) {
       if (isLocalSlm) {
         summaryGeminiModel.textContent = 'Qwen 0.5B (Offline)';
-      } else if (elements.autoIndexModelSelect) {
+      } else if (elements.autoIndexModelSelect && elements.autoIndexModelSelect.selectedIndex >= 0) {
         const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
-        summaryGeminiModel.textContent = selectedModelOpt ? selectedModelOpt.textContent.split(' ')[0] : '-';
+        const rawName = selectedModelOpt ? (selectedModelOpt.textContent || selectedModelOpt.value) : 'Gemini Flash';
+        const shortName = rawName.split(' (')[0];
+        const tierTag = tier === 'free' ? ' [15 RPM]' : ' [Turbo]';
+        summaryGeminiModel.textContent = shortName + tierTag;
       } else {
         summaryGeminiModel.textContent = 'Gemini Flash';
       }
@@ -7602,16 +7844,13 @@ function updateWizardSummary() {
     }
   }
 
-  if (summaryQuizStatus) {
-    summaryQuizStatus.textContent = 'Disabled (Coming Soon)';
-  }
-
-  // Toggle API Free Tier rate limit advisory card (only show if Gemini Cloud AI is selected)
+  // Toggle API Free Tier rate limit advisory card (only show if Gemini Cloud AI is selected AND in Free tier mode)
   const geminiRateLimitCard = document.getElementById('gemini-rate-limit-card');
   if (geminiRateLimitCard) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
     const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
-    if (useAi && !isLocalSlm) {
+    const tier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
+    if (useAi && !isLocalSlm && tier === 'free') {
       geminiRateLimitCard.classList.remove('hidden');
     } else {
       geminiRateLimitCard.classList.add('hidden');

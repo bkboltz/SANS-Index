@@ -892,7 +892,11 @@ Also, if there are minor spelling/capitalization variations of the same term (e.
   const allCuratedEntries = [];
   const failedChunks = [];
   const selectedModel = geminiModel || 'gemini-3.7-flash';
-  const concurrencyLimit = 3;
+  const apiTier = (options && options.apiTier) || 'free';
+  const isFreeTier = (apiTier === 'free');
+  const concurrencyLimit = isFreeTier ? 1 : 3;
+  const minIntervalMs = isFreeTier ? 4500 : 0;
+  let lastRequestStartTime = 0;
 
   const emitApiDebugLog = (msg) => {
     logDebug(msg);
@@ -904,7 +908,7 @@ Also, if there are minor spelling/capitalization variations of the same term (e.
     }
   };
 
-  emitApiDebugLog(`[Curation Init] Model: ${selectedModel} | Batches: ${chunks.length} | Retry Mode: ${isRetry}`);
+  emitApiDebugLog(`[Curation Init] Model: ${selectedModel} | Batches: ${chunks.length} | Tier: ${isFreeTier ? 'Free (Safe 15 RPM Pacing)' : 'Paid (Turbo 3x Parallel)'} | Retry Mode: ${isRetry}`);
 
   const emitProgress = () => {
     if (event) {
@@ -914,7 +918,9 @@ Also, if there are minor spelling/capitalization variations of the same term (e.
         currentChunk: completedCount,
         totalChunks: chunks.length,
         chunkStatuses: chunkStatuses,
-        message: `Curating candidate terms in parallel batches (${concurrencyLimit} parallel max)...`
+        message: isFreeTier
+          ? `Curating candidate terms (Free Tier: 15 RPM safe pacing)...`
+          : `Curating candidate terms in parallel batches (${concurrencyLimit} parallel max)...`
       });
     }
   };
@@ -943,12 +949,23 @@ Return a JSON array of objects with the exact same structure as the input:
     for (let attempt = prevAttempts + 1; attempt <= chunkMaxAttempts; attempt++) {
       statusObj.attempt = attempt;
       statusObj.maxAttempts = chunkMaxAttempts;
-      statusObj.message = `Retrying (${selectedModel})... Attempt ${attempt}/${chunkMaxAttempts}`;
+      const actionText = attempt === 1 ? 'Processing' : 'Retrying';
+      statusObj.message = `${actionText} (${selectedModel})... Attempt ${attempt}/${chunkMaxAttempts}`;
       emitProgress();
 
       emitApiDebugLog(`[POST] Calling models/${selectedModel}:generateContent (Batch ${statusObj.chunkIndex}/${statusObj.totalChunks}, Attempt ${attempt}/${chunkMaxAttempts})...`);
 
       try {
+        if (minIntervalMs > 0 && lastRequestStartTime > 0) {
+          const elapsed = Date.now() - lastRequestStartTime;
+          if (elapsed < minIntervalMs) {
+            const waitMs = minIntervalMs - elapsed;
+            emitApiDebugLog(`[Rate Limiter] Free tier pacing: waiting ${Math.round(waitMs)}ms to stay under 15 RPM limit...`);
+            await new Promise(r => setTimeout(r, waitMs));
+          }
+        }
+        lastRequestStartTime = Date.now();
+
         const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1547,7 +1564,9 @@ ipcMain.handle('run-auto-index', async (event, args) => {
         finalEntries = curationResult.entries;
         curationError = curationResult.error;
       } else if (geminiApiKey) {
-        const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel, settings.geminiPrompt || null);
+        const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel, settings.geminiPrompt || null, {
+          apiTier: (settings && settings.geminiApiTier) || args.geminiApiTier || 'free'
+        });
         finalEntries = curationResult.entries;
         curationError = curationResult.error;
         var failedChunks = curationResult.failedChunks || [];
@@ -1615,11 +1634,13 @@ ipcMain.handle('run-auto-index', async (event, args) => {
 });
 
 ipcMain.handle('retry-gemini-curation', async (event, args) => {
-  const { entries, geminiApiKey, geminiModel } = args;
-  logDebug(`[Auto-Index Handler] Received retry-gemini-curation request for ${entries ? entries.length : 0} terms. Model: ${geminiModel}`);
+  const { entries, geminiApiKey, geminiModel, geminiPrompt, geminiApiTier } = args;
+  logDebug(`[Auto-Index Handler] Received retry-gemini-curation request for ${entries ? entries.length : 0} terms. Model: ${geminiModel}, Tier: ${geminiApiTier || 'free'}`);
   
   try {
-    const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel);
+    const curationResult = await curateIndexWithGemini(entries, geminiApiKey, event, geminiModel, geminiPrompt || null, {
+      apiTier: geminiApiTier || 'free'
+    });
     return { success: curationResult.error ? false : true, entries: curationResult.entries, error: curationResult.error };
   } catch (error) {
     logDebug(`[Auto-Index Handler] Retry curation failed: ${error.message}`);
@@ -1628,8 +1649,8 @@ ipcMain.handle('retry-gemini-curation', async (event, args) => {
 });
 
 ipcMain.handle('retry-failed-chunks', async (event, args) => {
-  const { failedChunks, geminiApiKey, geminiModel, geminiPrompt } = args;
-  logDebug(`[Auto-Index Handler] Received retry-failed-chunks request for ${failedChunks ? failedChunks.length : 0} chunks. Model: ${geminiModel}`);
+  const { failedChunks, geminiApiKey, geminiModel, geminiPrompt, geminiApiTier } = args;
+  logDebug(`[Auto-Index Handler] Received retry-failed-chunks request for ${failedChunks ? failedChunks.length : 0} chunks. Model: ${geminiModel}, Tier: ${geminiApiTier || 'free'}`);
   
   if (!failedChunks || failedChunks.length === 0) {
     return { success: true, entries: [], failedChunks: [] };
@@ -1638,7 +1659,8 @@ ipcMain.handle('retry-failed-chunks', async (event, args) => {
   try {
     const curationResult = await curateIndexWithGemini([], geminiApiKey, event, geminiModel, geminiPrompt || null, {
       isRetry: true,
-      failedChunks: failedChunks
+      failedChunks: failedChunks,
+      apiTier: geminiApiTier || 'free'
     });
     return {
       success: curationResult.failedChunks && curationResult.failedChunks.length > 0 ? false : true,
@@ -1649,6 +1671,62 @@ ipcMain.handle('retry-failed-chunks', async (event, args) => {
   } catch (error) {
     logDebug(`[Auto-Index Handler] Retry failed chunks failed: ${error.message}`);
     return { success: false, entries: [], failedChunks: failedChunks, error: error.message };
+  }
+});
+
+// IPC Handler: Fetch available Gemini models dynamically from Google Generative Language API
+ipcMain.handle('fetch-gemini-models', async (event, apiKey) => {
+  if (!apiKey || !apiKey.trim()) {
+    return { success: false, error: 'Gemini API key is required to check for models.' };
+  }
+  const cleanKey = apiKey.trim();
+  try {
+    logDebug(`[Dynamic Models] Querying Google Generative Language API for models...`);
+    const response = await net.fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}&pageSize=100`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      let msg = errText;
+      try {
+        const parsed = JSON.parse(errText);
+        if (parsed.error && parsed.error.message) msg = parsed.error.message;
+      } catch (e) {}
+      logDebug(`[Dynamic Models] API query failed (${response.status}): ${msg}`);
+      return { success: false, error: `Google API Error (${response.status}): ${msg}` };
+    }
+
+    const data = await response.json();
+    if (!data.models || !Array.isArray(data.models)) {
+      return { success: false, error: 'No models returned from Google Generative Language API.' };
+    }
+
+    // Filter models supporting text/content generation and starting with gemini
+    const suitableModels = data.models
+      .filter(m => {
+        const methods = m.supportedGenerationMethods || [];
+        const name = (m.name || '').toLowerCase();
+        return methods.includes('generateContent') && name.includes('gemini');
+      })
+      .map(m => {
+        const rawName = m.name || '';
+        const id = rawName.replace(/^models\//, '');
+        return {
+          id: id,
+          displayName: m.displayName || id,
+          description: m.description || '',
+          inputTokenLimit: m.inputTokenLimit || null,
+          outputTokenLimit: m.outputTokenLimit || null
+        };
+      });
+
+    logDebug(`[Dynamic Models] Retrieved ${suitableModels.length} compatible Gemini models.`);
+    return { success: true, models: suitableModels };
+  } catch (error) {
+    logDebug(`[Dynamic Models] Fetch error: ${error.message}`);
+    return { success: false, error: error.message };
   }
 });
 
