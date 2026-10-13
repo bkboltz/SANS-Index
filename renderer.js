@@ -313,6 +313,7 @@ const elements = {
   pdfReviewFilterMenu: document.getElementById('pdf-review-filter-menu'),
   pdfReviewBypassCapToggle: document.getElementById('pdf-review-bypass-cap-toggle'),
   pdfIndexLoadingDialog: document.getElementById('pdf-index-loading-dialog'),
+  pdfIndexCandidateInfo: document.getElementById('pdf-index-candidate-info'),
   pdfIndexProgressContainer: document.getElementById('pdf-index-progress-container'),
   pdfIndexProgressStatus: document.getElementById('pdf-index-progress-status'),
   pdfIndexProgressPercent: document.getElementById('pdf-index-progress-percent'),
@@ -324,6 +325,11 @@ const elements = {
   combineSameItemsSetupDialog: document.getElementById('combine-same-items-setup-dialog'),
   combineAiKeyRow: document.getElementById('combine-ai-key-row'),
   combineAiGeminiKey: document.getElementById('combine-ai-gemini-key'),
+  combineConcurrencyContainer: document.getElementById('combine-concurrency-container'),
+  combineStatsSummary: document.getElementById('combine-stats-summary'),
+  combineConcurrencySelect: document.getElementById('combine-concurrency-select'),
+  combineWaveCalcText: document.getElementById('combine-wave-calc-text'),
+  combineWaveEstimateText: document.getElementById('combine-wave-estimate-text'),
   startCombineAiBtn: document.getElementById('start-combine-ai-btn'),
   sameItemsReviewDialog: document.getElementById('same-items-review-dialog'),
   sameItemsSummaryText: document.getElementById('same-items-review-summary-text'),
@@ -3319,6 +3325,10 @@ async function initiatePdfIndexParse() {
 
   // Close the import dialog and show the dedicated loading dialog
   elements.importDialog.close();
+  if (elements.pdfIndexCandidateInfo) {
+    elements.pdfIndexCandidateInfo.style.display = 'none';
+    elements.pdfIndexCandidateInfo.innerHTML = '';
+  }
   if (elements.pdfIndexLoadingDialog) {
     const titleEl = elements.pdfIndexLoadingDialog.querySelector('h3');
     const subtextEl = elements.pdfIndexLoadingDialog.querySelector('p');
@@ -3624,8 +3634,37 @@ async function commitImportSelectedEntries() {
 // AI SAME ITEMS CONSOLIDATION LOGIC (Option 1: Single-Pass Full Context)
 // ==========================================================================
 let sameItemsProposals = [];
+let currentCombineTotalBatches = 1;
 
-function openCombineSameItemsSetupDialog() {
+function updateWaveTimingDisplay() {
+  if (!elements.combineConcurrencySelect) return;
+  const concurrency = parseInt(elements.combineConcurrencySelect.value, 10) || 4;
+  const totalBatches = currentCombineTotalBatches || 1;
+  const waves = Math.ceil(totalBatches / concurrency);
+
+  if (elements.combineWaveCalcText) {
+    elements.combineWaveCalcText.textContent = `Waves = ⌈Total Batches (${totalBatches}) ÷ Batches at once (${concurrency})⌉ = ${waves} wave(s)`;
+  }
+
+  if (elements.combineWaveEstimateText) {
+    let estTime = '';
+    if (waves === 1) {
+      estTime = '~35–45 seconds';
+    } else if (waves === 2) {
+      estTime = '~1 min 15 sec';
+    } else {
+      const minMins = Math.round((waves * 35 / 60) * 10) / 10;
+      const maxMins = Math.round((waves * 45 / 60) * 10) / 10;
+      estTime = `~${minMins}–${maxMins} minutes`;
+    }
+    elements.combineWaveEstimateText.innerHTML = `
+      Each wave takes <strong>~35–45 seconds</strong> for Gemini to evaluate.<br>
+      Estimated total analysis time: <strong style="color: #38bdf8;">${estTime}</strong>.
+    `;
+  }
+}
+
+async function openCombineSameItemsSetupDialog() {
   const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
   if (courseEntries.length === 0) {
     alert("No index entries found in current course to combine.");
@@ -3658,8 +3697,89 @@ function openCombineSameItemsSetupDialog() {
     elements.combineAiKeyRow.style.display = 'none';
   }
 
+  // Show setup modal immediately
   if (elements.combineSameItemsSetupDialog) {
     elements.combineSameItemsSetupDialog.showModal();
+  }
+  lucide.createIcons();
+
+  // Reset and pre-calculate candidate stats
+  if (elements.combineStatsSummary) {
+    elements.combineStatsSummary.textContent = 'Scanning candidate pairs...';
+  }
+
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym);
+
+  const mappedEntries = courseEntries.map(e => {
+    const matchedBook = activeBooks.find(b => b.id === e.bookId);
+    let bookNum = 1;
+    if (matchedBook) {
+      const m = matchedBook.name.match(/(\d+)/);
+      if (m) bookNum = parseInt(m[1], 10);
+    }
+    return {
+      id: e.id,
+      topic: e.topic,
+      bookNum,
+      pages: e.pages
+    };
+  });
+
+  if (window.api && typeof window.api.getCombineCandidateStats === 'function') {
+    try {
+      const stats = await window.api.getCombineCandidateStats({
+        entries: mappedEntries,
+        acronyms: courseAcronyms.map(a => ({ acronym: a.acronym, term: a.term || '' }))
+      });
+
+      if (stats && stats.success) {
+        currentCombineTotalBatches = stats.totalBatches || 1;
+        if (elements.combineStatsSummary) {
+          elements.combineStatsSummary.textContent = `${stats.totalPairs.toLocaleString()} pairs across ${stats.totalBatches} batch(es)`;
+        }
+
+        if (elements.combineConcurrencySelect) {
+          elements.combineConcurrencySelect.innerHTML = '';
+          const maxConcurrency = Math.max(1, Math.min(15, stats.totalBatches || 1));
+
+          for (let i = 1; i <= maxConcurrency; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            if (i === 4) {
+              opt.textContent = `4 Batches at once (Recommended for Free Tier - safe from 15 RPM limit)`;
+            } else if (i === 8) {
+              opt.textContent = `8 Batches at once (Paid Tier - Balanced)`;
+            } else if (i === 12) {
+              opt.textContent = `12 Batches at once (Paid Tier)`;
+            } else {
+              opt.textContent = `${i} Batch${i > 1 ? 'es' : ''} at once`;
+            }
+            elements.combineConcurrencySelect.appendChild(opt);
+          }
+
+          // Restore previously chosen preference or default based on tier
+          const savedPref = parseInt(localStorage.getItem('combine_concurrency'), 10);
+          if (savedPref && savedPref >= 1 && savedPref <= maxConcurrency) {
+            elements.combineConcurrencySelect.value = savedPref;
+          } else if (maxConcurrency >= 8) {
+            elements.combineConcurrencySelect.value = 8;
+          } else if (maxConcurrency >= 4) {
+            elements.combineConcurrencySelect.value = 4;
+          } else {
+            elements.combineConcurrencySelect.value = maxConcurrency;
+          }
+
+          updateWaveTimingDisplay();
+          if (window.lucide) lucide.createIcons();
+        }
+      }
+    } catch (err) {
+      console.warn('[Same Items] Pre-calculation error:', err);
+      if (elements.combineStatsSummary) {
+        elements.combineStatsSummary.textContent = 'Auto-batching ready';
+      }
+    }
   }
 }
 
@@ -3677,8 +3797,16 @@ async function startCombineSameItemsAI() {
     return;
   }
 
+  const chosenConcurrency = elements.combineConcurrencySelect ? parseInt(elements.combineConcurrencySelect.value, 10) || 4 : 4;
+  localStorage.setItem('combine_concurrency', chosenConcurrency);
+
   if (elements.combineSameItemsSetupDialog) {
     elements.combineSameItemsSetupDialog.close();
+  }
+
+  if (elements.pdfIndexCandidateInfo) {
+    elements.pdfIndexCandidateInfo.style.display = 'none';
+    elements.pdfIndexCandidateInfo.innerHTML = '';
   }
 
   if (elements.pdfIndexLoadingDialog) {
@@ -3707,11 +3835,22 @@ async function startCombineSameItemsAI() {
       if (elements.pdfIndexProgressBar && typeof data.percent !== 'undefined') {
         elements.pdfIndexProgressBar.style.width = `${Math.min(100, Math.max(0, data.percent))}%`;
       }
+      if (elements.pdfIndexCandidateInfo && typeof data.candidatePairsCount !== 'undefined') {
+        elements.pdfIndexCandidateInfo.style.display = 'block';
+        elements.pdfIndexCandidateInfo.innerHTML = `
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 9999px; font-size: 0.8rem; color: #38bdf8; font-weight: 500;">
+            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+            <span>Candidate Entry Pairs Passed to Gemini: <strong style="color: #ffffff; font-weight: 700;">${data.candidatePairsCount.toLocaleString()}</strong></span>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+      }
     });
   }
 
   const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
   const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym);
 
   const mappedEntries = courseEntries.map(e => {
     const matchedBook = activeBooks.find(b => b.id === e.bookId);
@@ -3731,15 +3870,24 @@ async function startCombineSameItemsAI() {
   try {
     const result = await window.api.combineSameItems({
       entries: mappedEntries,
+      acronyms: courseAcronyms.map(a => ({ acronym: a.acronym, term: a.term || '' })),
       geminiApiKey: apiKey,
-      geminiModel: 'gemini-flash-latest'
+      geminiModel: 'gemini-flash-latest',
+      concurrency: chosenConcurrency
     });
 
     if (elements.pdfIndexLoadingDialog) {
       elements.pdfIndexLoadingDialog.close();
     }
+    if (elements.pdfIndexCandidateInfo) {
+      elements.pdfIndexCandidateInfo.style.display = 'none';
+      elements.pdfIndexCandidateInfo.innerHTML = '';
+    }
     stopFunFactsRotation();
     if (removeProgressListener && typeof removeProgressListener === 'function') removeProgressListener();
+    if (window.api && typeof window.api.removeListener === 'function') {
+      window.api.removeListener('pdf-import-progress');
+    }
 
     if (!result.success) {
       alert(`AI consolidation failed: ${result.error}`);
@@ -3769,7 +3917,15 @@ async function startCombineSameItemsAI() {
     if (elements.pdfIndexLoadingDialog) {
       elements.pdfIndexLoadingDialog.close();
     }
+    if (elements.pdfIndexCandidateInfo) {
+      elements.pdfIndexCandidateInfo.style.display = 'none';
+      elements.pdfIndexCandidateInfo.innerHTML = '';
+    }
     stopFunFactsRotation();
+    if (removeProgressListener && typeof removeProgressListener === 'function') removeProgressListener();
+    if (window.api && typeof window.api.removeListener === 'function') {
+      window.api.removeListener('pdf-import-progress');
+    }
     alert(`Error during AI consolidation: ${err.message}`);
   }
 }
@@ -4085,6 +4241,12 @@ function closePdfIndexReviewDialog(e) {
 function initPdfIndexImportBindings() {
   if (elements.combineSameItemsBtn) {
     elements.combineSameItemsBtn.addEventListener('click', openCombineSameItemsSetupDialog);
+  }
+  if (elements.combineConcurrencySelect) {
+    elements.combineConcurrencySelect.addEventListener('change', () => {
+      localStorage.setItem('combine_concurrency', elements.combineConcurrencySelect.value);
+      updateWaveTimingDisplay();
+    });
   }
   if (elements.startCombineAiBtn) {
     elements.startCombineAiBtn.addEventListener('click', startCombineSameItemsAI);
@@ -8690,11 +8852,19 @@ function applyAcronymDefinitionsToIndex() {
     return;
   }
 
-  // Create lookup map of normalized acronym code -> full term
+  // Create lookup map of normalized acronym code -> Array of { code, term }
   const acronymMap = new Map();
   courseAcronyms.forEach(a => {
     if (a.acronym && a.acronym.trim()) {
-      acronymMap.set(a.acronym.trim().toUpperCase(), { code: a.acronym.trim(), term: a.term.trim() });
+      const upper = a.acronym.trim().toUpperCase();
+      if (!acronymMap.has(upper)) {
+        acronymMap.set(upper, []);
+      }
+      const list = acronymMap.get(upper);
+      const cleanTerm = a.term.trim();
+      if (!list.some(item => item.term.toLowerCase() === cleanTerm.toLowerCase())) {
+        list.push({ code: a.acronym.trim(), term: cleanTerm });
+      }
     }
   });
 
@@ -8707,22 +8877,28 @@ function applyAcronymDefinitionsToIndex() {
     const upperTopic = cleanTopic.toUpperCase();
 
     if (acronymMap.has(upperTopic)) {
-      const match = acronymMap.get(upperTopic);
-      const newTopic = `${match.term} (${match.code})`;
-      if (entry.topic !== newTopic) {
-        const book = state.books.find(b => b && b.id === entry.bookId);
-        const bookName = book ? book.name : '';
-        const bookShort = bookName ? (bookName.includes(':') ? bookName.split(':')[0].trim() : bookName) : '';
-        const pageRef = entry.pages ? ` (p. ${entry.pages})` : '';
-        const bookRef = bookShort ? `${bookShort}${pageRef}` : (entry.pages ? `p. ${entry.pages}` : '');
+      const matches = acronymMap.get(upperTopic);
+      const options = matches.map(m => `${m.term} (${m.code})`);
 
-        pendingApplyAcronymProposals.push({
-          entryId: entry.id,
-          originalTopic: entry.topic,
-          newTopic: newTopic,
-          bookRef: bookRef
-        });
+      // If entry already matches one of the full definitions, skip proposing a duplicate rename
+      if (options.some(opt => opt.toLowerCase() === cleanTopic.toLowerCase())) {
+        return;
       }
+
+      const book = state.books.find(b => b && b.id === entry.bookId);
+      const bookName = book ? book.name : '';
+      const bookShort = bookName ? (bookName.includes(':') ? bookName.split(':')[0].trim() : bookName) : '';
+      const pageRef = entry.pages ? ` (p. ${entry.pages})` : '';
+      const bookRef = bookShort ? `${bookShort}${pageRef}` : (entry.pages ? `p. ${entry.pages}` : '');
+
+      pendingApplyAcronymProposals.push({
+        entryId: entry.id,
+        originalTopic: entry.topic,
+        newTopic: options[0],
+        options: options,
+        hasMultiple: options.length > 1,
+        bookRef: bookRef
+      });
     }
   });
 
@@ -8760,6 +8936,34 @@ function renderApplyAcronymsReviewTable(proposals) {
   proposals.forEach((p, idx) => {
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border-color)';
+
+    let topicCellHtml = '';
+    if (p.hasMultiple && p.options && p.options.length > 1) {
+      topicCellHtml = `
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); letter-spacing: 0.02em;">
+              <i data-lucide="layers" style="width: 12px; height: 12px;"></i>
+              <span>Multiple Definitions (${p.options.length})</span>
+            </span>
+          </div>
+          <div style="position: relative; width: 100%; display: flex; align-items: center;">
+            <select class="apply-acronym-option-select" data-index="${idx}" style="appearance: none; -webkit-appearance: none; -moz-appearance: none; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.5); color: #fbbf24; font-weight: 600; border-radius: 6px; padding: 6px 30px 6px 10px; font-size: 0.84rem; width: 100%; cursor: pointer; outline: none; transition: border-color 0.2s;">
+              ${p.options.map(opt => `<option value="${escapeHtml(opt)}" style="background: #0f172a; color: #f1f5f9;">${escapeHtml(opt)}</option>`).join('')}
+              <option value="__SKIP__" style="background: #0f172a; color: #94a3b8;">(Keep original topic - Do not rename)</option>
+            </select>
+            <i data-lucide="chevron-down" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #fbbf24; pointer-events: none;"></i>
+          </div>
+        </div>
+      `;
+    } else {
+      topicCellHtml = `
+        <span style="font-size: 0.85rem; font-weight: 600; color: #2dd4bf;">
+          ${escapeHtml(p.newTopic)}
+        </span>
+      `;
+    }
+
     tr.innerHTML = `
       <td style="text-align: center; padding: 8px 12px; vertical-align: middle;">
         <input type="checkbox" class="apply-acronym-row-checkbox" data-index="${idx}" checked>
@@ -8767,8 +8971,8 @@ function renderApplyAcronymsReviewTable(proposals) {
       <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono, monospace);">
         ${escapeHtml(p.originalTopic)}
       </td>
-      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; font-weight: 600; color: #2dd4bf;">
-        ${escapeHtml(p.newTopic)}
+      <td style="padding: 8px 12px; vertical-align: middle;">
+        ${topicCellHtml}
       </td>
       <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.8rem; color: var(--text-muted);">
         ${escapeHtml(p.bookRef || '-')}
@@ -8776,6 +8980,31 @@ function renderApplyAcronymsReviewTable(proposals) {
     `;
     elements.applyAcronymsTableBody.appendChild(tr);
   });
+
+  // Attach change listeners for selects
+  elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-option-select').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.getAttribute('data-index'), 10);
+      const row = e.target.closest('tr');
+      const cb = row ? row.querySelector('.apply-acronym-row-checkbox') : null;
+      if (e.target.value === '__SKIP__') {
+        if (cb) cb.checked = false;
+      } else {
+        if (cb) cb.checked = true;
+        if (pendingApplyAcronymProposals[idx]) {
+          pendingApplyAcronymProposals[idx].newTopic = e.target.value;
+        }
+      }
+    });
+  });
+
+  if (window.lucide && elements.applyAcronymsTableBody) {
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.applyAcronymsTableBody.querySelectorAll('[data-lucide]')
+    });
+  }
 }
 
 function confirmApplyAcronymDefinitions() {
@@ -8788,10 +9017,19 @@ function confirmApplyAcronymDefinitions() {
       const idx = parseInt(cb.getAttribute('data-index'), 10);
       const item = pendingApplyAcronymProposals[idx];
       if (item) {
-        const entry = state.entries.find(e => e && e.id === item.entryId);
-        if (entry) {
-          entry.topic = item.newTopic;
-          updatedCount++;
+        let chosenTopic = item.newTopic;
+        if (item.hasMultiple) {
+          const selectEl = elements.applyAcronymsTableBody.querySelector(`.apply-acronym-option-select[data-index="${idx}"]`);
+          if (selectEl) {
+            chosenTopic = selectEl.value;
+          }
+        }
+        if (chosenTopic && chosenTopic !== '__SKIP__') {
+          const entry = state.entries.find(e => e && e.id === item.entryId);
+          if (entry) {
+            entry.topic = chosenTopic;
+            updatedCount++;
+          }
         }
       }
     }
@@ -8866,10 +9104,10 @@ function renderImportClassAcronymsReviewTable() {
   }
 
   const sourceAcronyms = (state.acronyms || []).filter(a => a && a.courseId === sourceCourseId && a.acronym);
-  const targetExistingAcronyms = new Set(
+  const targetExistingAcronymPairs = new Set(
     (state.acronyms || [])
       .filter(a => a && a.courseId === state.currentCourseId && a.acronym)
-      .map(a => a.acronym.trim().toUpperCase())
+      .map(a => `${a.acronym.trim().toUpperCase()}:::${normalizeAcronymTerm(a.term)}`)
   );
 
   pendingImportClassAcronymsList = sourceAcronyms;
@@ -8896,7 +9134,8 @@ function renderImportClassAcronymsReviewTable() {
 
   sourceAcronyms.forEach((ac, idx) => {
     const codeUpper = (ac.acronym || '').trim().toUpperCase();
-    const isDuplicate = targetExistingAcronyms.has(codeUpper);
+    const pairKey = `${codeUpper}:::${normalizeAcronymTerm(ac.term)}`;
+    const isDuplicate = targetExistingAcronymPairs.has(pairKey);
     const shouldCheck = skipDuplicates ? !isDuplicate : true;
 
     const tr = document.createElement('tr');
@@ -8931,10 +9170,10 @@ function confirmImportClassAcronyms() {
   const checkboxes = elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox');
   const skipDuplicates = elements.importAcronymsSkipDuplicates ? elements.importAcronymsSkipDuplicates.checked : true;
 
-  const targetExistingAcronyms = new Set(
+  const targetExistingAcronymPairs = new Set(
     (state.acronyms || [])
       .filter(a => a && a.courseId === state.currentCourseId && a.acronym)
-      .map(a => a.acronym.trim().toUpperCase())
+      .map(a => `${a.acronym.trim().toUpperCase()}:::${normalizeAcronymTerm(a.term)}`)
   );
 
   let addedCount = 0;
@@ -8946,7 +9185,8 @@ function confirmImportClassAcronyms() {
       const item = pendingImportClassAcronymsList[idx];
       if (item && item.acronym) {
         const codeUpper = item.acronym.trim().toUpperCase();
-        if (skipDuplicates && targetExistingAcronyms.has(codeUpper)) {
+        const pairKey = `${codeUpper}:::${normalizeAcronymTerm(item.term)}`;
+        if (skipDuplicates && targetExistingAcronymPairs.has(pairKey)) {
           skippedDuplicateCount++;
         } else {
           state.acronyms.push({
@@ -8956,7 +9196,7 @@ function confirmImportClassAcronyms() {
             term: item.term || '',
             createdAt: new Date().toISOString()
           });
-          targetExistingAcronyms.add(codeUpper);
+          targetExistingAcronymPairs.add(pairKey);
           addedCount++;
         }
       }
@@ -8985,6 +9225,11 @@ function confirmImportClassAcronyms() {
 // --------------------------------------------------------------------------
 // AUTOMATED INDEX ACRONYM PARSER
 // --------------------------------------------------------------------------
+function normalizeAcronymTerm(term) {
+  if (!term) return '';
+  return term.trim().toLowerCase().replace(/[\s\-_.,;:]+/g, ' ');
+}
+
 function parseIndexForAcronyms() {
   const activeEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
   if (activeEntries.length === 0) {
@@ -8992,13 +9237,28 @@ function parseIndexForAcronyms() {
     return;
   }
 
-  const existingAcronyms = new Set(
-    (state.acronyms || [])
-      .filter(a => a && a.courseId === state.currentCourseId)
-      .map(a => a.acronym.trim().toUpperCase())
-  );
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId);
+  const existingCodesSet = new Set();
+  const existingPairsMap = new Map(); // upperCode -> Set of normalizedTerms
+  const existingTermsListMap = new Map(); // upperCode -> Array of original term strings
 
-  const candidateMap = new Map(); // acronym Upper -> { acronym, term, sourceTopic }
+  courseAcronyms.forEach(a => {
+    if (a.acronym && a.acronym.trim()) {
+      const upper = a.acronym.trim().toUpperCase();
+      existingCodesSet.add(upper);
+      if (!existingPairsMap.has(upper)) {
+        existingPairsMap.set(upper, new Set());
+        existingTermsListMap.set(upper, []);
+      }
+      const norm = normalizeAcronymTerm(a.term);
+      if (norm) {
+        existingPairsMap.get(upper).add(norm);
+        existingTermsListMap.get(upper).push(a.term.trim());
+      }
+    }
+  });
+
+  const candidateMap = new Map(); // key (${upperCode}:::${normTerm}) -> candidate object
 
   activeEntries.forEach(entry => {
     if (!entry.topic) return;
@@ -9013,39 +9273,73 @@ function parseIndexForAcronyms() {
     const pMatch1 = topic.match(/^(.+?)\s*\(([^)]+)\)$/);
     const pMatch2 = topic.match(/^\(([^)]+)\)\s*(.+)$/);
 
+    let foundAcronym = null;
+    let foundTerm = null;
+
     if (pMatch1) {
       const part1 = pMatch1[1].trim();
       const part2 = pMatch1[2].trim();
 
       // If part2 is uppercase acronym 2-6 chars
       if (/^[A-Z0-9]{2,6}$/.test(part2)) {
-        const ac = part2.toUpperCase();
-        if (!existingAcronyms.has(ac)) {
-          candidateMap.set(ac, { acronym: part2, term: part1, sourceTopic: fullSourceEntry });
-        }
+        foundAcronym = part2;
+        foundTerm = part1;
       }
       // If part1 is uppercase acronym 2-6 chars
       else if (/^[A-Z0-9]{2,6}$/.test(part1)) {
-        const ac = part1.toUpperCase();
-        if (!existingAcronyms.has(ac)) {
-          candidateMap.set(ac, { acronym: part1, term: part2, sourceTopic: fullSourceEntry });
-        }
+        foundAcronym = part1;
+        foundTerm = part2;
       }
     } else if (pMatch2) {
       const part1 = pMatch2[1].trim();
       const part2 = pMatch2[2].trim();
       if (/^[A-Z0-9]{2,6}$/.test(part1)) {
-        const ac = part1.toUpperCase();
-        if (!existingAcronyms.has(ac)) {
-          candidateMap.set(ac, { acronym: part1, term: part2, sourceTopic: fullSourceEntry });
-        }
+        foundAcronym = part1;
+        foundTerm = part2;
+      }
+    }
+
+    if (foundAcronym && foundTerm) {
+      const upper = foundAcronym.toUpperCase();
+      const normTerm = normalizeAcronymTerm(foundTerm);
+
+      // Rule 1: Exact (Acronym + Definition) deduplication - skip if this exact definition already exists in the course list
+      if (existingPairsMap.has(upper) && existingPairsMap.get(upper).has(normTerm)) {
+        return;
+      }
+
+      // Rule 3: Flag if this is a new / alternative definition for an acronym already known in the list
+      const isAlternative = existingCodesSet.has(upper);
+      const existingDefs = existingTermsListMap.get(upper) || [];
+
+      const candKey = `${upper}:::${normTerm}`;
+      if (!candidateMap.has(candKey)) {
+        candidateMap.set(candKey, {
+          acronym: foundAcronym,
+          term: foundTerm,
+          sourceTopic: fullSourceEntry,
+          isAlternativeDefinition: isAlternative,
+          existingDefinitions: existingDefs
+        });
       }
     } else {
       // 2. Standalone Uppercase Acronym Check (e.g. "ADFS", "CSRF", "SMB")
       if (/^[A-Z0-9]{2,6}$/.test(topic)) {
-        const ac = topic.toUpperCase();
-        if (!existingAcronyms.has(ac) && !candidateMap.has(ac)) {
-          candidateMap.set(ac, { acronym: topic, term: '', sourceTopic: fullSourceEntry });
+        const upper = topic.toUpperCase();
+        // Rule 2: Standalone bare acronyms with NO definition in topic are SKIPPED if the letters already exist in the list
+        if (existingCodesSet.has(upper)) {
+          return;
+        }
+
+        const candKey = `${upper}:::`;
+        if (!candidateMap.has(candKey)) {
+          candidateMap.set(candKey, {
+            acronym: topic,
+            term: '',
+            sourceTopic: fullSourceEntry,
+            isAlternativeDefinition: false,
+            existingDefinitions: []
+          });
         }
       }
     }
@@ -9074,23 +9368,41 @@ function renderAcronymReviewModal() {
 
   elements.acronymReviewTableBody.innerHTML = pendingAcronymCandidates.map((cand, idx) => {
     const isChecked = cand.term && cand.term.trim().length > 0 ? 'checked' : '';
+    const altBadge = cand.isAlternativeDefinition ? `
+      <div style="margin-top: 4px;">
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);" title="Existing definition(s) in list: ${escapeHtml(cand.existingDefinitions.join(', '))}">
+          <i data-lucide="alert-triangle" style="width: 11px; height: 11px;"></i>
+          <span>New definition (In list: ${escapeHtml(cand.existingDefinitions.join(', '))})</span>
+        </span>
+      </div>
+    ` : '';
+
     return `
       <tr>
         <td style="text-align: center; width: 5%;">
           <input type="checkbox" class="acronym-review-row-checkbox" data-idx="${idx}" ${isChecked}>
         </td>
-        <td style="width: 18%;">
+        <td style="width: 22%;">
           <input type="text" class="acronym-review-code-input" data-idx="${idx}" value="${escapeHtml(cand.acronym)}" style="width: 100%; font-weight: 700; padding: 4px 8px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px;">
+          ${altBadge}
         </td>
-        <td style="width: 45%;">
+        <td style="width: 43%;">
           <input type="text" class="acronym-review-term-input" data-idx="${idx}" value="${escapeHtml(cand.term)}" placeholder="(Leave blank to skip auto-import)" style="width: 100%; padding: 4px 8px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px;">
         </td>
-        <td style="width: 32%; font-size: 0.8rem; color: var(--text-secondary); vertical-align: middle; word-break: break-word;">
+        <td style="width: 30%; font-size: 0.8rem; color: var(--text-secondary); vertical-align: middle; word-break: break-word;">
           ${escapeHtml(cand.sourceTopic || '')}
         </td>
       </tr>
     `;
   }).join('');
+
+  if (window.lucide && elements.acronymReviewDialog) {
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.acronymReviewDialog.querySelectorAll('[data-lucide]')
+    });
+  }
 }
 
 function confirmAcronymReview() {

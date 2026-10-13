@@ -2122,10 +2122,288 @@ ${chunkText}`;
 });
 
 // ==========================================================================
-// IPC Handler: Combine Same Items using Gemini AI (Chunked Batching Engine)
+// Candidate Clustering & Inverted Index Engine for Same Items Consolidation
 // ==========================================================================
-ipcMain.handle('combine-same-items', async (event, { entries, geminiApiKey, geminiModel }) => {
-  logDebug(`[Same Items Consolidation] Starting chunked AI analysis for ${entries.length} entries.`);
+function buildCandidatePairsCluster(entries, acronyms) {
+  if (!entries || entries.length === 0) {
+    return { allCandidatePairs: [], globalAcronymMap: {}, sortedEntries: [] };
+  }
+
+  // 1. Sort entries alphabetically by topic title
+  const sortedEntries = [...entries].sort((a, b) => (a.topic || '').localeCompare(b.topic || '', undefined, { sensitivity: 'base' }));
+
+  // 2. Build Global Acronym & Full-Name Reference Map
+  const globalAcronymMap = {};
+  const acronymDefsMap = new Map();
+
+  if (Array.isArray(acronyms)) {
+    acronyms.forEach(a => {
+      if (!a || !a.acronym) return;
+      const code = a.acronym.trim().toUpperCase();
+      const term = (a.term || '').trim();
+      if (!code) return;
+      if (!acronymDefsMap.has(code)) acronymDefsMap.set(code, new Set());
+      if (term) {
+        acronymDefsMap.get(code).add(term);
+        if (!globalAcronymMap[code]) {
+          globalAcronymMap[code] = term;
+        }
+      }
+    });
+  }
+
+  sortedEntries.forEach(e => {
+    if (!e || !e.topic) return;
+    const t = e.topic.trim();
+    const m = t.match(/\(([A-Z0-9]{2,10})\)/i);
+    if (m) {
+      const code = m[1].toUpperCase();
+      if (!acronymDefsMap.has(code)) acronymDefsMap.set(code, new Set());
+      acronymDefsMap.get(code).add(t);
+      if (!globalAcronymMap[code]) {
+        globalAcronymMap[code] = t;
+      }
+    }
+    const words = t.split(/\s+/).filter(w => w.length > 0 && !['and', 'or', 'for', 'of', 'in', 'on', 'with', 'the', 'a', 'an'].includes(w.toLowerCase()));
+    if (words.length >= 2) {
+      const acr = words.map(w => w[0]?.toUpperCase() || '').join('');
+      if (acr.length >= 2 && acr.length <= 6) {
+        if (!globalAcronymMap[acr]) {
+          globalAcronymMap[acr] = t;
+        }
+      }
+    }
+  });
+
+  // 3. Helpers for tokenizing and parsing page numbers
+  const stopWords = new Set(['and', 'or', 'the', 'in', 'to', 'of', 'a', 'an', 'for', 'with', 'on', 'at', 'by', 'is', 'from', 'as', 'into', 'using', 'via', 'vs', 'versus']);
+
+  const tokenize = (text) => {
+    if (!text) return [];
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !stopWords.has(w));
+  };
+
+  const stemWord = (w) => {
+    if (!w || w.length <= 4) return w;
+    return w.replace(/(?:ation|tion|ing|ies|es|ed|s)$/i, '');
+  };
+
+  const parsePages = (pageStr) => {
+    if (!pageStr) return [];
+    const pages = [];
+    const parts = pageStr.toString().split(/[,;]/);
+    for (const part of parts) {
+      const m = part.trim().match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+      if (m) {
+        const s = parseInt(m[1], 10);
+        const e = m[2] ? parseInt(m[2], 10) : s;
+        for (let p = s; p <= Math.min(e, s + 10); p++) pages.push(p);
+      }
+    }
+    return pages;
+  };
+
+  // 3b. Calculate dynamic high-frequency stop-word stems (> 1.5% of topics, floor of 10)
+  const stemFrequency = new Map();
+  sortedEntries.forEach(e => {
+    if (!e || !e.topic) return;
+    const words = tokenize(e.topic);
+    const uniqueStems = new Set(words.map(w => stemWord(w)));
+    uniqueStems.forEach(st => {
+      stemFrequency.set(st, (stemFrequency.get(st) || 0) + 1);
+    });
+  });
+
+  const frequencyThreshold = Math.max(10, Math.round(sortedEntries.length * 0.015));
+  const noBucketStems = new Set();
+  stemFrequency.forEach((count, st) => {
+    if (count >= frequencyThreshold) {
+      noBucketStems.add(st);
+    }
+  });
+  logDebug(`[Same Items Consolidation] Identified ${noBucketStems.size} high-frequency generic word stems (threshold: >= ${frequencyThreshold}): ${Array.from(noBucketStems).join(', ')}`);
+
+  // 4. Inverted Index Buckets: Page, Word/Stem (unified), and Skeleton Buckets
+  const pageBuckets = new Map();
+  const wordBuckets = new Map();
+  const skeletonBuckets = new Map();
+
+  const addToMapList = (map, key, val) => {
+    if (!map.has(key)) map.set(key, []);
+    if (!map.get(key).includes(val)) map.get(key).push(val);
+  };
+
+  sortedEntries.forEach((e, idx) => {
+    if (!e.topic) return;
+    const book = e.bookNum || e.book || 1;
+
+    // 4a. Book/page buckets (always captured regardless of words)
+    const pages = parsePages(e.pages);
+    pages.forEach(p => addToMapList(pageBuckets, `b${book}_p${p}`, idx));
+
+    // 4b. Word & Stem unified buckets (filtered by no_buckets)
+    const words = tokenize(e.topic);
+    const uniqueWords = new Set(words);
+    uniqueWords.forEach(w => {
+      const st = stemWord(w);
+      if (!noBucketStems.has(st)) {
+        addToMapList(wordBuckets, w, idx);
+        if (st.length >= 3) {
+          addToMapList(wordBuckets, st, idx);
+        }
+      }
+    });
+
+    // 4c. Additional Alphanumeric Skeleton bucket (e.g. nodejs <-> node-js <-> node js)
+    const skeleton = (e.topic || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (skeleton.length >= 3) {
+      addToMapList(skeletonBuckets, skeleton, idx);
+    }
+
+    // 4d. Case-insensitive Acronym expansion into word and stem buckets
+    const rawTokens = (e.topic || '').split(/[^a-zA-Z0-9]/).filter(Boolean);
+    const checkedAcrs = new Set();
+    rawTokens.forEach(rawCode => {
+      const code = rawCode.toUpperCase();
+      if (code.length >= 2 && code.length <= 8 && !checkedAcrs.has(code)) {
+        checkedAcrs.add(code);
+        if (acronymDefsMap.has(code)) {
+          acronymDefsMap.get(code).forEach(defText => {
+            const expWords = tokenize(defText);
+            expWords.forEach(w => {
+              const st = stemWord(w);
+              if (!noBucketStems.has(st)) {
+                addToMapList(wordBuckets, w, idx);
+                if (st.length >= 3) {
+                  addToMapList(wordBuckets, st, idx);
+                }
+              }
+            });
+          });
+        }
+      }
+    });
+  });
+
+  // 5. Build Canonical Candidate Pairs (Undirected Graph, O(N))
+  const candidateMap = new Map();
+
+  const addCandidate = (i, j, reason) => {
+    if (i === j) return;
+    const minIdx = Math.min(i, j);
+    const maxIdx = Math.max(i, j);
+    const e1 = sortedEntries[minIdx];
+    const e2 = sortedEntries[maxIdx];
+    // Allow case variations ("Cronjobs" vs "cronjobs"), but skip identical string duplicates
+    if (e1.topic.trim() === e2.topic.trim()) return;
+
+    const pairKey = `${minIdx}_${maxIdx}`;
+    if (!candidateMap.has(pairKey)) {
+      candidateMap.set(pairKey, {
+        pairId: candidateMap.size + 1,
+        termA: e1.topic,
+        bookA: e1.bookNum || e1.book || 1,
+        pagesA: e1.pages || '',
+        termB: e2.topic,
+        bookB: e2.bookNum || e2.book || 1,
+        pagesB: e2.pages || '',
+        signals: []
+      });
+    }
+    candidateMap.get(pairKey).signals.push(reason);
+  };
+
+  // 5a. Case variations (e.g. "Cronjobs" <-> "cronjobs") across the course
+  const lowerMap = new Map();
+  sortedEntries.forEach((e, idx) => {
+    const lower = (e.topic || '').trim().toLowerCase();
+    addToMapList(lowerMap, lower, idx);
+  });
+  lowerMap.forEach((indices, lower) => {
+    for (let a = 0; a < indices.length; a++) {
+      for (let b = a + 1; b < indices.length; b++) {
+        addCandidate(indices[a], indices[b], `Case variation match (${lower})`);
+      }
+    }
+  });
+
+  // 5b. Page bucket collisions (Option A: Word-level prefix/suffix match on same page)
+  pageBuckets.forEach((indices, pageKey) => {
+    for (let a = 0; a < indices.length; a++) {
+      for (let b = a + 1; b < indices.length; b++) {
+        const idxA = indices[a];
+        const idxB = indices[b];
+        if (sortedEntries[idxA].topic.trim() === sortedEntries[idxB].topic.trim()) continue;
+
+        const wordsA = sortedEntries[idxA].topic.toLowerCase().split(/[^a-z0-9]/).filter(w => w.length >= 3 && !stopWords.has(w));
+        const wordsB = sortedEntries[idxB].topic.toLowerCase().split(/[^a-z0-9]/).filter(w => w.length >= 3 && !stopWords.has(w));
+
+        let matchedAffix = '';
+        const hasAffixMatch = wordsA.some(wa => wordsB.some(wb => {
+          const shorter = wa.length <= wb.length ? wa : wb;
+          const longer = wa.length <= wb.length ? wb : wa;
+          if (shorter.length < 3) return false;
+          if (longer.startsWith(shorter) || longer.endsWith(shorter)) {
+            matchedAffix = `${wa} ~ ${wb}`;
+            return true;
+          }
+          return false;
+        }));
+
+        if (hasAffixMatch) {
+          addCandidate(idxA, idxB, `Page affix match (${pageKey}: ${matchedAffix})`);
+        }
+      }
+    }
+  });
+
+  // 5c. Word & Stem unified bucket collisions: any entries sharing at least 1 word or stem (or expanded acronym word)
+  wordBuckets.forEach((indices, word) => {
+    for (let a = 0; a < indices.length; a++) {
+      for (let b = a + 1; b < indices.length; b++) {
+        addCandidate(indices[a], indices[b], `Shared term/stem (${word})`);
+      }
+    }
+  });
+
+  // 5d. Additional Skeleton bucket collisions (exact alphanumeric match regardless of hyphens/spaces)
+  skeletonBuckets.forEach((indices, skel) => {
+    for (let a = 0; a < indices.length; a++) {
+      for (let b = a + 1; b < indices.length; b++) {
+        addCandidate(indices[a], indices[b], `Alphanumeric skeleton match (${skel})`);
+      }
+    }
+  });
+
+  const allCandidatePairs = Array.from(candidateMap.values());
+  logDebug(`[Same Items Consolidation] Clustered ${allCandidatePairs.length} high-confidence unique candidate pairs.`);
+
+  return { allCandidatePairs, globalAcronymMap, sortedEntries };
+}
+
+// IPC Handler: Pre-calculate candidate stats for setup dialog
+ipcMain.handle('get-combine-candidate-stats', async (event, { entries, acronyms }) => {
+  try {
+    const { allCandidatePairs } = buildCandidatePairsCluster(entries, acronyms);
+    const totalPairs = allCandidatePairs.length;
+    const pairChunkSize = 500;
+    const totalBatches = Math.ceil(totalPairs / pairChunkSize);
+    return {
+      success: true,
+      totalPairs,
+      totalBatches,
+      pairChunkSize
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ==========================================================================
+// IPC Handler: Combine Same Items using Gemini AI (Candidate-Clustering Engine)
+// ==========================================================================
+ipcMain.handle('combine-same-items', async (event, { entries, acronyms, geminiApiKey, geminiModel, concurrency: requestedConcurrency }) => {
+  logDebug(`[Same Items Consolidation] Starting candidate-clustered AI analysis for ${entries.length} entries.`);
 
   if (!geminiApiKey) {
     return { success: false, error: 'Gemini API key is required.' };
@@ -2139,68 +2417,73 @@ ipcMain.handle('combine-same-items', async (event, { entries, geminiApiKey, gemi
     const modelName = geminiModel || 'gemini-flash-latest';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`;
 
-    // 1. Sort entries alphabetically by topic title
-    const sortedEntries = [...entries].sort((a, b) => (a.topic || '').localeCompare(b.topic || '', undefined, { sensitivity: 'base' }));
-
-    // 2. Build Global Acronym & Short-Term Reference Map across full project
-    const globalAcronymMap = {};
-    sortedEntries.forEach(e => {
-      if (!e || !e.topic) return;
-      const t = e.topic.trim();
-      const m = t.match(/\(([A-Z0-9]{2,10})\)/i);
-      if (m) {
-        globalAcronymMap[m[1].toUpperCase()] = t;
-      }
-      const words = t.split(/\s+/).filter(w => w.length > 0 && !['and', 'or', 'for', 'of', 'in', 'on', 'with', 'the', 'a', 'an'].includes(w.toLowerCase()));
-      if (words.length >= 2) {
-        const acr = words.map(w => w[0]?.toUpperCase() || '').join('');
-        if (acr.length >= 2 && acr.length <= 6) {
-          globalAcronymMap[acr] = t;
-        }
-      }
-    });
-
-    // 3. Split entries into batches of 120 entries each to prevent LLM response truncation
-    const chunkSize = 120;
-    const chunks = [];
-    for (let i = 0; i < sortedEntries.length; i += chunkSize) {
-      chunks.push(sortedEntries.slice(i, i + chunkSize));
+    if (event) {
+      event.sender.send('pdf-import-progress', {
+        percent: 10,
+        message: `Building inverted index and clustering candidate topic pairs...`
+      });
     }
 
-    const allProposals = [];
-    const totalChunks = chunks.length;
-    const concurrencyLimit = 5;
+    const { allCandidatePairs, globalAcronymMap } = buildCandidatePairsCluster(entries, acronyms);
+
+    if (allCandidatePairs.length === 0) {
+      logDebug(`[Same Items Consolidation] No candidate pairs identified. Index appears fully consolidated.`);
+      if (event) {
+        event.sender.send('pdf-import-progress', {
+          percent: 100,
+          message: `No candidate pairs identified. Index appears fully consolidated.`,
+          candidatePairsCount: 0
+        });
+      }
+      return { success: true, proposals: [] };
+    }
+
+    if (event) {
+      event.sender.send('pdf-import-progress', {
+        percent: 15,
+        message: `Identified ${allCandidatePairs.length} candidate pairs. Starting AI evaluation...`,
+        candidatePairsCount: allCandidatePairs.length
+      });
+    }
+
+    // Split candidate pairs into batches of at most 500 pairs to keep prompt compact and fast
+    const pairChunkSize = 500;
+    const pairChunks = [];
+    for (let i = 0; i < allCandidatePairs.length; i += pairChunkSize) {
+      pairChunks.push(allCandidatePairs.slice(i, i + pairChunkSize));
+    }
+
+    const totalChunks = pairChunks.length;
     let completedChunks = 0;
+    const allProposals = [];
 
-    logDebug(`[Same Items Consolidation] Processing ${sortedEntries.length} entries in ${totalChunks} parallel batches (concurrency: 5).`);
+    const processPairBatch = async (chunk, cIdx) => {
+      const systemPrompt = `You are an index consolidation assistant. Your task is to consolidate similar, duplicate, or equivalent index topics into clean, unified entries.
+Review the following candidate pairs of course index topics (${cIdx + 1} of ${totalChunks}).
 
-    const processBatch = async (chunk, cIdx) => {
-      const firstLetter = (chunk[0].topic || '').charAt(0).toUpperCase() || 'A';
-      const lastLetter = (chunk[chunk.length - 1].topic || '').charAt(0).toUpperCase() || 'Z';
-
-      const batchEntries = chunk.map(e => ({
-        id: e.id,
-        topic: e.topic,
-        book: e.bookNum || e.book || 1,
-        pages: e.pages
-      }));
-
-      const systemPrompt = `You are an expert cybersecurity index consolidation assistant.
-Analyze the following batch of course index entries (${cIdx + 1} of ${totalChunks}) and identify terms that represent the SAME concept, tool, technology, or standard (e.g. "Active Directory" and "AD", "Active Directory Certificate Services (AD CS)" and "AD CS", "Resource-Based Constrained Delegation (RBCD)" and "RBCD").
-
-GLOBAL ACRONYM & FULL NAME REFERENCE MAP Across Full Index:
+GLOBAL ACRONYM & FULL NAME REFERENCE MAP:
 ${JSON.stringify(globalAcronymMap, null, 2)}
 
-CRITICAL CONSOLIDATION & ACRONYM RULES:
-1. ONLY COMBINE MULTIPLE DISTINCT TERMS: Do NOT propose changes for single standalone terms (like "Attack Instances" or "Kerberos") unless they match a separate abbreviation, acronym, or equivalent term in the batch or Global Reference Map!
-2. NEVER INVENT OR GENERATE FAKE ACRONYMS: Do NOT append invented parenthetical acronyms (like "(AI)" for "Attack Instances" or "(KD)" for "Key Distribution") unless that acronym actually exists as a separate term in the index or Global Reference Map!
-3. High Recall Preference for Genuine Matches: Actively combine terms when a true abbreviation or equivalent term exists (e.g. "AD" <-> "Active Directory", "RBCD" <-> "Resource-Based Constrained Delegation").
-4. Moderate Precision Limit: Do NOT combine clearly distinct sub-topics or modules just because they share a prefix (e.g. do NOT combine "AD Module" with "Active Directory").
-5. Standardized Naming Format:
-   - If combining a long-form title with a known acronym: format as "Long-Form Title (ACRONYM)". E.g. "Active Directory (AD)".
-   - If no established acronym exists in the index, keep the clean long-form title WITHOUT inventing any parenthetical letters!
-6. Return ONLY a JSON array of consolidation proposals matching this structure:
+CONSOLIDATION RULES — WHAT TO COMBINE:
+Actively combine pairs that represent the same subject, concept, or tool:
+1. Plural & Singular Variants: (e.g. "Thing" <-> "things", "Firewall" <-> "Firewalls", "Process" <-> "Processes"). Standardize to the clean singular form (e.g. "Thing", "Firewall").
+2. Capitalization & Formatting Variants: (e.g. "cronjobs" <-> "Cronjobs", "wireshark" <-> "Wireshark", "node.js" <-> "nodejs"). Standardize to standard casing.
+3. Abbreviations & Full Names: (e.g. "AD" <-> "Active Directory", "RBCD" <-> "Resource-Based Constrained Delegation"). Format as "Full Name (ACRONYM)" (e.g. "Active Directory (AD)").
+4. Equivalent Terms: Names that refer to the exact same tool, standard, or concept.
+
+WHAT NOT TO COMBINE:
+- Do NOT combine distinct sub-topics or modules just because they share words (e.g. do NOT combine "Active Directory Architecture" or "AD Module" with "Active Directory").
+- NEVER invent fake acronyms: Do NOT append parenthetical letters unless that acronym actually exists in the index or Global Reference Map!
+
+Return ONLY a JSON array of consolidation proposals for pairs that should be combined (omit pairs that are distinct):
 [
+  {
+    "originalTopic": "things",
+    "book": 1,
+    "proposedTopic": "Thing",
+    "targetTopic": "Thing",
+    "reason": "Plural variation of Thing"
+  },
   {
     "originalTopic": "AD",
     "book": 1,
@@ -2210,8 +2493,8 @@ CRITICAL CONSOLIDATION & ACRONYM RULES:
   }
 ]
 
-List of entries in this batch (${firstLetter} to ${lastLetter}):
-${JSON.stringify(batchEntries, null, 2)}
+Candidate pairs to evaluate:
+${JSON.stringify(chunk, null, 2)}
 `;
 
       const requestBody = {
@@ -2223,79 +2506,88 @@ ${JSON.stringify(batchEntries, null, 2)}
         }
       };
 
-      try {
-        const startTime = Date.now();
-        let response = null;
+      const startTime = Date.now();
+      let response = null;
 
-        while (true) {
-          response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
-          });
+      while (true) {
+        response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
 
-          if (response.status === 429) {
-            const elapsed = Date.now() - startTime;
-            if (elapsed >= 60000) {
-              throw new Error(`Gemini API rate limit (HTTP 429) persisted for more than 1 minute on batch ${cIdx + 1}. Please wait a moment or check API quota.`);
-            }
-            logDebug(`[Same Items Consolidation] HTTP 429 on batch ${cIdx + 1}. Pausing 15 seconds before retrying (elapsed: ${Math.round(elapsed / 1000)}s)...`);
-            if (event) {
-              event.sender.send('pdf-import-progress', {
-                percent: Math.round((completedChunks / totalChunks) * 100),
-                message: `Rate limit hit (429). Waiting 15s before retrying batch ${cIdx + 1}...`
-              });
-            }
-            await new Promise(res => setTimeout(res, 15000));
-            continue;
+        if (response.status === 429) {
+          const elapsed = Date.now() - startTime;
+          if (elapsed >= 60000) {
+            throw new Error(`Gemini API rate limit (HTTP 429) persisted for more than 1 minute on batch ${cIdx + 1}.`);
           }
-
-          break;
+          logDebug(`[Same Items Consolidation] HTTP 429 on pair batch ${cIdx + 1}. Pausing 10s before retry...`);
+          if (event) {
+            event.sender.send('pdf-import-progress', {
+              percent: Math.round((completedChunks / totalChunks) * 100),
+              message: `Rate limit hit (429). Waiting 10s before retrying batch ${cIdx + 1}...`,
+              candidatePairsCount: allCandidatePairs.length
+            });
+          }
+          await new Promise(res => setTimeout(res, 10000));
+          continue;
         }
 
-        completedChunks++;
-        const progressPercent = Math.round((completedChunks / totalChunks) * 100);
+        break;
+      }
 
-        if (event) {
-          event.sender.send('pdf-import-progress', {
-            percent: progressPercent,
-            message: `Analyzing topics in parallel [Completed ${completedChunks} of ${totalChunks} (${firstLetter} - ${lastLetter})]...`
-          });
-        }
+      completedChunks++;
+      const progressPercent = Math.round((completedChunks / totalChunks) * 100);
 
-        if (response.ok) {
-          const resData = await response.json();
-          if (resData.candidates && resData.candidates.length > 0) {
-            const responseText = resData.candidates[0].content.parts[0].text;
-            const chunkProposals = tryParseJSONArray(responseText);
-            if (Array.isArray(chunkProposals) && chunkProposals.length > 0) {
-              return chunkProposals;
+      if (event) {
+        event.sender.send('pdf-import-progress', {
+          percent: progressPercent,
+          message: `Evaluating candidate pairs with Gemini AI [Completed ${completedChunks} of ${totalChunks}]...`,
+          candidatePairsCount: allCandidatePairs.length
+        });
+      }
+
+      if (response.ok) {
+        const resData = await response.json();
+        if (resData.candidates && resData.candidates.length > 0) {
+          const responseText = resData.candidates[0].content?.parts?.[0]?.text;
+          if (responseText) {
+            const batchProposals = tryParseJSONArray(responseText);
+            if (Array.isArray(batchProposals) && batchProposals.length > 0) {
+              return batchProposals;
             }
           }
-        } else {
-          logDebug(`[Same Items Consolidation] Batch ${cIdx + 1} HTTP error ${response.status}`);
         }
-      } catch (batchErr) {
-        logDebug(`[Same Items Consolidation] Batch ${cIdx + 1} error: ${batchErr.message}`);
-        if (batchErr.message.includes('rate limit')) {
-          throw batchErr;
+      } else {
+        const errText = await response.text().catch(() => '');
+        logDebug(`[Same Items Consolidation] Batch ${cIdx + 1} HTTP error ${response.status}: ${errText}`);
+        if (response.status === 402) {
+          throw new Error(`Google API Error: Payment Required (HTTP 402). Check your Google Cloud Billing or AI Studio quota.`);
         }
+        if (response.status === 403) {
+          throw new Error(`Google API Error: Permission Denied / Invalid API Key (HTTP 403).`);
+        }
+        throw new Error(`Google API HTTP ${response.status} error on batch ${cIdx + 1}: ${errText.slice(0, 150)}`);
       }
       return [];
     };
 
-    // Run parallel batch processing with concurrency limit of 5
-    for (let i = 0; i < chunks.length; i += concurrencyLimit) {
-      const batchPromises = chunks.slice(i, i + concurrencyLimit).map((chunk, index) => processBatch(chunk, i + index));
+    // Run parallel batches with user-selected concurrency rate (clamped between 1 and 15)
+    const concurrency = Math.max(1, Math.min(15, parseInt(requestedConcurrency, 10) || 4));
+    logDebug(`[Same Items Consolidation] Executing ${totalChunks} batches with concurrency: ${concurrency}`);
+
+    for (let i = 0; i < pairChunks.length; i += concurrency) {
+      const batchPromises = pairChunks.slice(i, i + concurrency).map((chunk, index) => processPairBatch(chunk, i + index));
       const batchResults = await Promise.all(batchPromises);
       batchResults.forEach(r => allProposals.push(...r));
     }
 
     if (allProposals.length === 0) {
+      logDebug(`[Same Items Consolidation] Gemini analysis returned no consolidation proposals.`);
       return { success: true, proposals: [] };
     }
 
-    // 4. Deduplicate proposals by originalTopic + book + proposedTopic
+    // Deduplicate proposals by originalTopic + book + proposedTopic
     const uniqueMap = new Map();
     allProposals.forEach(p => {
       if (!p || !p.originalTopic || !p.proposedTopic) return;
@@ -2307,6 +2599,15 @@ ${JSON.stringify(batchEntries, null, 2)}
 
     const deduplicatedProposals = Array.from(uniqueMap.values());
     logDebug(`[Same Items Consolidation] Total deduplicated AI proposals: ${deduplicatedProposals.length}`);
+    logDebug(`[Same Items Consolidation] Proposals summary: ` + deduplicatedProposals.map(p => `"${p.originalTopic}" -> "${p.proposedTopic}"`).join(' | '));
+
+    if (event) {
+      event.sender.send('pdf-import-progress', {
+        percent: 100,
+        message: `Consolidation complete! Found ${deduplicatedProposals.length} proposal(s).`
+      });
+    }
+
     return { success: true, proposals: deduplicatedProposals };
 
   } catch (err) {
