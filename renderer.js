@@ -3183,14 +3183,6 @@ function processImport() {
       return;
     }
 
-    const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
-    if (activeBooks.length === 0) {
-      alert("Please configure at least one book in this course before importing a CSV index.");
-      elements.importDialog.close();
-      openBookDialog();
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = function(e) {
       try {
@@ -3202,14 +3194,66 @@ function processImport() {
           return;
         }
 
-        const headers = lines[0].map(h => h.trim().toLowerCase());
+        const headers = lines[0].map(h => h.trim().toLowerCase().replace(/^\ufeff/, ''));
         const topicIdx = headers.indexOf('topic');
         const pagesIdx = headers.indexOf('pages');
+        const notesIdx = headers.indexOf('notes');
         const bookIdx = headers.indexOf('book');
 
         if (topicIdx === -1 || pagesIdx === -1) {
           alert("CSV requires at least 'Topic' and 'Pages' headers.");
           return;
+        }
+
+        const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+        const resolvedBooksMap = new Map();
+        const csvPresetColors = ['#0d9488', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#ca8a04', '#4b5563'];
+        let nextColorIdx = activeBooks.length;
+
+        function getOrCreateBook(bookStr) {
+          const rawName = (bookStr || '').trim();
+          const cleanName = rawName || 'Book 1';
+          const lookupKey = cleanName.toLowerCase();
+
+          if (resolvedBooksMap.has(lookupKey)) {
+            return resolvedBooksMap.get(lookupKey);
+          }
+
+          // 1. Try exact name match with existing books in this course
+          let existing = activeBooks.find(b => b && b.name.trim().toLowerCase() === lookupKey);
+
+          // 2. If no exact name match, try matching by book number
+          if (!existing) {
+            const m = cleanName.match(/(\d+)/);
+            if (m) {
+              const num = parseInt(m[1], 10);
+              existing = activeBooks.find(b => {
+                if (!b || !b.name) return false;
+                const bm = b.name.match(/(\d+)/);
+                return bm && parseInt(bm[1], 10) === num;
+              });
+            }
+          }
+
+          if (existing) {
+            const info = { id: existing.id, name: existing.name, isPending: false, bookObj: existing };
+            resolvedBooksMap.set(lookupKey, info);
+            return info;
+          }
+
+          // 3. Not found in existing books: prepare a pending book to be auto-created
+          const newId = `book-${state.currentCourseId}-${Date.now()}-${resolvedBooksMap.size + 1}`;
+          const assignedColor = csvPresetColors[nextColorIdx % csvPresetColors.length];
+          nextColorIdx++;
+          const newBookObj = {
+            id: newId,
+            courseId: state.currentCourseId,
+            name: cleanName,
+            color: assignedColor
+          };
+          const info = { id: newId, name: cleanName, isPending: true, bookObj: newBookObj };
+          resolvedBooksMap.set(lookupKey, info);
+          return info;
         }
 
         const parsedEntries = [];
@@ -3219,31 +3263,24 @@ function processImport() {
 
           const topic = row[topicIdx]?.trim();
           const pages = row[pagesIdx]?.trim();
+          const notes = notesIdx !== -1 ? (row[notesIdx]?.trim() || '') : '';
           const csvBookStr = bookIdx !== -1 ? row[bookIdx]?.trim() : '';
 
           if (!topic || !pages) continue;
 
-          let bookNum = 1;
-          if (csvBookStr) {
-            const m = csvBookStr.match(/(\d+)/);
-            if (m) {
-              bookNum = parseInt(m[1], 10);
-            } else {
-              const matched = activeBooks.find(b => b && b.name.toLowerCase() === csvBookStr.toLowerCase());
-              if (matched) {
-                const bm = matched.name.match(/(\d+)/);
-                if (bm) bookNum = parseInt(bm[1], 10);
-              }
-            }
-          }
-
+          const bookInfo = getOrCreateBook(csvBookStr);
           const validation = parseAndValidatePages(pages);
           const finalPages = validation.isValid ? validation.formatted : pages;
 
           parsedEntries.push({
             topic,
-            book: bookNum,
-            pages: finalPages
+            book: bookInfo.name,
+            bookName: bookInfo.name,
+            bookId: bookInfo.id,
+            pendingBook: bookInfo.isPending ? bookInfo.bookObj : null,
+            pages: finalPages,
+            notes,
+            source: 'csv-import'
           });
         }
 
@@ -3381,16 +3418,27 @@ function buildPdfReviewData(rawEntries, bypassCap = false) {
     const { topic, book, pages } = entry;
     const topicLower = topic.toLowerCase();
 
-    // Match book by number — look for "Book N" or "book-N" style matches
-    const matchedBook = activeBooks.find(b => {
-      const nameNum = b.name.match(/(\d+)/);
-      return nameNum && parseInt(nameNum[1], 10) === book;
-    }) || null;
+    // Check if entry already has a pre-resolved book (from CSV import) or match by number/name
+    let matchedBook = null;
+    let bookId = null;
+    let bookName = '';
 
-    const bookId = matchedBook ? matchedBook.id : null;
+    if (entry.bookId) {
+      bookId = entry.bookId;
+      matchedBook = activeBooks.find(b => b && b.id === bookId) || entry.pendingBook || null;
+      bookName = matchedBook ? matchedBook.name : (entry.bookName || `Book ${book}`);
+    } else {
+      // PDF index / legacy JSON mode: match book by number — look for "Book N" or "book-N" style matches
+      matchedBook = activeBooks.find(b => {
+        const nameNum = b.name.match(/(\d+)/);
+        return nameNum && parseInt(nameNum[1], 10) === book;
+      }) || null;
+      bookId = matchedBook ? matchedBook.id : null;
+      bookName = matchedBook ? matchedBook.name : `Book ${book} (not found)`;
+    }
 
     // Find existing entry in current course for this topic+book
-    const existingEntry = bookId
+    const existingEntry = (bookId && !entry.pendingBook)
       ? state.entries.find(e =>
           e && e.courseId === state.currentCourseId &&
           e.bookId === bookId &&
@@ -3442,7 +3490,19 @@ function buildPdfReviewData(rawEntries, bypassCap = false) {
       action = 'NEW';
     }
 
-    return { topic, book, pages: pagesToUse, bookId, bookName: matchedBook ? matchedBook.name : `Book ${book} (not found)`, existingEntry, mergedPages, action };
+    return {
+      topic,
+      book: bookName,
+      bookName,
+      pages: pagesToUse,
+      bookId,
+      pendingBook: entry.pendingBook || null,
+      notes: entry.notes || '',
+      source: entry.source || 'pdf-index-import',
+      existingEntry,
+      mergedPages,
+      action
+    };
   });
 }
 
@@ -3472,7 +3532,7 @@ function renderPdfIndexReviewTable(entries) {
         <input type="checkbox" class="pdf-review-checkbox" data-idx="${idx}" ${isChecked ? 'checked' : ''}>
       </td>
       <td style="font-size:0.85rem;">${escapeHtml(entry.topic)}</td>
-      <td style="font-size:0.82rem; color:var(--text-muted);">${entry.book}</td>
+      <td style="font-size:0.82rem; color:var(--text-muted);">${escapeHtml(entry.bookName || String(entry.book || ''))}</td>
       <td style="font-size:0.82rem;">${escapeHtml(entry.pages)}</td>
       <td style="font-size:0.82rem; color:var(--text-muted);">${entry.existingEntry ? escapeHtml(entry.existingEntry.pages) : '—'}</td>
       <td><span style="font-size:0.78rem; font-weight:600; color:${cfg.color};">${cfg.label}</span>${entry.action === 'MERGE' ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">→ ${escapeHtml(entry.mergedPages || '')}</div>` : ''}</td>
@@ -3549,12 +3609,19 @@ async function commitImportSelectedEntries() {
 
   const checkboxes = elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox');
   let countNew = 0, countMerge = 0, countSkipped = 0;
+  let countBooksCreated = 0;
 
   checkboxes.forEach((cb) => {
     if (!cb.checked) return;
     const realIdx = parseInt(cb.getAttribute('data-idx'), 10);
     const entry = pdfIndexParsedEntries[realIdx];
     if (!entry || !entry.bookId) { countSkipped++; return; }
+
+    // If this entry references a pending book that hasn't been added to state.books yet, add it now
+    if (entry.pendingBook && !state.books.some(b => b.id === entry.pendingBook.id)) {
+      state.books.push(entry.pendingBook);
+      countBooksCreated++;
+    }
 
     const { topic, pages, bookId, existingEntry, mergedPages, action } = entry;
 
@@ -3565,8 +3632,8 @@ async function commitImportSelectedEntries() {
         bookId,
         topic,
         pages: compressPageList(pages),
-        notes: '',
-        source: 'pdf-index-import',
+        notes: entry.notes || '',
+        source: entry.source || 'pdf-index-import',
         createdAt: new Date().toISOString()
       });
       countNew++;
@@ -3588,7 +3655,7 @@ async function commitImportSelectedEntries() {
     }
   });
 
-  if (countNew + countMerge === 0) {
+  if (countNew + countMerge === 0 && countBooksCreated === 0) {
     showToast('No changes made.');
     closePdfIndexReviewDialog();
     return;
@@ -3597,7 +3664,8 @@ async function commitImportSelectedEntries() {
   await saveState();
   renderAll();
   closePdfIndexReviewDialog();
-  showToast(`Import complete: ${countNew} new, ${countMerge} merged, ${countSkipped} skipped.`, 3000);
+  const bookMsg = countBooksCreated > 0 ? `, ${countBooksCreated} book${countBooksCreated > 1 ? 's' : ''} created` : '';
+  showToast(`Import complete: ${countNew} new, ${countMerge} merged${bookMsg}, ${countSkipped} skipped.`, 3000);
 }
 
 // ==========================================================================
