@@ -3,11 +3,12 @@
    ========================================================================== */
 
 /* Design Tokens & Theme Variables */
-:root {
+:root,
+body.theme-default {
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'Roboto Mono', monospace;
 
-  /* Dark Theme Colors */
+  /* Default Dark (Teal) */
   --bg-app: #0f172a;        /* slate-900 */
   --bg-sidebar: #1e293b;    /* slate-800 */
   --bg-card: #1e293b;       /* slate-800 */
@@ -34,6 +35,128 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+}
+
+/* Midnight (Deep Navy) (Beta) */
+body.theme-midnight {
+  --bg-app: #0b0f19;
+  --bg-sidebar: #111827;
+  --bg-card: #172033;
+  --bg-input: #0b0f19;
+  --border-color: #24324f;
+  --border-focus: #3b82f6;
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: #60a5fa;
+  
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --success: #10b981;
+}
+
+/* Hacker / Matrix (Beta) */
+body.theme-hacker {
+  --font-sans: 'Roboto Mono', monospace;
+  --bg-app: #050805;
+  --bg-sidebar: #0a110a;
+  --bg-card: #0d170d;
+  --bg-input: #050805;
+  --border-color: #1e381e;
+  --border-focus: #22c55e;
+  
+  --text-primary: #4ade80;
+  --text-secondary: #86efac;
+  --text-muted: #2d6a36;
+  
+  --accent: #15803d;
+  --accent-hover: #166534;
+  --accent-light: #22c55e;
+  
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --success: #22c55e;
+  
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+/* Cyberpunk Pink (Beta) */
+body.theme-pink {
+  --bg-app: #120b18;
+  --bg-sidebar: #1c1126;
+  --bg-card: #251733;
+  --bg-input: #120b18;
+  --border-color: #4c2663;
+  --border-focus: #ec4899;
+  
+  --text-primary: #fdf2f8;
+  --text-secondary: #f472b6;
+  --text-muted: #9d4edd;
+  
+  --accent: #db2777;
+  --accent-hover: #be185d;
+  --accent-light: #f472b6;
+  
+  --danger: #f87171;
+  --danger-hover: #ef4444;
+  --success: #34d399;
+}
+
+/* Bright / Light Mode (Beta) */
+body.theme-bright {
+  --bg-app: #f1f5f9;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #f8fafc;
+  --border-color: #cbd5e1;
+  --border-focus: #0d9488;
+  
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  
+  --accent: #0d9488;
+  --accent-hover: #0f766e;
+  --accent-light: #14b8a6;
+  
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
+  --success: #16a34a;
+}
+
+/* Windows 95 (Beta) */
+body.theme-win95 {
+  --font-sans: 'MS Sans Serif', Tahoma, 'Segoe UI', Arial, sans-serif;
+  --font-mono: 'Fixedsys', 'Courier New', monospace;
+
+  --bg-app: #008080;        /* Classic Desktop Teal */
+  --bg-sidebar: #c0c0c0;    /* Classic Win95 Silver Gray */
+  --bg-card: #c0c0c0;       /* Classic 3D Window Frame */
+  --bg-input: #ffffff;      /* Sunken Pure White Textfield */
+  --border-color: #808080;  /* Standard Win95 Bevel Dark Shadow */
+  --border-focus: #000080;  /* Win95 Navy Focus */
+  
+  --text-primary: #000000;  /* High contrast black */
+  --text-secondary: #222222;
+  --text-muted: #555555;
+  
+  --accent: #000080;         /* Win95 Active Title Navy */
+  --accent-hover: #101090;
+  --accent-light: #000080;
+  
+  --danger: #800000;
+  --danger-hover: #a00000;
+  --success: #008000;
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
 }
 
 /* Global Reset */
@@ -4605,6 +4728,772 @@ tr.auto-row:hover {
   cursor: pointer;
   accent-color: var(--accent-color, #3b82f6);
 }
+
+/* ==========================================================================
+   THEME COMPONENT OVERRIDES & SYSTEM STYLES
+   ========================================================================== */
+
+/* --- Bright / Light Mode (Beta) Component Polish --- */
+body.theme-bright .btn-secondary {
+  background-color: #e2e8f0;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+body.theme-bright .btn-secondary:hover {
+  background-color: #cbd5e1;
+}
+body.theme-bright select,
+body.theme-bright input[type="text"],
+body.theme-bright input[type="password"],
+body.theme-bright input[type="email"],
+body.theme-bright input[type="number"],
+body.theme-bright textarea,
+body.theme-bright .notes-textarea-replacement {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+body.theme-bright .index-table th {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  border-bottom: 2px solid #cbd5e1;
+}
+body.theme-bright .index-table td {
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+body.theme-bright .index-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+body.theme-bright .tab-btn {
+  color: #64748b;
+}
+body.theme-bright .tab-btn:hover {
+  color: #0f172a;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+body.theme-bright .tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background-color: rgba(13, 148, 136, 0.08);
+}
+body.theme-bright .stat-card,
+body.theme-bright .entry-form-container,
+body.theme-bright .table-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+body.theme-bright .sidebar {
+  background-color: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+}
+body.theme-bright .sidebar-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+body.theme-bright .sidebar-section {
+  border-bottom: 1px solid #e2e8f0;
+}
+body.theme-bright .keyboard-tip {
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+body.theme-bright .keyboard-tip kbd {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
+body.theme-bright ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+body.theme-bright ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+body.theme-bright ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* --- Hacker / Matrix (Beta) Component Polish --- */
+body.theme-hacker {
+  font-family: var(--font-mono) !important;
+}
+body.theme-hacker * {
+  font-family: var(--font-mono);
+}
+body.theme-hacker .btn-primary {
+  background-color: #15803d;
+  color: #000000;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
+}
+body.theme-hacker .btn-primary:hover {
+  background-color: #22c55e;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
+}
+body.theme-hacker .stat-card,
+body.theme-hacker .entry-form-container,
+body.theme-hacker .table-container {
+  border: 1px solid #166534;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.08);
+}
+body.theme-hacker input[type="text"]:focus,
+body.theme-hacker textarea:focus,
+body.theme-hacker select:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.35);
+}
+body.theme-hacker .tab-btn.active {
+  color: #4ade80;
+  border-bottom: 2px solid #22c55e;
+  text-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+}
+
+/* --- Cyberpunk Pink (Beta) Component Polish --- */
+body.theme-pink .btn-primary {
+  background-color: #db2777;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(219, 39, 119, 0.4);
+}
+body.theme-pink .btn-primary:hover {
+  background-color: #f472b6;
+  box-shadow: 0 0 18px rgba(244, 114, 182, 0.6);
+}
+body.theme-pink .stat-card,
+body.theme-pink .entry-form-container,
+body.theme-pink .table-container {
+  border: 1px solid #4c2663;
+  box-shadow: 0 0 10px rgba(219, 39, 119, 0.1);
+}
+body.theme-pink .tab-btn.active {
+  color: #f472b6;
+  border-bottom: 2px solid #ec4899;
+}
+
+/* ==========================================================================
+   WINDOWS 95 AUTHENTIC FULL RETRO TRANSFORMATION
+   ========================================================================== */
+body.theme-win95 {
+  font-family: 'MS Sans Serif', Tahoma, 'Segoe UI', Arial, sans-serif !important;
+  background-color: #008080 !important;
+}
+
+body.theme-win95 * {
+  border-radius: 0 !important;
+  font-family: 'MS Sans Serif', Tahoma, 'Segoe UI', Arial, sans-serif !important;
+}
+
+body.theme-win95 .sidebar,
+body.theme-win95 .stat-card,
+body.theme-win95 .entry-form-container,
+body.theme-win95 .table-container,
+body.theme-win95 .sidebar-section,
+body.theme-win95 .custom-dialog,
+body.theme-win95 .dropdown-popover {
+  background: #c0c0c0 !important;
+  border: 2px solid !important;
+  border-color: #ffffff #808080 #808080 #ffffff !important;
+  box-shadow: none !important;
+}
+
+body.theme-win95 .main-content {
+  background: #008080 !important;
+  padding: 12px;
+}
+
+/* Win95 3D Raised Buttons */
+body.theme-win95 .btn,
+body.theme-win95 .tab-btn,
+body.theme-win95 .icon-btn-small,
+body.theme-win95 .icon-btn-text,
+body.theme-win95 .icon-btn-text-small {
+  background: #c0c0c0 !important;
+  color: #000000 !important;
+  font-weight: bold !important;
+  border: none !important;
+  box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080, inset 2px 2px #dfdfdf, inset -2px -2px #000000 !important;
+  transition: none !important;
+}
+
+body.theme-win95 .btn:hover,
+body.theme-win95 .tab-btn:hover {
+  background: #d4d0c8 !important;
+}
+
+/* Win95 Pressed 3D Buttons */
+body.theme-win95 .btn:active,
+body.theme-win95 .tab-btn.active,
+body.theme-win95 .icon-btn-small:active,
+body.theme-win95 .icon-btn-text:active {
+  background: #c0c0c0 !important;
+  color: #000000 !important;
+  box-shadow: inset 1px 1px #000000, inset -1px -1px #ffffff, inset 2px 2px #808080, inset -2px -2px #dfdfdf !important;
+  transform: none !important;
+}
+
+/* Active Workspace Tab */
+body.theme-win95 .tab-btn.active {
+  border-bottom: none !important;
+  font-weight: 700 !important;
+  background: #c0c0c0 !important;
+  box-shadow: inset 1px 1px #ffffff, inset -1px 0 #ffffff, inset 2px 2px #dfdfdf, inset -2px 0 #808080 !important;
+}
+
+/* Win95 Sunken Inset Text Fields & Inputs */
+body.theme-win95 input[type="text"],
+body.theme-win95 input[type="password"],
+body.theme-win95 input[type="email"],
+body.theme-win95 input[type="number"],
+body.theme-win95 select,
+body.theme-win95 textarea,
+body.theme-win95 .notes-textarea-replacement {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: none !important;
+  box-shadow: inset 1px 1px #808080, inset -1px -1px #ffffff, inset 2px 2px #000000, inset -2px -2px #dfdfdf !important;
+}
+
+/* Win95 Classic Navy Blue Title Strips */
+body.theme-win95 .main-header,
+body.theme-win95 .sidebar-header,
+body.theme-win95 .dialog-header {
+  background: linear-gradient(90deg, #000080 0%, #1084d0 100%) !important;
+  color: #ffffff !important;
+  border-bottom: 2px solid #808080 !important;
+}
+body.theme-win95 .main-header h1,
+body.theme-win95 .main-header p,
+body.theme-win95 .sidebar-header .logo,
+body.theme-win95 .dialog-header h3 {
+  color: #ffffff !important;
+}
+
+/* Win95 Index Table */
+body.theme-win95 .index-table {
+  background: #ffffff !important;
+  border-collapse: separate !important;
+}
+body.theme-win95 .index-table th {
+  background: #c0c0c0 !important;
+  color: #000000 !important;
+  font-weight: bold !important;
+  border: none !important;
+  box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080, inset 2px 2px #dfdfdf, inset -2px -2px #000000 !important;
+}
+body.theme-win95 .index-table td {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-bottom: 1px solid #d4d0c8 !important;
+  border-right: 1px solid #d4d0c8 !important;
+}
+body.theme-win95 .index-table tr:hover td {
+  background-color: #000080 !important;
+  color: #ffffff !important;
+}
+body.theme-win95 .index-table tr:hover td span,
+body.theme-win95 .index-table tr:hover td strong,
+body.theme-win95 .index-table tr:hover td a {
+  color: #ffffff !important;
+}
+
+/* Win95 Scrollbars */
+body.theme-win95 ::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+body.theme-win95 ::-webkit-scrollbar-track {
+  background: #dfdfdf;
+  box-shadow: inset 1px 1px #808080, inset -1px -1px #ffffff;
+}
+body.theme-win95 ::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  box-shadow: inset 1px 1px #ffffff, inset -1px -1px #808080, inset 2px 2px #dfdfdf, inset -2px -2px #000000;
+  border-radius: 0;
+}
+
+/* ==========================================================================
+   REVERT TO PREVIOUS INDEX VERSION MODAL
+   ========================================================================== */
+.revert-version-modal {
+  width: 840px !important;
+  max-width: 95vw !important;
+  max-height: 90vh !important;
+}
+
+.revert-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 85vh;
+  padding: 24px;
+  overflow: hidden !important;
+}
+
+.revert-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 14px;
+}
+
+.revert-modal-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.revert-modal-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: rgba(20, 184, 166, 0.12);
+  border: 1px solid rgba(20, 184, 166, 0.25);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.revert-modal-title-group h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.revert-modal-title-group .dialog-text {
+  margin: 0;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.revert-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+.revert-close-btn:hover {
+  color: var(--text-primary);
+}
+
+.revert-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.revert-search-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.revert-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 15px;
+  height: 15px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.revert-search-wrapper input {
+  width: 100%;
+  padding: 8px 12px 8px 32px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.revert-search-wrapper input:focus {
+  border-color: var(--color-accent);
+}
+
+.revert-split-container {
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  gap: 14px;
+  height: 380px;
+  overflow: hidden;
+}
+
+.revert-list-column {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+}
+
+.revert-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.revert-list-tip {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.revert-versions-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.revert-version-card {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.revert-version-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color);
+}
+
+.revert-version-card.active {
+  background: rgba(20, 184, 166, 0.12);
+  border-color: var(--color-accent);
+}
+
+.revert-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.revert-card-time {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+}
+.revert-version-card.active .revert-card-time {
+  color: var(--color-accent);
+}
+
+.revert-card-date {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+.revert-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.revert-card-size {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.revert-preview-column {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.revert-preview-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 24px;
+}
+
+.revert-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.revert-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.revert-preview-timestamp {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.revert-preview-age {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.revert-preview-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.revert-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.revert-stat-box {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.revert-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.revert-stat-val-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.revert-stat-curr {
+  color: var(--text-secondary);
+}
+
+.revert-stat-arrow {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.revert-stat-target {
+  color: var(--text-primary);
+}
+
+.revert-stat-val-course {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.revert-stat-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.revert-breakdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.revert-breakdown-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.revert-breakdown-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.revert-breakdown-table-wrapper {
+  max-height: 140px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.revert-breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.revert-breakdown-table th {
+  padding: 6px 10px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.revert-breakdown-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.revert-book-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.revert-book-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.revert-delta-pill {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.revert-delta-pill.neg {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+.revert-delta-pill.pos {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+.revert-delta-pill.zero {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-muted);
+}
+
+.revert-safeguard-banner {
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.revert-safeguard-icon {
+  color: #38bdf8;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.revert-safeguard-text strong {
+  color: #38bdf8;
+}
+
+.revert-safeguard-text em {
+  color: var(--text-primary);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.revert-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Win95 Theme Adaptations */
+body.theme-win95 .revert-version-modal {
+  background: #c0c0c0 !important;
+}
+body.theme-win95 .revert-modal-icon-badge {
+  background: #dfdfdf !important;
+  color: #000080 !important;
+  border: 1px solid #808080 !important;
+}
+body.theme-win95 .revert-list-column,
+body.theme-win95 .revert-preview-column,
+body.theme-win95 .revert-stat-box,
+body.theme-win95 .revert-breakdown-table-wrapper {
+  background: #ffffff !important;
+  border: 2px solid !important;
+  border-color: #808080 #ffffff #ffffff #808080 !important;
+}
+body.theme-win95 .revert-list-header {
+  background: #dfdfdf !important;
+  color: #000000 !important;
+}
+body.theme-win95 .revert-version-card.active {
+  background: #000080 !important;
+}
+body.theme-win95 .revert-version-card.active * {
+  color: #ffffff !important;
+}
+body.theme-win95 .revert-safeguard-banner {
+  background: #ffffcc !important;
+  border: 1px solid #808080 !important;
+  color: #000000 !important;
+}
+body.theme-win95 .revert-safeguard-banner strong {
+  color: #000080 !important;
+}
+
 
 
 

@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   loadData: () => ipcRenderer.invoke('load-data'),
   saveData: (data) => ipcRenderer.invoke('save-data', data),
+  getBackupsList: (courseId) => ipcRenderer.invoke('get-backups-list', courseId),
+  getBackupDetails: (filename, courseId) => ipcRenderer.invoke('get-backup-details', filename, courseId),
+  revertToBackup: (args) => ipcRenderer.invoke('revert-to-backup', args),
   print: () => ipcRenderer.invoke('print-app'),
   savePdf: (options) => ipcRenderer.invoke('save-pdf', options),
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
@@ -43,6 +46,15 @@ contextBridge.exposeInMainWorld('api', {
   },
   checkForUpdates: (testMode) => ipcRenderer.invoke('check-for-updates', testMode),
   performUpdate: (testMode) => ipcRenderer.invoke('perform-update', testMode),
+  onMenuAction: (callback) => {
+    ipcRenderer.on('menu-action', (event, action, ...args) => callback(action, ...args));
+  },
+  onSetTheme: (callback) => {
+    ipcRenderer.on('set-theme', (event, themeKey) => callback(themeKey));
+  },
+  sendThemeChanged: (themeKey) => {
+    ipcRenderer.send('theme-changed', themeKey);
+  },
   removeListener: (channel) => {
     ipcRenderer.removeAllListeners(channel);
   }

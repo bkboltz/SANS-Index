@@ -110,6 +110,9 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
+  // Setup polished desktop application menu
+  setupApplicationMenu();
+
   // Open external links in default browser instead of Electron child window
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://') || url.startsWith('http://')) {
@@ -158,6 +161,261 @@ function createWindow() {
   // Open the DevTools during development if needed
   // mainWindow.webContents.openDevTools();
 }
+
+let currentTheme = 'theme-default';
+
+function setupApplicationMenu() {
+  if (!mainWindow) return;
+
+  const template = [
+    {
+      label: '&File',
+      submenu: [
+        {
+          label: 'New Index Entry',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'new-entry');
+          }
+        },
+        {
+          label: 'Print Index...',
+          accelerator: 'CmdOrCtrl+P',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'print');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Export to CSV...',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'export-csv');
+          }
+        },
+        {
+          label: 'Backup Data (JSON)...',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'export-json');
+          }
+        },
+        {
+          label: 'Import Data...',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'import-data');
+          }
+        },
+        {
+          label: 'Revert to Previous Version...',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'revert-version');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Exit',
+          accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Alt+F4',
+          click: () => {
+            app.quit();
+          }
+        }
+      ]
+    },
+    {
+      label: '&Edit',
+      submenu: [
+        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+        { label: 'Redo', accelerator: 'CmdOrCtrl+Y', role: 'redo' },
+        { type: 'separator' },
+        { label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+        { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+        { label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' },
+        { label: 'Delete', role: 'delete' },
+        { type: 'separator' },
+        { label: 'Select All', accelerator: 'CmdOrCtrl+A', role: 'selectAll' }
+      ]
+    },
+    {
+      label: '&View',
+      submenu: [
+        {
+          label: 'Toggle Sidebar',
+          accelerator: 'CmdOrCtrl+B',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'toggle-sidebar');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Switch to: My Index',
+          accelerator: 'CmdOrCtrl+1',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'switch-tab', 'manual-index');
+          }
+        },
+        {
+          label: 'Switch to: My Acronyms',
+          accelerator: 'CmdOrCtrl+2',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'switch-tab', 'my-acronyms');
+          }
+        },
+        {
+          label: 'Switch to: Auto-Index PDF',
+          accelerator: 'CmdOrCtrl+3',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'switch-tab', 'auto-index');
+          }
+        },
+        {
+          label: 'Switch to: Notes Editor',
+          accelerator: 'CmdOrCtrl+4',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'switch-tab', 'notes-editor');
+          }
+        },
+        { type: 'separator' },
+        { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', role: 'zoomIn' },
+        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+        { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
+        { type: 'separator' },
+        { label: 'Toggle Full Screen', accelerator: 'F11', role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: '&Theme',
+      submenu: [
+        {
+          label: 'Default Dark (Teal)',
+          type: 'radio',
+          checked: currentTheme === 'theme-default',
+          click: () => {
+            currentTheme = 'theme-default';
+            mainWindow.webContents.send('set-theme', 'theme-default');
+          }
+        },
+        {
+          label: 'Midnight (Beta)',
+          type: 'radio',
+          checked: currentTheme === 'theme-midnight',
+          click: () => {
+            currentTheme = 'theme-midnight';
+            mainWindow.webContents.send('set-theme', 'theme-midnight');
+          }
+        },
+        {
+          label: 'Hacker / Matrix (Beta)',
+          type: 'radio',
+          checked: currentTheme === 'theme-hacker',
+          click: () => {
+            currentTheme = 'theme-hacker';
+            mainWindow.webContents.send('set-theme', 'theme-hacker');
+          }
+        },
+        {
+          label: 'Cyberpunk Pink (Beta)',
+          type: 'radio',
+          checked: currentTheme === 'theme-pink',
+          click: () => {
+            currentTheme = 'theme-pink';
+            mainWindow.webContents.send('set-theme', 'theme-pink');
+          }
+        },
+        {
+          label: 'Bright / Light Mode (Beta)',
+          type: 'radio',
+          checked: currentTheme === 'theme-bright',
+          click: () => {
+            currentTheme = 'theme-bright';
+            mainWindow.webContents.send('set-theme', 'theme-bright');
+          }
+        },
+        {
+          label: 'Windows 95 (Beta)',
+          type: 'radio',
+          checked: currentTheme === 'theme-win95',
+          click: () => {
+            currentTheme = 'theme-win95';
+            mainWindow.webContents.send('set-theme', 'theme-win95');
+          }
+        }
+      ]
+    },
+    {
+      label: '&Window',
+      submenu: [
+        {
+          label: 'Minimize',
+          accelerator: 'CmdOrCtrl+M',
+          role: 'minimize'
+        },
+        {
+          label: 'Maximize / Restore',
+          click: () => {
+            if (mainWindow.isMaximized()) {
+              mainWindow.unmaximize();
+            } else {
+              mainWindow.maximize();
+            }
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Close Window',
+          accelerator: 'CmdOrCtrl+W',
+          role: 'close'
+        }
+      ]
+    },
+    {
+      label: '&Help',
+      submenu: [
+        {
+          label: 'Keyboard Shortcuts',
+          accelerator: 'F1',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'shortcuts');
+          }
+        },
+        {
+          label: 'Check for Updates...',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'check-updates');
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'About SANS Study Indexer',
+          click: () => {
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: 'About SANS Study Indexer',
+              message: 'SANS Study Indexer v1.0.0',
+              detail: 'A high-efficiency desktop indexer for SANS course books and open-book exam preparation.\n\nCrafted for rapid lookups and exam success.',
+              buttons: ['OK']
+            });
+          }
+        }
+      ]
+    }
+  ];
+
+  // DevTools via F12 or Ctrl+Shift+I
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.key === 'F12' || (input.control && input.shift && (input.key === 'I' || input.key === 'i'))) {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+}
+
+// IPC Listener: Theme changed in renderer
+ipcMain.on('theme-changed', (event, themeKey) => {
+  currentTheme = themeKey;
+  setupApplicationMenu();
+});
 
 app.whenReady().then(() => {
   createWindow();
@@ -251,6 +509,354 @@ ipcMain.handle('save-data', async (event, data) => {
     return { success: true, backupFile: path.basename(backupFile) };
   } catch (error) {
     console.error("Failed to save data:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Helper: Build or read backups metadata index cache for instant filtering
+const BACKUPS_INDEX_FILE = path.join(BACKUPS_DIR, '.backups_index.json');
+
+function getOrBuildBackupsIndex() {
+  if (!fs.existsSync(BACKUPS_DIR)) {
+    return [];
+  }
+
+  const files = fs.readdirSync(BACKUPS_DIR)
+    .filter(file => file.startsWith('backup_') && file.endsWith('.json'))
+    .map(file => {
+      const filePath = path.join(BACKUPS_DIR, file);
+      const stat = fs.statSync(filePath);
+      return {
+        filename: file,
+        filePath,
+        mtime: stat.mtime.toISOString(),
+        mtimeMs: stat.mtime.getTime(),
+        size: stat.size,
+        isPreRevert: file.includes('pre_revert')
+      };
+    })
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+  let cache = {};
+  if (fs.existsSync(BACKUPS_INDEX_FILE)) {
+    try {
+      cache = JSON.parse(fs.readFileSync(BACKUPS_INDEX_FILE, 'utf8'));
+    } catch (e) {
+      cache = {};
+    }
+  }
+
+  let cacheUpdated = false;
+  const result = files.map(fileInfo => {
+    // If cached and mtime matches, reuse cached course summary
+    if (cache[fileInfo.filename] && cache[fileInfo.filename].mtime === fileInfo.mtime && cache[fileInfo.filename].totalNotes !== undefined) {
+      return {
+        ...fileInfo,
+        courses: cache[fileInfo.filename].courses,
+        totalEntries: cache[fileInfo.filename].totalEntries,
+        totalNotes: cache[fileInfo.filename].totalNotes
+      };
+    }
+
+    // Otherwise read and parse backup summary
+    try {
+      const raw = fs.readFileSync(fileInfo.filePath, 'utf8');
+      const data = JSON.parse(raw);
+      const courses = (data.courses || []).map(c => {
+        const courseEntries = (data.entries || []).filter(e => e && e.courseId === c.id);
+        const entriesCount = courseEntries.length;
+        const notesCount = courseEntries.filter(e => e && e.notes && e.notes.trim().length > 0).length;
+        const booksCount = (data.books || []).filter(b => b && b.courseId === c.id).length;
+        return {
+          id: c.id,
+          name: c.name,
+          entriesCount,
+          notesCount,
+          booksCount
+        };
+      });
+
+      const totalEntries = (data.entries || []).length;
+      const totalNotes = (data.entries || []).filter(e => e && e.notes && e.notes.trim().length > 0).length;
+      cache[fileInfo.filename] = {
+        mtime: fileInfo.mtime,
+        courses,
+        totalEntries,
+        totalNotes
+      };
+      cacheUpdated = true;
+
+      return {
+        ...fileInfo,
+        courses,
+        totalEntries,
+        totalNotes
+      };
+    } catch (err) {
+      return {
+        ...fileInfo,
+        courses: [],
+        totalEntries: 0,
+        totalNotes: 0
+      };
+    }
+  });
+
+  if (cacheUpdated) {
+    try {
+      const fileSet = new Set(files.map(f => f.filename));
+      Object.keys(cache).forEach(k => {
+        if (!fileSet.has(k)) delete cache[k];
+      });
+      fs.writeFileSync(BACKUPS_INDEX_FILE, JSON.stringify(cache, null, 2), 'utf8');
+    } catch (e) {
+      console.error("Failed to write backups index cache:", e);
+    }
+  }
+
+  return result;
+}
+
+// IPC Handler: Get List of Available Backups (optionally filtered by courseId)
+ipcMain.handle('get-backups-list', async (event, courseId) => {
+  try {
+    const allBackups = getOrBuildBackupsIndex();
+
+    if (!courseId || courseId === 'all') {
+      return { success: true, backups: allBackups };
+    }
+
+    // Filter strictly to backups that contain this course
+    const filtered = allBackups
+      .filter(b => b.courses && b.courses.some(c => c.id === courseId))
+      .map(b => {
+        const courseInfo = b.courses.find(c => c.id === courseId);
+        return {
+          filename: b.filename,
+          mtime: b.mtime,
+          size: b.size,
+          isPreRevert: b.isPreRevert,
+          totalEntries: b.totalEntries,
+          totalNotes: b.totalNotes,
+          courseId: courseInfo.id,
+          courseName: courseInfo.name,
+          courseEntries: courseInfo.entriesCount,
+          courseNotes: courseInfo.notesCount || 0,
+          courseBooks: courseInfo.booksCount
+        };
+      });
+
+    return { success: true, backups: filtered, courseId };
+  } catch (error) {
+    console.error("Failed to list backups:", error);
+    return { success: false, error: error.message, backups: [] };
+  }
+});
+
+// IPC Handler: Get Details for a Specific Backup (for comparison preview)
+ipcMain.handle('get-backup-details', async (event, filename, courseId) => {
+  try {
+    const safeName = path.basename(filename);
+    const filePath = path.join(BACKUPS_DIR, safeName);
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: 'Backup file does not exist.' };
+    }
+
+    const stat = fs.statSync(filePath);
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const data = JSON.parse(raw);
+
+    const courses = (data.courses || []).map(c => ({
+      id: c.id,
+      name: c.name
+    }));
+
+    const books = (data.books || []).map(b => ({
+      id: b.id,
+      name: b.name,
+      courseId: b.courseId,
+      color: b.color
+    }));
+
+    const entries = data.entries || [];
+
+    const entriesPerCourse = {};
+    const notesPerCourse = {};
+    const entriesPerBook = {};
+    const notesPerBook = {};
+    let totalNotes = 0;
+
+    entries.forEach(e => {
+      const hasNote = e && e.notes && e.notes.trim().length > 0;
+      if (hasNote) totalNotes++;
+
+      if (e.courseId) {
+        entriesPerCourse[e.courseId] = (entriesPerCourse[e.courseId] || 0) + 1;
+        if (hasNote) {
+          notesPerCourse[e.courseId] = (notesPerCourse[e.courseId] || 0) + 1;
+        }
+      }
+      if (e.bookId) {
+        entriesPerBook[e.bookId] = (entriesPerBook[e.bookId] || 0) + 1;
+        if (hasNote) {
+          notesPerBook[e.bookId] = (notesPerBook[e.bookId] || 0) + 1;
+        }
+      }
+    });
+
+    const targetCourse = (courseId && courseId !== 'all') ? courses.find(c => c.id === courseId) : null;
+    const targetCourseEntries = targetCourse ? (entriesPerCourse[targetCourse.id] || 0) : null;
+    const targetCourseNotes = targetCourse ? (notesPerCourse[targetCourse.id] || 0) : null;
+
+    return {
+      success: true,
+      filename: safeName,
+      mtime: stat.mtime.toISOString(),
+      size: stat.size,
+      totalCourses: courses.length,
+      totalBooks: books.length,
+      totalEntries: entries.length,
+      totalNotes,
+      targetCourseEntries,
+      targetCourseNotes,
+      courses,
+      books,
+      entriesPerCourse,
+      notesPerCourse,
+      entriesPerBook,
+      notesPerBook,
+      isPreRevert: safeName.includes('pre_revert')
+    };
+  } catch (error) {
+    console.error("Failed to get backup details:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// IPC Handler: Revert to a Selected Backup with Safeguard Snapshot
+// Supports course-scoped revert (preserving other courses) or full database revert
+ipcMain.handle('revert-to-backup', async (event, args) => {
+  try {
+    const filename = typeof args === 'string' ? args : (args && args.filename);
+    const courseId = (typeof args === 'object' && args && args.courseId && args.courseId !== 'all') ? args.courseId : null;
+
+    if (!filename) {
+      return { success: false, error: 'No backup filename specified.' };
+    }
+
+    const safeName = path.basename(filename);
+    const sourcePath = path.join(BACKUPS_DIR, safeName);
+    if (!fs.existsSync(sourcePath)) {
+      return { success: false, error: 'Selected backup file not found.' };
+    }
+
+    // 1. Verify backup file contains valid JSON and structure
+    const backupContent = fs.readFileSync(sourcePath, 'utf8');
+    const backupData = JSON.parse(backupContent);
+    if (!backupData || (!backupData.courses && !backupData.entries)) {
+      return { success: false, error: 'Backup file is corrupted or not a valid SANS index database.' };
+    }
+
+    // 2. Safeguard: Take an immediate safety snapshot of current DATA_FILE before overwriting
+    if (fs.existsSync(DATA_FILE)) {
+      const currentDataRaw = fs.readFileSync(DATA_FILE, 'utf8');
+      const now = new Date();
+      const timestamp = now.toISOString()
+        .replace(/:/g, '-')
+        .replace(/\./g, '-')
+        .replace(/T/g, '_')
+        .replace(/Z/g, '');
+      const safetyBackupFile = path.join(BACKUPS_DIR, `backup_${timestamp}_pre_revert.json`);
+      fs.writeFileSync(safetyBackupFile, currentDataRaw, 'utf8');
+    }
+
+    let finalData;
+
+    if (courseId) {
+      // Course-scoped revert: restore only books, entries, acronyms, and todos for this course!
+      const currentData = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+
+      const backupCourse = (backupData.courses || []).find(c => c.id === courseId);
+      const hasCourseEntriesInBackup = (backupData.entries || []).some(e => e.courseId === courseId);
+      if (!backupCourse && !hasCourseEntriesInBackup) {
+        return { success: false, error: `This backup does not contain data for the selected course.` };
+      }
+
+      // Merge courses
+      const mergedCourses = (currentData.courses || []).map(c => {
+        if (c.id === courseId && backupCourse) {
+          return { ...c, ...backupCourse };
+        }
+        return c;
+      });
+      if (backupCourse && !mergedCourses.some(c => c.id === courseId)) {
+        mergedCourses.push(backupCourse);
+      }
+
+      // Merge books: keep other courses' books, take this course's books from backup
+      const otherBooks = (currentData.books || []).filter(b => b.courseId !== courseId);
+      const backupBooks = (backupData.books || []).filter(b => b.courseId === courseId);
+      const mergedBooks = [...otherBooks, ...backupBooks];
+
+      // Merge entries: keep other courses' entries, take this course's entries from backup
+      const otherEntries = (currentData.entries || []).filter(e => e.courseId !== courseId);
+      const backupEntries = (backupData.entries || []).filter(e => e.courseId === courseId);
+      const mergedEntries = [...otherEntries, ...backupEntries];
+
+      // Merge acronyms
+      const otherAcronyms = (currentData.acronyms || []).filter(a => a.courseId !== courseId);
+      const backupAcronyms = (backupData.acronyms || []).filter(a => a.courseId === courseId);
+      const mergedAcronyms = [...otherAcronyms, ...backupAcronyms];
+
+      // Merge todos
+      const otherTodos = (currentData.todos || []).filter(t => t.courseId !== courseId);
+      const backupTodos = (backupData.todos || []).filter(t => t.courseId === courseId);
+      const mergedTodos = [...otherTodos, ...backupTodos];
+
+      finalData = {
+        ...currentData,
+        courses: mergedCourses,
+        books: mergedBooks,
+        entries: mergedEntries,
+        acronyms: mergedAcronyms,
+        todos: mergedTodos
+      };
+    } else {
+      // Full database revert
+      finalData = backupData;
+    }
+
+    // 3. Write finalData to DATA_FILE
+    fs.writeFileSync(DATA_FILE, JSON.stringify(finalData, null, 2), 'utf8');
+
+    // 4. Enforce 100-backup pruning limit
+    const files = fs.readdirSync(BACKUPS_DIR)
+      .filter(file => file.startsWith('backup_') && file.endsWith('.json'))
+      .map(file => ({
+        path: path.join(BACKUPS_DIR, file),
+        mtime: fs.statSync(path.join(BACKUPS_DIR, file)).mtime
+      }))
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (files.length > 100) {
+      const filesToDelete = files.slice(100);
+      filesToDelete.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error("Error deleting old backup:", err);
+        }
+      });
+    }
+
+    return {
+      success: true,
+      data: finalData,
+      filename: safeName,
+      courseId: courseId || null
+    };
+  } catch (error) {
+    console.error("Failed to revert to backup:", error);
     return { success: false, error: error.message };
   }
 });
