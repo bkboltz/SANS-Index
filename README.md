@@ -104,7 +104,7 @@ To generate a standalone Windows executable (so classmates or study group partne
 * Toggle the ⭐ star icon to flag must-know concepts for the exam.
 
 ### 3. Using AI Auto-Indexing
-* Navigate to the **Auto-Index** tab.
+* Navigate to the **Auto Index** tab.
 * Enter your Gemini API Key and click **Lock**.
 * Select your target course book and upload the book's PDF or index excerpt.
 * Choose your Gemini model and click **Start Auto-Indexing**. Review the generated entries in the staging table before approving them into your live index.

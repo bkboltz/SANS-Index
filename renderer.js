@@ -541,9 +541,9 @@ function handleMenuAction(action, ...args) {
         "• Ctrl+P : Print Index Preview\n" +
         "• Ctrl+B : Toggle Sidebar\n" +
         "• Ctrl+1 : Switch to My Index\n" +
-        "• Ctrl+2 : Switch to My Acronyms\n" +
-        "• Ctrl+3 : Switch to Auto-Index Tool\n" +
-        "• Ctrl+4 : Switch to Notes Editor\n" +
+        "• Ctrl+2 : Switch to Auto Index\n" +
+        "• Ctrl+3 : Switch to My Acronyms\n" +
+        "• Ctrl+4 : Switch to Notes\n" +
         "• F11    : Toggle Full Screen\n" +
         "• Esc    : Clear Form / Cancel Edit"
       );

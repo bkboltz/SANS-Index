@@ -253,21 +253,21 @@ function setupApplicationMenu() {
           }
         },
         {
-          label: 'Switch to: My Acronyms',
+          label: 'Switch to: Auto Index',
           accelerator: 'CmdOrCtrl+2',
-          click: () => {
-            mainWindow.webContents.send('menu-action', 'switch-tab', 'my-acronyms');
-          }
-        },
-        {
-          label: 'Switch to: Auto-Index PDF',
-          accelerator: 'CmdOrCtrl+3',
           click: () => {
             mainWindow.webContents.send('menu-action', 'switch-tab', 'auto-index');
           }
         },
         {
-          label: 'Switch to: Notes Editor',
+          label: 'Switch to: My Acronyms',
+          accelerator: 'CmdOrCtrl+3',
+          click: () => {
+            mainWindow.webContents.send('menu-action', 'switch-tab', 'my-acronyms');
+          }
+        },
+        {
+          label: 'Switch to: Notes',
           accelerator: 'CmdOrCtrl+4',
           click: () => {
             mainWindow.webContents.send('menu-action', 'switch-tab', 'notes-editor');
