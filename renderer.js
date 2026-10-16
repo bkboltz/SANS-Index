@@ -225,6 +225,10 @@ const elements = {
   curationCardLocal05b: document.getElementById('curation-card-local-0.5b'),
   curationCardLocal15b: document.getElementById('curation-card-local-1.5b'),
   curationCardLocal3b: document.getElementById('curation-card-local-3b'),
+  localSlmToggle: document.getElementById('local-slm-toggle'),
+  localSlmContainer: document.getElementById('local-slm-container'),
+  localSlmToggleStatus: document.getElementById('local-slm-toggle-status'),
+  localSlmToggleIcon: document.getElementById('local-slm-toggle-icon'),
   geminiSettingsContainer: document.getElementById('gemini-settings-container'),
   localSlmInfoContainer: document.getElementById('local-slm-info-container'),
   aiCurationOptionsContainer: document.getElementById('ai-curation-options-container'),
@@ -6401,6 +6405,17 @@ function initAutoIndexingBindings() {
     const unlockSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
 
     const updateLockUi = () => {
+      const keyVal = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
+      const hasLockedKey = isKeyLocked && keyVal.length > 0;
+
+      if (elements.getFreeKeyBtn) {
+        if (hasLockedKey) {
+          elements.getFreeKeyBtn.classList.remove('api-key-guide-glowing');
+        } else {
+          elements.getFreeKeyBtn.classList.add('api-key-guide-glowing');
+        }
+      }
+
       if (isKeyLocked) {
         elements.autoIndexGeminiKey.readOnly = true;
         elements.autoIndexGeminiKey.style.opacity = '0.7';
@@ -6693,9 +6708,34 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       });
     }
 
+    if (elements.localSlmToggle && elements.localSlmContainer) {
+      elements.localSlmToggle.addEventListener('click', () => {
+        const isCollapsed = elements.localSlmContainer.classList.contains('hidden');
+        if (isCollapsed) {
+          elements.localSlmContainer.classList.remove('hidden');
+          elements.localSlmToggle.classList.add('active');
+          if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(90deg)';
+          if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Expanded';
+        } else {
+          elements.localSlmContainer.classList.add('hidden');
+          elements.localSlmToggle.classList.remove('active');
+          if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(0deg)';
+          if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Collapsed';
+        }
+      });
+    }
+
     const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
     const savedModel = localStorage.getItem('local_slm_model') || '1.5b';
     setCurationEngine(savedEngine, savedModel);
+
+    // If previously saved engine was local-slm, expand the container so user sees their selection
+    if (savedEngine === 'local-slm' && elements.localSlmContainer) {
+      elements.localSlmContainer.classList.remove('hidden');
+      if (elements.localSlmToggle) elements.localSlmToggle.classList.add('active');
+      if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(90deg)';
+      if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Expanded';
+    }
 
     const initialKey = localStorage.getItem('gemini_api_key') || '';
     elements.autoIndexGeminiKey.value = initialKey;
@@ -6720,6 +6760,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
     elements.autoIndexGeminiKey.addEventListener('input', () => {
       localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
       validateGeminiKey();
+      updateLockUi();
     });
 
     elements.autoIndexUseAi.addEventListener('change', () => {

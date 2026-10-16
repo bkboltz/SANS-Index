@@ -812,136 +812,148 @@
                     <option value="local-slm">Local 0.5B SLM Engine</option>
                   </select>
 
-                  <!-- Selectable Cards Grid -->
+                  <!-- Selectable AI Engine Card -->
                   <div style="margin-bottom: 8px;">
                     <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Select AI Engine</label>
                   </div>
 
-                  <div class="curation-card-grid">
-                    <!-- Gemini Cloud AI Card -->
-                    <div class="curation-engine-card active" id="curation-card-gemini" data-engine="gemini">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
-                            </div>
+                  <!-- Google Gemini (Cloud AI) - Recommended Default Card -->
+                  <div class="curation-engine-card active" id="curation-card-gemini" data-engine="gemini" style="margin-bottom: 12px;">
+                    <div>
+                      <div class="curation-card-header">
+                        <div class="curation-card-icon-title">
+                          <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                            <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
+                          </div>
+                          <div>
                             <div class="curation-card-title">Google Gemini (Cloud AI)</div>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">High-speed Google cloud models</span>
                           </div>
-                          <span class="badge badge-success" style="font-size: 0.68rem;">Cloud</span>
                         </div>
-                        <div class="curation-card-description">
-                          Highest quality curation using Google Gemini cloud models. Simple manual API key setup required. Uses 0% local PC resources (best for lightweight laptops). Prone to free-tier traffic rate limits.
-                        </div>
+                        <span class="badge" style="background: rgba(20, 184, 166, 0.2); color: var(--color-accent); border: 1px solid rgba(20, 184, 166, 0.45); font-size: 0.7rem; font-weight: 700; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;">
+                          <i data-lucide="sparkles" style="width: 11px; height: 11px;"></i>Recommended
+                        </span>
                       </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> 0 MB (Cloud)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> 0% PC RAM/CPU</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: #eab308;">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★★★★ (Top)</span>
-                        </div>
+                      <div class="curation-card-description" style="margin-bottom: 12px;">
+                        Highest quality curation using Google Gemini cloud models. Fast execution, uses 0% local PC resources (ideal for lightweight laptops), and supports all Gemini 2.x/3.x models.
+                      </div>
+                    </div>
+                    <div class="curation-card-features" style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 16px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
+                      <div class="curation-card-feature-item">
+                        <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
+                        <span><strong>Download Size:</strong> 0 MB (Cloud)</span>
+                      </div>
+                      <div class="curation-card-feature-item">
+                        <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
+                        <span><strong>Hardware Demand:</strong> 0% PC RAM/CPU</span>
+                      </div>
+                      <div class="curation-card-feature-item" style="color: #eab308;">
+                        <i data-lucide="star" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
+                        <span><strong>Curation Quality:</strong> ★★★★★ (Top)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Collapsed Local Offline SLM Models -->
+                  <div style="margin-bottom: 16px;">
+                    <div id="local-slm-toggle" class="collapsible-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(30, 41, 59, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; user-select: none;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="cpu" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
+                        <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);">Offline Local SLM Models (Optional / Advanced)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="local-slm-toggle-status" style="font-size: 0.7rem; color: var(--text-muted);">Collapsed</span>
+                        <i data-lucide="chevron-right" class="collapse-icon" id="local-slm-toggle-icon" style="transition: transform 0.2s ease;"></i>
                       </div>
                     </div>
 
-                    <!-- Local Qwen 1.5B (Recommended) -->
-                    <div class="curation-engine-card" id="curation-card-local-1.5b" data-engine="local-slm" data-model="1.5b">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="zap" style="width: 18px; height: 18px;"></i>
+                    <div id="local-slm-container" class="hidden" style="margin-top: 10px; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: rgba(15, 23, 42, 0.25);">
+                      <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.45;">
+                        Small language models run 100% offline without API keys, but require downloading multi-gigabyte files and utilize significant local CPU/RAM.
+                      </p>
+                      <div class="curation-card-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 0; margin-bottom: 0;">
+                        <!-- Local Qwen 1.5B -->
+                        <div class="curation-engine-card" id="curation-card-local-1.5b" data-engine="local-slm" data-model="1.5b">
+                          <div>
+                            <div class="curation-card-header">
+                              <div class="curation-card-icon-title">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                                  <i data-lucide="zap" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div class="curation-card-title">Qwen 1.5B (Fast & Smart)</div>
+                              </div>
+                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-1.5b">1.5B Local</span>
                             </div>
-                            <div class="curation-card-title">Qwen 1.5B (Fast & Smart) ⭐</div>
+                            <div class="curation-card-description">
+                              Fast execution with technical English vocabulary. Runs 100% offline without API keys.
+                            </div>
                           </div>
-                          <span class="badge badge-success model-status-badge" style="font-size: 0.68rem;" id="badge-model-1.5b">Recommended</span>
+                          <div class="curation-card-features">
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Download:</strong> ~1.1 GB</span>
+                            </div>
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Demand:</strong> ~1.5 GB RAM</span>
+                            </div>
+                          </div>
                         </div>
-                        <div class="curation-card-description">
-                          Recommended sweet spot for local curation! Excellent technical English vocabulary, fast execution, and strict JSON output. Runs 100% offline without API keys.
-                        </div>
-                      </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> ~1.1 GB (One-time)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> ~1.5 GB RAM (Low)</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: #38bdf8;">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★★★☆ (Great)</span>
-                        </div>
-                      </div>
-                    </div>
 
-                    <!-- Local Qwen 3B (Near Cloud Quality) -->
-                    <div class="curation-engine-card" id="curation-card-local-3b" data-engine="local-slm" data-model="3b">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="brain-circuit" style="width: 18px; height: 18px;"></i>
+                        <!-- Local Qwen 3B (Near Cloud Quality) -->
+                        <div class="curation-engine-card" id="curation-card-local-3b" data-engine="local-slm" data-model="3b">
+                          <div>
+                            <div class="curation-card-header">
+                              <div class="curation-card-icon-title">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                                  <i data-lucide="brain-circuit" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div class="curation-card-title">Qwen 3B (Near-Cloud)</div>
+                              </div>
+                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-3b">3B Local</span>
                             </div>
-                            <div class="curation-card-title">Qwen 3B (Near-Cloud)</div>
+                            <div class="curation-card-description">
+                              High reasoning capacity for complex technical terms and protocol names completely offline.
+                            </div>
                           </div>
-                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-3b">Near-Cloud</span>
+                          <div class="curation-card-features">
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="download" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Download:</strong> ~2.0 GB</span>
+                            </div>
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Demand:</strong> ~2.8 GB RAM</span>
+                            </div>
+                          </div>
                         </div>
-                        <div class="curation-card-description">
-                          High reasoning capacity for complex technical terms, tool names, and protocols. Produces near-cloud quality results completely offline without API rate limits.
-                        </div>
-                      </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="download" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> ~2.0 GB (One-time)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> ~2.8 GB RAM (Medium)</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: #a78bfa;">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★★★½ (High)</span>
-                        </div>
-                      </div>
-                    </div>
 
-                    <!-- Local Qwen 0.5B (Ultra-Lightweight) -->
-                    <div class="curation-engine-card" id="curation-card-local-0.5b" data-engine="local-slm" data-model="0.5b">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="feather" style="width: 18px; height: 18px;"></i>
+                        <!-- Local Qwen 0.5B (Ultra-Lightweight) -->
+                        <div class="curation-engine-card" id="curation-card-local-0.5b" data-engine="local-slm" data-model="0.5b">
+                          <div>
+                            <div class="curation-card-header">
+                              <div class="curation-card-icon-title">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                                  <i data-lucide="feather" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div class="curation-card-title">Qwen 0.5B (Ultra-Light)</div>
+                              </div>
+                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-0.5b">0.5B Micro</span>
                             </div>
-                            <div class="curation-card-title">Qwen 0.5B (Ultra-Light)</div>
+                            <div class="curation-card-description">
+                              Smallest, lightweight model for basic offline filtering. Lowest resource demand.
+                            </div>
                           </div>
-                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-0.5b">Micro</span>
-                        </div>
-                        <div class="curation-card-description">
-                          Smallest, ultra-fast model for basic offline index cleaning. Lowest resource demand, but basic reasoning capabilities (recommended to review final list).
-                        </div>
-                      </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> ~398 MB (One-time)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> ~800 MB RAM (Micro)</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: var(--text-muted);">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★☆☆☆ (Basic)</span>
+                          <div class="curation-card-features">
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Download:</strong> ~398 MB</span>
+                            </div>
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Demand:</strong> ~800 MB RAM</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -967,6 +979,9 @@
                           <i data-lucide="lock" style="width: 14px; height: 14px;"></i>
                           <span>Lock</span>
                         </button>
+                      </div>
+                      <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
+                        <span style="color: var(--color-accent); font-weight: 600;">Suggested:</span> Adding Google's minimum ~$10 billing credit to your Google AI Studio account avoids RPM rate limit delays and unlocks all models. (100% of payment goes directly to Google, not the app developers).
                       </div>
                     </div>
 
@@ -2491,9 +2506,22 @@
           </div>
         </div>
 
-        <!-- Tip Box -->
-        <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #fef08a; line-height: 1.45;">
-          <strong>💡 Pro Tip:</strong> Google provides generous free tier quotas! If you ever run into high traffic rate limits during peak usage, you can enable paid billing in AI Studio for higher limits across all Gemini models.
+        <!-- Recommended $10 Credit Box -->
+        <div style="background: rgba(20, 184, 166, 0.08); border: 1px solid rgba(20, 184, 166, 0.3); border-radius: 8px; padding: 12px 14px; font-size: 0.8rem; line-height: 1.5; color: var(--text-secondary);">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+            <i data-lucide="zap" style="width: 15px; height: 15px; color: var(--color-accent);"></i>
+            <strong style="color: var(--color-accent); font-size: 0.84rem;">Suggested: Optional $10 Google Credit (Pay-As-You-Go)</strong>
+          </div>
+          <p style="margin: 0 0 8px 0;">
+            Google offers a generous free tier (15 requests/min), but adding Google's minimum credit (approx. $10) to your Google AI Studio account is <strong>strongly recommended</strong>:
+          </p>
+          <ul style="margin: 0 0 8px 18px; padding: 0;">
+            <li><strong>Prevents RPM Rate Limits:</strong> Eliminates traffic rate limits and 429 quota delays when auto-indexing large books.</li>
+            <li><strong>Unlocks All Gemini Models:</strong> Provides immediate access to high-speed Flash & Pro reasoning models.</li>
+          </ul>
+          <div style="background: rgba(255, 255, 255, 0.05); border-radius: 4px; padding: 6px 10px; font-size: 0.74rem; color: var(--text-muted); border-left: 3px solid var(--color-accent); margin-top: 6px;">
+            <strong>Note on Payments:</strong> 100% of this money goes directly to Google for API token usage, <em>not to the developers of this app</em>. SANS Study Indexer is 100% free to use. Adding credit is purely optional, never required, but suggested for heavy indexing.
+          </div>
         </div>
       </div>
 

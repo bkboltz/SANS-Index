@@ -3892,6 +3892,34 @@ tr.auto-row:hover {
   gap: 6px;
 }
 
+/* Glowing Pulse Animation for "How to Get Free Key" when key is missing or unlocked */
+@keyframes keyGuideGlowPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7);
+    background: rgba(20, 184, 166, 0.1);
+    color: var(--color-accent);
+  }
+  50% {
+    box-shadow: 0 0 12px 3px rgba(20, 184, 166, 0.45);
+    background: rgba(20, 184, 166, 0.22);
+    color: #5eead4;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7);
+    background: rgba(20, 184, 166, 0.1);
+    color: var(--color-accent);
+  }
+}
+
+.api-key-guide-glowing {
+  animation: keyGuideGlowPulse 2.2s infinite ease-in-out !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 3px 8px !important;
+  border: 1px solid rgba(20, 184, 166, 0.5) !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
 /* ==========================================================================
    NOTES TEXT EDITOR - WORD PROCESSOR STYLES & THEMES
    ========================================================================== */
