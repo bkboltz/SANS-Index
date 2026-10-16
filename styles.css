@@ -1340,6 +1340,44 @@ dialog:not([open]) {
   padding: 24px;
 }
 
+/* Fix for API Key Guide Modal container overflow & sticky footer buttons on laptop screens */
+#api-key-guide-modal[open] {
+  display: flex !important;
+  flex-direction: column;
+  max-height: 85vh !important;
+  overflow: hidden !important;
+}
+
+#api-key-guide-modal .dialog-content {
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 85vh !important;
+  height: 100% !important;
+  padding: 20px 24px 16px 24px !important;
+  box-sizing: border-box !important;
+}
+
+#api-key-guide-modal .guide-modal-scroll {
+  overflow-y: auto !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 6px;
+  margin-bottom: 12px;
+  flex: 1;
+}
+
+#api-key-guide-modal .guide-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  flex-shrink: 0;
+  background-color: inherit;
+}
+
 /* PDF Review Info Tooltip */
 .info-tooltip-wrapper:hover .info-tooltip-popover {
   display: block !important;
