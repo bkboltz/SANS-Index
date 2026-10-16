@@ -5330,6 +5330,19 @@ function renderPrintPreview() {
       font-size: 6.5pt !important;
       padding: 1.5px 3px !important;
     }
+    @media print {
+      .print-only .index-table {
+        margin-bottom: 0 !important;
+      }
+      .print-only .print-acronyms-table {
+        margin-bottom: 0 !important;
+      }
+      .print-only .print-preview-page-sheet {
+        box-sizing: border-box !important;
+        max-height: 10.5in !important;
+        overflow: hidden !important;
+      }
+    }
   `;
 
   // 2. Off-screen DOM Measurement Pass for 100% Pixel-Accurate Row Heights
@@ -5384,7 +5397,9 @@ function renderPrintPreview() {
   measureContainer.innerHTML = ''; // Clean up off-screen DOM
 
   // Sequential Left-First, Right-Second Page Sheet & Column Building Algorithm
-  const maxColumnHeight = cols === '2' ? 903 : 950;
+  // Calibrated column height budget: 1008px printable height minus ~90px header/thead overhead
+  // minus 45-50px engineering safety buffer to absorb print typography line-wrap deviations
+  const maxColumnHeight = cols === '2' ? 865 : 865;
   const indexPageSheets = [];
 
   if (includeIndex) {
@@ -5483,8 +5498,8 @@ function renderPrintPreview() {
     measureContainer.innerHTML = '';
   }
 
-  // Group acronym items into 2-column page sheets using 2-column max page height (878px) ALL THE TIME, regardless of index column setting
-  const maxAcronymColumnHeight = 878;
+  // Group acronym items into 2-column page sheets using safe column height (865px)
+  const maxAcronymColumnHeight = 865;
   const acronymPageSheets = [];
   let acIdx = 0;
 

@@ -264,7 +264,7 @@ ipcMain.handle('print-app', async () => {
     silent: false,
     printBackground: true,
     color: true,
-    margins: { marginType: 'default' }
+    margins: { marginType: 'none' }
   }, (success, failureReason) => {
     if (!success) {
       console.log(`Print failed: ${failureReason}`);
@@ -297,7 +297,8 @@ ipcMain.handle('save-pdf', async (event, options = {}) => {
     const pdfData = await mainWindow.webContents.printToPDF({
       pageSize: 'Letter',
       printBackground: true,
-      preferCSSPageSize: true
+      preferCSSPageSize: true,
+      margins: { marginType: 'none' }
     });
 
     fs.writeFileSync(filePath, pdfData);
