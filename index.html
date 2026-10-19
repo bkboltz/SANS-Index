@@ -2964,6 +2964,27 @@
     </div>
   </dialog>
 
+  <!-- Global In-App Alert Dialog (Replaces native window.alert to prevent Windows Electron focus drops) -->
+  <dialog id="app-alert-dialog" class="custom-dialog" style="max-width: 440px;">
+    <div class="dialog-content" style="padding: 22px 24px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div id="app-alert-icon-container" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); color: #60a5fa; flex-shrink: 0;">
+          <i data-lucide="info" id="app-alert-icon" style="width: 22px; height: 22px;"></i>
+        </div>
+        <h3 id="app-alert-title" style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">Notice</h3>
+      </div>
+      
+      <div id="app-alert-message" style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 22px; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow-y: auto;">
+      </div>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 0;">
+        <button type="button" id="app-alert-ok-btn" class="btn btn-accent" style="min-width: 90px;">
+          <span>OK</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Print only container -->
   <div id="print-only-container" class="print-only"></div>
 

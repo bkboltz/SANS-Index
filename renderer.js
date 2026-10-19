@@ -459,7 +459,150 @@ const elements = {
   updateProgressView: document.getElementById('update-progress-view'),
   updateProgressText: document.getElementById('update-progress-text'),
   updateProgressBar: document.getElementById('update-progress-bar'),
-  updateBellBtn: document.getElementById('update-bell-btn')
+  updateBellBtn: document.getElementById('update-bell-btn'),
+
+  // Global In-App Alert Dialog
+  appAlertDialog: document.getElementById('app-alert-dialog'),
+  appAlertTitle: document.getElementById('app-alert-title'),
+  appAlertMessage: document.getElementById('app-alert-message'),
+  appAlertOkBtn: document.getElementById('app-alert-ok-btn'),
+  appAlertIconContainer: document.getElementById('app-alert-icon-container'),
+  appAlertIcon: document.getElementById('app-alert-icon')
+};
+
+// ==========================================================================
+// IN-APP DOM ALERT SYSTEM (Replaces native window.alert to prevent Windows focus bug)
+// ==========================================================================
+const alertQueue = [];
+let isAlertOpen = false;
+
+function showInAppAlert(message, customTitle = null) {
+  const msgStr = (message !== undefined && message !== null) ? String(message) : '';
+
+  if (isAlertOpen) {
+    alertQueue.push({ message: msgStr, title: customTitle });
+    return;
+  }
+
+  const dialog = elements.appAlertDialog || document.getElementById('app-alert-dialog');
+  if (!dialog) {
+    console.warn('[InAppAlert] Dialog element not found. Fallback to console:', msgStr);
+    return;
+  }
+
+  isAlertOpen = true;
+
+  const titleEl = elements.appAlertTitle || document.getElementById('app-alert-title');
+  const msgEl = elements.appAlertMessage || document.getElementById('app-alert-message');
+  const iconContainer = elements.appAlertIconContainer || document.getElementById('app-alert-icon-container');
+  const iconEl = elements.appAlertIcon || document.getElementById('app-alert-icon');
+  const okBtn = elements.appAlertOkBtn || document.getElementById('app-alert-ok-btn');
+
+  // Determine alert type based on message text
+  const lower = msgStr.toLowerCase();
+  let type = 'info';
+  let defaultTitle = 'Notice';
+
+  if (lower.includes('error') || lower.includes('failed') || lower.includes('could not')) {
+    type = 'error';
+    defaultTitle = 'Error';
+  } else if (lower.includes('warning') || lower.includes('caution') || lower.includes('notice:')) {
+    type = 'warning';
+    defaultTitle = 'Warning';
+  } else if (lower.includes('success') || lower.includes('imported') || lower.includes('completed') || lower.includes('saved')) {
+    type = 'success';
+    defaultTitle = 'Success';
+  }
+
+  if (titleEl) {
+    titleEl.textContent = customTitle || defaultTitle;
+  }
+
+  if (msgEl) {
+    msgEl.textContent = msgStr;
+  }
+
+  if (iconContainer && iconEl) {
+    if (type === 'error') {
+      iconContainer.style.background = 'rgba(239, 68, 68, 0.15)';
+      iconContainer.style.color = '#f87171';
+      iconEl.setAttribute('data-lucide', 'alert-circle');
+    } else if (type === 'warning') {
+      iconContainer.style.background = 'rgba(245, 158, 11, 0.15)';
+      iconContainer.style.color = '#fbbf24';
+      iconEl.setAttribute('data-lucide', 'alert-triangle');
+    } else if (type === 'success') {
+      iconContainer.style.background = 'rgba(16, 185, 129, 0.15)';
+      iconContainer.style.color = '#34d399';
+      iconEl.setAttribute('data-lucide', 'check-circle');
+    } else {
+      iconContainer.style.background = 'rgba(59, 130, 246, 0.15)';
+      iconContainer.style.color = '#60a5fa';
+      iconEl.setAttribute('data-lucide', 'info');
+    }
+
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons({
+        attrs: { class: 'lucide-icon' },
+        nameAttr: 'data-lucide',
+        nodeList: [iconEl]
+      });
+    }
+  }
+
+  const closeAlert = () => {
+    dialog.removeEventListener('close', handleDialogClose);
+    if (okBtn) okBtn.removeEventListener('click', handleOkClick);
+    dialog.removeEventListener('keydown', handleKeydown);
+
+    if (dialog.open) {
+      dialog.close();
+    }
+    isAlertOpen = false;
+
+    // If more alerts queued, display the next one
+    if (alertQueue.length > 0) {
+      const next = alertQueue.shift();
+      setTimeout(() => {
+        showInAppAlert(next.message, next.title);
+      }, 50);
+    }
+  };
+
+  const handleOkClick = (e) => {
+    e.preventDefault();
+    closeAlert();
+  };
+
+  const handleDialogClose = () => {
+    closeAlert();
+  };
+
+  const handleKeydown = (e) => {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      closeAlert();
+    }
+  };
+
+  if (okBtn) {
+    okBtn.addEventListener('click', handleOkClick, { once: true });
+  }
+  dialog.addEventListener('close', handleDialogClose, { once: true });
+  dialog.addEventListener('keydown', handleKeydown);
+
+  try {
+    dialog.showModal();
+    if (okBtn) okBtn.focus();
+  } catch (err) {
+    console.error('[InAppAlert] Error showing modal:', err);
+    isAlertOpen = false;
+  }
+}
+
+// Override global window.alert to always route through in-app DOM modal
+window.alert = function(message) {
+  showInAppAlert(message);
 };
 
 // Application State Store
