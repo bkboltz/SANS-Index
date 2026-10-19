@@ -304,10 +304,10 @@
             <input type="text" id="table-search-input" placeholder="Search by topic, notes, or pages...">
           </div>
 
-          <!-- Middle-positioned Teal AI Combine Button -->
-          <button type="button" id="combine-same-items-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Use AI to find and combine identical topics across your index">
+          <!-- Middle-positioned Teal Combine Button -->
+          <button type="button" id="combine-same-items-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Find and combine identical topics across your index">
             <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
-            <span>Combine same items using AI</span>
+            <span>Combine same items</span>
           </button>
 
           <div class="filters-wrapper">
@@ -1995,20 +1995,48 @@
     <div class="dialog-content">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
         <i data-lucide="sparkles" style="width: 22px; height: 22px; color: var(--color-accent);"></i>
-        <h3 style="margin: 0; font-size: 1.15rem;">Combine Same Items Using AI</h3>
+        <h3 style="margin: 0; font-size: 1.15rem;">Combine Same Items</h3>
       </div>
       
       <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
-        <p style="margin: 0 0 10px 0;">This tool analyzes your project's index entries using Gemini AI to identify terms that represent the <strong>exact same concept or tool</strong> (e.g. <code>Active Directory</code> & <code>AD</code>, or <code>Resource-Based Constrained Delegation (RBCD)</code> & <code>RBCD</code>) and standardizes them.</p>
+        <p style="margin: 0 0 10px 0;">This tool analyzes your project's index entries to identify terms that represent the <strong>exact same concept or tool</strong> (e.g. <code>Active Directory</code> & <code>AD</code>, or <code>file_filter</code> & <code>filter_file</code>) and standardizes them into clean, unified entries.</p>
         <ul style="margin: 0 0 12px 18px; padding: 0; display: flex; flex-direction: column; gap: 4px;">
-          <li>Standardizes names into long-form format with parenthetical acronyms: <code>Long-Form Title (ACRONYM)</code>.</li>
+          <li>Standardizes names into clean canonical formats with parenthetical acronyms.</li>
           <li>Merges page references for entries in the same book.</li>
-          <li>Standardizes topic names across different books so term names remain 100% consistent.</li>
+          <li>Standardizes topic names across different books so term names remain consistent.</li>
         </ul>
       </div>
 
-      <div style="padding: 10px 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 0.78rem; color: #fbbf24; margin-bottom: 16px; line-height: 1.45;">
-        <strong>⚠️ Usage & Quota Notice:</strong> This analysis uses your personal Gemini API key. You will be able to review, check, or uncheck all proposed combinations before any permanent changes are saved.
+      <!-- Consolidation Mode Selection -->
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; display: block;">Consolidation Method:</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <label class="radio-card" style="flex: 1; min-width: 140px; display: flex; align-items: flex-start; gap: 8px; padding: 10px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+            <input type="radio" name="combine-mode" value="both" checked style="margin-top: 2px;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">Both (AI + Rules)</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.3;">Recommended: Full AI evaluation with rule bypass</div>
+            </div>
+          </label>
+          <label class="radio-card" style="flex: 1; min-width: 140px; display: flex; align-items: flex-start; gap: 8px; padding: 10px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+            <input type="radio" name="combine-mode" value="rule-only" style="margin-top: 2px;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">⚡ Rule-Based Only</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.3;">Instant: Word & page overlap rules (No API key needed)</div>
+            </div>
+          </label>
+          <label class="radio-card" style="flex: 1; min-width: 140px; display: flex; align-items: flex-start; gap: 8px; padding: 10px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+            <input type="radio" name="combine-mode" value="ai-only" style="margin-top: 2px;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">🤖 Gemini AI Only</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.3;">Evaluate candidate pairs exclusively with Gemini</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div id="combine-warning-box" style="padding: 10px 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 0.78rem; color: #fbbf24; margin-bottom: 16px; line-height: 1.45;">
+        <strong>⚠️ Usage & Quota Notice:</strong> AI analysis uses your personal Gemini API key. You will be able to review, check, or uncheck all proposed combinations before any permanent changes are saved.
       </div>
 
       <div id="combine-ai-key-row" class="form-group" style="display: none; margin-bottom: 16px;">
@@ -2053,7 +2081,7 @@
         <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
         <button type="button" id="start-combine-ai-btn" class="btn btn-accent">
           <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
-          <span>Start AI Analysis</span>
+          <span id="start-combine-btn-text">Start Consolidation</span>
         </button>
       </div>
     </div>
@@ -2075,10 +2103,22 @@
         </div>
       </div>
 
-      <div style="margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; align-items: center;">
-        <span id="same-items-stat-total" style="padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.12); color: #ffffff; font-weight: 600;">0 Groups</span>
-        <span id="same-items-stat-merge" style="padding: 3px 10px; border-radius: 12px; background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 600;">0 Total Items</span>
-        <span id="same-items-stat-selected" style="padding: 3px 10px; border-radius: 12px; background: rgba(20,184,166,0.15); color: #2dd4bf; font-weight: 600;">0 Groups Selected</span>
+      <div style="margin-bottom: 12px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; align-items: center;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <span id="same-items-stat-total" style="padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.12); color: #ffffff; font-weight: 600;">0 Groups</span>
+          <span id="same-items-stat-merge" style="padding: 3px 10px; border-radius: 12px; background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 600;">0 Total Items</span>
+          <span id="same-items-stat-selected" style="padding: 3px 10px; border-radius: 12px; background: rgba(20,184,166,0.15); color: #2dd4bf; font-weight: 600;">0 Groups Selected</span>
+        </div>
+
+        <!-- Filter by Source Segmented Control -->
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Filter:</span>
+          <div id="same-items-source-filters" style="display: inline-flex; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 6px; padding: 2px;">
+            <button type="button" class="btn btn-xs same-items-filter-btn active" data-source="all" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; border: none; cursor: pointer; background: var(--color-accent); color: #ffffff; font-weight: 600;">All (<span id="same-items-filter-count-all">0</span>)</button>
+            <button type="button" class="btn btn-xs same-items-filter-btn" data-source="ai" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; border: none; cursor: pointer; background: transparent; color: var(--text-muted); font-weight: 500;">🤖 Gemini AI (<span id="same-items-filter-count-ai">0</span>)</button>
+            <button type="button" class="btn btn-xs same-items-filter-btn" data-source="rule" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; border: none; cursor: pointer; background: transparent; color: var(--text-muted); font-weight: 500;">⚡ Rule-Based (<span id="same-items-filter-count-rule">0</span>)</button>
+          </div>
+        </div>
       </div>
 
       <div class="pdf-review-table-wrapper" style="flex: 1; overflow-y: auto; min-height: 0; max-height: 60vh; border: 1px solid var(--border-color); border-radius: 6px;">

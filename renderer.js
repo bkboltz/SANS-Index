@@ -330,9 +330,15 @@ const elements = {
   combineConcurrencySelect: document.getElementById('combine-concurrency-select'),
   combineWaveCalcText: document.getElementById('combine-wave-calc-text'),
   combineWaveEstimateText: document.getElementById('combine-wave-estimate-text'),
+  combineWarningBox: document.getElementById('combine-warning-box'),
   startCombineAiBtn: document.getElementById('start-combine-ai-btn'),
+  startCombineBtnText: document.getElementById('start-combine-btn-text'),
   sameItemsReviewDialog: document.getElementById('same-items-review-dialog'),
   sameItemsSummaryText: document.getElementById('same-items-review-summary-text'),
+  sameItemsSourceFilters: document.getElementById('same-items-source-filters'),
+  sameItemsFilterCountAll: document.getElementById('same-items-filter-count-all'),
+  sameItemsFilterCountAi: document.getElementById('same-items-filter-count-ai'),
+  sameItemsFilterCountRule: document.getElementById('same-items-filter-count-rule'),
   sameItemsTableBody: document.getElementById('same-items-table-body'),
   sameItemsHeaderCheckbox: document.getElementById('same-items-header-checkbox'),
   sameItemsSelectAllBtn: document.getElementById('same-items-select-all-btn'),
@@ -3690,12 +3696,10 @@ async function openCombineSameItemsSetupDialog() {
   lucide.createIcons();
   renderAll();
 
-  const storedKey = localStorage.getItem('gemini_api_key') || '';
-  if (!storedKey && elements.combineAiKeyRow) {
-    elements.combineAiKeyRow.style.display = 'block';
-  } else if (elements.combineAiKeyRow) {
-    elements.combineAiKeyRow.style.display = 'none';
-  }
+  // Read current mode selection
+  const selectedRadio = document.querySelector('input[name="combine-mode"]:checked');
+  const mode = selectedRadio ? selectedRadio.value : 'both';
+  updateCombineModeUI(mode);
 
   // Show setup modal immediately
   if (elements.combineSameItemsSetupDialog) {
@@ -3703,12 +3707,61 @@ async function openCombineSameItemsSetupDialog() {
   }
   lucide.createIcons();
 
-  // Reset and pre-calculate candidate stats
+  await refreshCombineStats(mode);
+}
+
+function updateCombineModeUI(mode) {
+  const warningBox = elements.combineWarningBox || document.getElementById('combine-warning-box');
+  const keyRow = elements.combineAiKeyRow;
+  const concurrencySelectGroup = elements.combineConcurrencySelect ? elements.combineConcurrencySelect.closest('.form-group') : null;
+  const waveTimingCard = document.getElementById('combine-wave-timing-card');
+  const btnText = elements.startCombineBtnText || document.getElementById('start-combine-btn-text');
+  const storedKey = localStorage.getItem('gemini_api_key') || '';
+
+  if (mode === 'rule-only') {
+    if (warningBox) {
+      warningBox.innerHTML = `<strong>⚡ Instant Rule-Based Mode:</strong> Evaluates candidate index entries using page overlap and title keyword rules. Runs entirely offline on your computer &mdash; no Gemini API key or quota used.`;
+      warningBox.style.background = 'rgba(16, 185, 129, 0.12)';
+      warningBox.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      warningBox.style.color = '#34d399';
+    }
+    if (keyRow) keyRow.style.display = 'none';
+    if (concurrencySelectGroup) concurrencySelectGroup.style.display = 'none';
+    if (waveTimingCard) waveTimingCard.style.display = 'none';
+    if (btnText) btnText.textContent = 'Run Rule-Based Consolidation';
+  } else if (mode === 'ai-only') {
+    if (warningBox) {
+      warningBox.innerHTML = `<strong>⚠️ AI-Only Mode:</strong> Evaluates all candidate pairs exclusively through Gemini AI using your personal API key. You will review all proposals before changes are saved.`;
+      warningBox.style.background = 'rgba(245, 158, 11, 0.12)';
+      warningBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      warningBox.style.color = '#fbbf24';
+    }
+    if (keyRow) keyRow.style.display = storedKey ? 'none' : 'block';
+    if (concurrencySelectGroup) concurrencySelectGroup.style.display = 'block';
+    if (waveTimingCard) waveTimingCard.style.display = 'block';
+    if (btnText) btnText.textContent = 'Start AI Analysis';
+  } else {
+    // 'both'
+    if (warningBox) {
+      warningBox.innerHTML = `<strong>⚠️ Hybrid Mode (Recommended):</strong> High-confidence overlapping pairs are auto-combined, and remaining candidates are evaluated by Gemini AI. Uses your personal API key. You will review all proposals before changes are saved.`;
+      warningBox.style.background = 'rgba(245, 158, 11, 0.12)';
+      warningBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      warningBox.style.color = '#fbbf24';
+    }
+    if (keyRow) keyRow.style.display = storedKey ? 'none' : 'block';
+    if (concurrencySelectGroup) concurrencySelectGroup.style.display = 'block';
+    if (waveTimingCard) waveTimingCard.style.display = 'block';
+    if (btnText) btnText.textContent = 'Start Consolidation';
+  }
+}
+
+async function refreshCombineStats(mode = 'both') {
   if (elements.combineStatsSummary) {
     elements.combineStatsSummary.textContent = 'Scanning candidate pairs...';
   }
 
   const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
   const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym);
 
   const mappedEntries = courseEntries.map(e => {
@@ -3730,16 +3783,25 @@ async function openCombineSameItemsSetupDialog() {
     try {
       const stats = await window.api.getCombineCandidateStats({
         entries: mappedEntries,
-        acronyms: courseAcronyms.map(a => ({ acronym: a.acronym, term: a.term || '' }))
+        acronyms: courseAcronyms.map(a => ({ acronym: a.acronym, term: a.term || '' })),
+        mode
       });
 
       if (stats && stats.success) {
-        currentCombineTotalBatches = stats.totalBatches || 1;
+        currentCombineTotalBatches = stats.totalBatches || 0;
         if (elements.combineStatsSummary) {
-          elements.combineStatsSummary.textContent = `${stats.totalPairs.toLocaleString()} pairs across ${stats.totalBatches} batch(es)`;
+          if (mode === 'rule-only') {
+            elements.combineStatsSummary.textContent = `${(stats.autoPairs || 0).toLocaleString()} rule-matched pairs ready to consolidate (Instant)`;
+          } else if (mode === 'ai-only') {
+            elements.combineStatsSummary.textContent = `${(stats.geminiPairs || stats.totalPairs).toLocaleString()} pairs across ${stats.totalBatches} AI batch(es)`;
+          } else {
+            const aiCount = (stats.geminiPairs || 0).toLocaleString();
+            const ruleCount = (stats.autoPairs || 0).toLocaleString();
+            elements.combineStatsSummary.textContent = `${aiCount} AI pairs (${ruleCount} auto-combined) across ${stats.totalBatches} batch(es)`;
+          }
         }
 
-        if (elements.combineConcurrencySelect) {
+        if (elements.combineConcurrencySelect && mode !== 'rule-only') {
           elements.combineConcurrencySelect.innerHTML = '';
           const maxConcurrency = Math.max(1, Math.min(15, stats.totalBatches || 1));
 
@@ -3784,6 +3846,9 @@ async function openCombineSameItemsSetupDialog() {
 }
 
 async function startCombineSameItemsAI() {
+  const selectedRadio = document.querySelector('input[name="combine-mode"]:checked');
+  const mode = selectedRadio ? selectedRadio.value : 'both';
+
   const storedKey = localStorage.getItem('gemini_api_key') || '';
   let apiKey = storedKey;
 
@@ -3792,13 +3857,15 @@ async function startCombineSameItemsAI() {
     localStorage.setItem('gemini_api_key', apiKey);
   }
 
-  if (!apiKey) {
+  if (mode !== 'rule-only' && !apiKey) {
     alert("Please enter a valid Gemini API Key to run AI consolidation.");
     return;
   }
 
   const chosenConcurrency = elements.combineConcurrencySelect ? parseInt(elements.combineConcurrencySelect.value, 10) || 4 : 4;
-  localStorage.setItem('combine_concurrency', chosenConcurrency);
+  if (mode !== 'rule-only') {
+    localStorage.setItem('combine_concurrency', chosenConcurrency);
+  }
 
   if (elements.combineSameItemsSetupDialog) {
     elements.combineSameItemsSetupDialog.close();
@@ -3812,13 +3879,20 @@ async function startCombineSameItemsAI() {
   if (elements.pdfIndexLoadingDialog) {
     const titleEl = elements.pdfIndexLoadingDialog.querySelector('h3');
     const subtextEl = elements.pdfIndexLoadingDialog.querySelector('p');
-    if (titleEl) titleEl.textContent = 'Combining Same Items with Gemini AI...';
-    if (subtextEl) subtextEl.textContent = 'Analyzing topics across your index to group equivalent terms. This can take a few minutes.';
+    if (mode === 'rule-only') {
+      if (titleEl) titleEl.textContent = 'Running Rule-Based Consolidation...';
+      if (subtextEl) subtextEl.textContent = 'Evaluating index entries against overlap and keyword rules...';
+    } else {
+      if (titleEl) titleEl.textContent = 'Combining Same Items with Gemini AI...';
+      if (subtextEl) subtextEl.textContent = 'Analyzing topics across your index to group equivalent terms. This can take a few minutes.';
+    }
     elements.pdfIndexLoadingDialog.showModal();
   }
   startFunFactsRotation();
 
-  if (elements.pdfIndexProgressStatus) elements.pdfIndexProgressStatus.textContent = 'Initializing AI Analysis...';
+  if (elements.pdfIndexProgressStatus) {
+    elements.pdfIndexProgressStatus.textContent = mode === 'rule-only' ? 'Applying rules...' : 'Initializing AI Analysis...';
+  }
   if (elements.pdfIndexProgressPercent) elements.pdfIndexProgressPercent.textContent = '0%';
   if (elements.pdfIndexProgressBar) elements.pdfIndexProgressBar.style.width = '0%';
 
@@ -3873,7 +3947,8 @@ async function startCombineSameItemsAI() {
       acronyms: courseAcronyms.map(a => ({ acronym: a.acronym, term: a.term || '' })),
       geminiApiKey: apiKey,
       geminiModel: 'gemini-flash-latest',
-      concurrency: chosenConcurrency
+      concurrency: chosenConcurrency,
+      mode: mode
     });
 
     if (elements.pdfIndexLoadingDialog) {
@@ -3890,12 +3965,15 @@ async function startCombineSameItemsAI() {
     }
 
     if (!result.success) {
-      alert(`AI consolidation failed: ${result.error}`);
+      alert(`Consolidation failed: ${result.error}`);
       return;
     }
 
     if (!result.proposals || result.proposals.length === 0) {
-      alert('AI analysis finished: No identical or duplicate topics were found to combine.');
+      const emptyMsg = mode === 'rule-only'
+        ? 'Rule analysis finished: No duplicate topics met the rule criteria to combine.'
+        : 'Analysis finished: No identical or duplicate topics were found to combine.';
+      alert(emptyMsg);
       return;
     }
 
@@ -3903,9 +3981,22 @@ async function startCombineSameItemsAI() {
     sameItemsGroups = buildSameItemsGroups(sameItemsProposals);
 
     if (sameItemsGroups.length === 0) {
-      alert('AI analysis finished: No identical or duplicate topics were found to combine.');
+      const emptyMsg = mode === 'rule-only'
+        ? 'Rule analysis finished: No duplicate topics met the rule criteria to combine.'
+        : 'Analysis finished: No identical or duplicate topics were found to combine.';
+      alert(emptyMsg);
       return;
     }
+
+    // Reset filter to 'all' on new review session
+    sameItemsActiveFilter = 'all';
+    document.querySelectorAll('.same-items-filter-btn').forEach(b => {
+      const isAll = b.getAttribute('data-source') === 'all';
+      b.classList.toggle('active', isAll);
+      b.style.background = isAll ? 'var(--color-accent)' : 'transparent';
+      b.style.color = isAll ? '#ffffff' : 'var(--text-muted)';
+      b.style.fontWeight = isAll ? '600' : '500';
+    });
 
     renderSameItemsReviewGroups(sameItemsGroups);
     if (elements.sameItemsReviewDialog) {
@@ -3926,52 +4017,235 @@ async function startCombineSameItemsAI() {
     if (window.api && typeof window.api.removeListener === 'function') {
       window.api.removeListener('pdf-import-progress');
     }
-    alert(`Error during AI consolidation: ${err.message}`);
+    alert(`Error during consolidation: ${err.message}`);
   }
 }
 
 let sameItemsGroups = [];
+let sameItemsActiveFilter = 'all';
+
+function isSameItemGroupVisible(g) {
+  if (!g) return false;
+  if (sameItemsActiveFilter === 'all') return true;
+  if (sameItemsActiveFilter === 'ai') return g.source === 'ai' || g.source === 'both';
+  if (sameItemsActiveFilter === 'rule') return g.source === 'rule' || g.source === 'both';
+  return true;
+}
+
+function applySameItemsFilterVisibility() {
+  const tbody = elements.sameItemsTableBody;
+  if (!tbody) return;
+
+  sameItemsGroups.forEach((g, gIdx) => {
+    const isVisible = isSameItemGroupVisible(g);
+    const headerTr = tbody.querySelector(`.same-items-group-header-row[data-group-idx="${gIdx}"]`);
+    if (headerTr) {
+      headerTr.style.display = isVisible ? 'table-row' : 'none';
+    }
+    tbody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
+      r.style.display = (isVisible && !g.collapsed) ? 'table-row' : 'none';
+    });
+  });
+
+  updateSameItemsGroupStats();
+  updateSameItemsHeaderCheckboxState();
+  updateCollapseAllButtonText();
+}
+
+function updateSameItemsHeaderCheckboxState() {
+  if (!elements.sameItemsHeaderCheckbox) return;
+  const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+  if (visibleGroups.length === 0) {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+    return;
+  }
+  const allChangeable = [];
+  visibleGroups.forEach(g => {
+    g.items.forEach(it => {
+      if (!it.isAlreadyProposed) allChangeable.push(it);
+    });
+  });
+  if (allChangeable.length === 0) {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+    return;
+  }
+  const checkedCount = allChangeable.filter(it => it.checked).length;
+  if (checkedCount === allChangeable.length) {
+    elements.sameItemsHeaderCheckbox.checked = true;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+  } else if (checkedCount === 0) {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+  } else {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = true;
+  }
+}
+
+function updateGroupCheckboxState(g, gIdx) {
+  const changeableItems = g.items.filter(it => !it.isAlreadyProposed);
+  if (changeableItems.length < 2) return;
+
+  const checkedCount = changeableItems.filter(it => it.checked).length;
+  const headerCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+
+  if (checkedCount === changeableItems.length) {
+    g.checked = true;
+    if (headerCb) {
+      headerCb.checked = true;
+      headerCb.indeterminate = false;
+    }
+  } else if (checkedCount === 0) {
+    g.checked = false;
+    if (headerCb) {
+      headerCb.checked = false;
+      headerCb.indeterminate = false;
+    }
+  } else {
+    g.checked = true; // Group has partial active items
+    if (headerCb) {
+      headerCb.checked = false;
+      headerCb.indeterminate = true;
+    }
+  }
+}
+
+function recalculateGroupPages(g) {
+  if (!g || !g.items) return;
+  const bookPagesMap = new Map();
+
+  g.items.forEach(it => {
+    // Only include in resulting pages if it's the base entry or it's checked
+    if (!it.isAlreadyProposed && !it.checked) return;
+    if (!bookPagesMap.has(it.bookId)) {
+      bookPagesMap.set(it.bookId, it.pages);
+    } else {
+      const merged = mergePageStrings(bookPagesMap.get(it.bookId), it.pages);
+      bookPagesMap.set(it.bookId, merged.merged);
+    }
+  });
+
+  g.items.forEach(it => {
+    if (!it.isAlreadyProposed && !it.checked) {
+      it.resultingPages = it.pages; // Revert to original
+    } else {
+      it.resultingPages = bookPagesMap.get(it.bookId) || it.pages;
+    }
+  });
+}
 
 function buildSameItemsGroups(proposals) {
   const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
   const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
 
-  // Group proposals by proposedTopic (case-insensitive)
-  const groupMap = new Map();
+  if (!proposals || proposals.length === 0) return [];
+
+  // Disjoint Set (Union-Find) to cluster interconnected pairs into single components
+  const parent = new Map();
+
+  function find(x) {
+    if (!parent.has(x)) parent.set(x, x);
+    if (parent.get(x) !== x) {
+      parent.set(x, find(parent.get(x)));
+    }
+    return parent.get(x);
+  }
+
+  function union(x, y) {
+    const rx = find(x);
+    const ry = find(y);
+    if (rx !== ry) {
+      parent.set(rx, ry);
+    }
+  }
+
+  proposals.forEach(p => {
+    if (!p) return;
+    const orig = p.originalTopic?.trim().toLowerCase();
+    const prop = p.proposedTopic?.trim().toLowerCase();
+    if (orig && prop && orig !== prop) {
+      union(orig, prop);
+    }
+    if (p.targetTopic) {
+      const tgt = p.targetTopic.trim().toLowerCase();
+      if (tgt && tgt !== prop) union(tgt, prop);
+    }
+  });
+
+  const clusterMap = new Map(); // root -> { topics: Set, proposals: [], sourcesSet: Set, reasons: [] }
 
   proposals.forEach(p => {
     if (!p || !p.proposedTopic) return;
-    const key = p.proposedTopic.trim().toLowerCase();
-    if (!groupMap.has(key)) {
-      groupMap.set(key, {
-        proposedTopic: p.proposedTopic.trim(),
-        targetTopicsSet: new Set(),
-        originalTopicsSet: new Set()
+    const propLower = p.proposedTopic.trim().toLowerCase();
+    const root = find(propLower);
+
+    if (!clusterMap.has(root)) {
+      clusterMap.set(root, {
+        topics: new Set(),
+        proposals: [],
+        sourcesSet: new Set(),
+        reasons: []
       });
     }
-    const g = groupMap.get(key);
-    if (p.originalTopic) g.originalTopicsSet.add(p.originalTopic.trim().toLowerCase());
-    if (p.targetTopic) g.targetTopicsSet.add(p.targetTopic.trim().toLowerCase());
+
+    const cl = clusterMap.get(root);
+    cl.topics.add(propLower);
+    if (p.originalTopic) cl.topics.add(p.originalTopic.trim().toLowerCase());
+    if (p.targetTopic) cl.topics.add(p.targetTopic.trim().toLowerCase());
+    cl.proposals.push(p);
+
+    const pSrc = p.source || 'ai';
+    if (pSrc === 'both') {
+      cl.sourcesSet.add('ai');
+      cl.sourcesSet.add('rule');
+    } else {
+      cl.sourcesSet.add(pSrc);
+    }
+
+    if (p.reason && !cl.reasons.includes(p.reason)) {
+      cl.reasons.push(p.reason);
+    }
   });
 
   const resultGroups = [];
 
-  groupMap.forEach((gData, key) => {
-    const proposedLower = key;
-    const targetTopics = Array.from(gData.targetTopicsSet);
-    const originalTopics = Array.from(gData.originalTopicsSet);
-
-    // Find ALL entries in current course that match proposedTopic, targetTopic, OR originalTopic!
+  clusterMap.forEach((cl) => {
+    // Find all matching entries in current course for this cluster
     const memberEntries = courseEntries.filter(e => {
       if (!e || !e.topic) return false;
-      const tLower = e.topic.trim().toLowerCase();
-      return tLower === proposedLower || targetTopics.includes(tLower) || originalTopics.includes(tLower);
+      return cl.topics.has(e.topic.trim().toLowerCase());
     });
 
-    // Consolidation requires at least 2 items to combine. Ignore lone 1-item groups!
+    // Consolidation requires at least 2 distinct entries in the course
     if (memberEntries.length < 2) return;
 
-    // Build details for each member entry
+    // Determine the single best canonical topic for this cluster
+    const propCounts = new Map();
+    cl.proposals.forEach(p => {
+      const pt = p.proposedTopic?.trim();
+      if (pt) propCounts.set(pt, (propCounts.get(pt) || 0) + 1);
+    });
+
+    let bestCanonical = '';
+    let bestScore = -1;
+    propCounts.forEach((count, pt) => {
+      let score = count * 10;
+      if (memberEntries.some(e => e.topic.trim() === pt)) score += 5;
+      if (pt.includes('(') && pt.includes(')')) score += 3;
+      if (score > bestScore) {
+        bestScore = score;
+        bestCanonical = pt;
+      }
+    });
+
+    if (!bestCanonical && memberEntries.length > 0) {
+      bestCanonical = memberEntries[0].topic.trim();
+    }
+    const proposedLower = bestCanonical.toLowerCase();
+
+    // Build items
     const items = memberEntries.map(entry => {
       const bookObj = activeBooks.find(b => b.id === entry.bookId);
       const bNumMatch = bookObj ? bookObj.name.match(/(\d+)/) : null;
@@ -3984,23 +4258,23 @@ function buildSameItemsGroups(proposals) {
         bookName: `Book ${bookNum}`,
         originalTopic: entry.topic,
         pages: entry.pages,
-        isAlreadyProposed
+        isAlreadyProposed,
+        checked: true // Checked by default
       };
     });
 
-    // Calculate resulting pages per book if this group is accepted!
-    const bookPagesMap = new Map();
-    items.forEach(it => {
-      if (!bookPagesMap.has(it.bookId)) {
-        bookPagesMap.set(it.bookId, it.pages);
-      } else {
-        const merged = mergePageStrings(bookPagesMap.get(it.bookId), it.pages);
-        bookPagesMap.set(it.bookId, merged.merged);
-      }
+    // Sort items so the Base entry is at the top of the group
+    items.sort((a, b) => {
+      if (a.isAlreadyProposed && !b.isAlreadyProposed) return -1;
+      if (!a.isAlreadyProposed && b.isAlreadyProposed) return 1;
+      return a.bookName.localeCompare(b.bookName, undefined, { numeric: true });
     });
 
+    // Initial page calculation
+    const tempGroup = { items };
+    recalculateGroupPages(tempGroup);
+
     items.forEach(it => {
-      it.resultingPages = bookPagesMap.get(it.bookId);
       if (it.isAlreadyProposed) {
         it.statusLabel = 'Existing (No Change)';
         it.statusColor = '#94a3b8';
@@ -4013,12 +4287,23 @@ function buildSameItemsGroups(proposals) {
       }
     });
 
+    let groupSource = 'ai';
+    if (cl.sourcesSet.has('ai') && cl.sourcesSet.has('rule')) {
+      groupSource = 'both';
+    } else if (cl.sourcesSet.has('rule')) {
+      groupSource = 'rule';
+    } else {
+      groupSource = 'ai';
+    }
+
     resultGroups.push({
       groupIdx: resultGroups.length,
-      proposedTopic: gData.proposedTopic,
+      proposedTopic: bestCanonical,
       items: items,
       checked: true,
-      collapsed: false // Open by default
+      collapsed: false,
+      source: groupSource,
+      reasons: cl.reasons
     });
   });
 
@@ -4030,23 +4315,52 @@ function renderSameItemsReviewGroups(groups) {
   if (!tbody) return;
   tbody.innerHTML = '';
 
+  // Update filter count badges
+  const countAll = groups.length;
+  const countAi = groups.filter(g => g.source === 'ai' || g.source === 'both').length;
+  const countRule = groups.filter(g => g.source === 'rule' || g.source === 'both').length;
+
+  const filterCountAll = document.getElementById('same-items-filter-count-all');
+  const filterCountAi = document.getElementById('same-items-filter-count-ai');
+  const filterCountRule = document.getElementById('same-items-filter-count-rule');
+  if (filterCountAll) filterCountAll.textContent = countAll;
+  if (filterCountAi) filterCountAi.textContent = countAi;
+  if (filterCountRule) filterCountRule.textContent = countRule;
+
   groups.forEach((g, gIdx) => {
     // 1. Group Header Row
     const headerTr = document.createElement('tr');
     headerTr.className = 'same-items-group-header-row';
+    headerTr.setAttribute('data-group-idx', gIdx);
+    headerTr.setAttribute('data-source', g.source);
     headerTr.style.background = '#1e293b';
     headerTr.style.borderTop = '2px solid var(--border-color)';
     headerTr.style.borderBottom = '1px solid var(--border-color)';
     headerTr.style.cursor = 'pointer';
 
+    const isVisible = isSameItemGroupVisible(g);
+    headerTr.style.display = isVisible ? 'table-row' : 'none';
+
+    // Source badge
+    let sourceBadgeHtml = '';
+    const tooltipReason = (g.reasons && g.reasons.length > 0) ? escapeHtml(g.reasons.join(' | ')) : '';
+    if (g.source === 'both') {
+      sourceBadgeHtml = `<span class="same-items-source-badge" title="${tooltipReason || 'Identified by both Gemini AI and Overlap Rules'}" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; background: rgba(20, 184, 166, 0.18); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.35); flex-shrink: 0;"><i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> AI + Rule</span>`;
+    } else if (g.source === 'rule') {
+      sourceBadgeHtml = `<span class="same-items-source-badge" title="${tooltipReason || 'Identified by Overlap Rules'}" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); flex-shrink: 0;"><i data-lucide="zap" style="width: 12px; height: 12px;"></i> Rule</span>`;
+    } else {
+      sourceBadgeHtml = `<span class="same-items-source-badge" title="${tooltipReason || 'Evaluated and proposed by Gemini AI'}" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; background: rgba(99, 102, 241, 0.18); color: #a5b4fc; border: 1px solid rgba(165, 180, 252, 0.35); flex-shrink: 0;"><i data-lucide="bot" style="width: 12px; height: 12px;"></i> AI</span>`;
+    }
+
     headerTr.innerHTML = `
       <td style="text-align: center; padding: 10px 8px; vertical-align: middle;">
-        <input type="checkbox" class="same-items-group-checkbox" data-group-idx="${gIdx}" ${g.checked ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer; accent-color: #14b8a6;">
+        <input type="checkbox" class="same-items-group-checkbox" data-group-idx="${gIdx}" ${g.checked ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer; accent-color: #14b8a6;" title="Select or deselect all items in this group">
       </td>
       <td colspan="4" style="padding: 8px 12px; vertical-align: middle;">
-        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap;">
           <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}" class="group-collapse-icon" style="width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0;"></i>
-          <input type="text" class="same-items-group-topic-input" data-group-idx="${gIdx}" value="${escapeHtml(g.proposedTopic)}" style="font-size: 0.92rem; font-weight: 700; color: #2dd4bf; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(45, 212, 191, 0.4); border-radius: 4px; padding: 4px 10px; width: 100%; max-width: 500px;" title="Click to edit the combined group name">
+          <input type="text" class="same-items-group-topic-input" data-group-idx="${gIdx}" value="${escapeHtml(g.proposedTopic)}" style="font-size: 0.92rem; font-weight: 700; color: #2dd4bf; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(45, 212, 191, 0.4); border-radius: 4px; padding: 4px 10px; width: 100%; max-width: 440px;" title="Click to edit the combined group name">
+          ${sourceBadgeHtml}
         </div>
       </td>
       <td style="text-align: right; padding: 10px 12px; vertical-align: middle;">
@@ -4056,26 +4370,41 @@ function renderSameItemsReviewGroups(groups) {
     tbody.appendChild(headerTr);
 
     // 2. Group Member Rows
-    g.items.forEach(it => {
+    const changeableCount = g.items.filter(it => !it.isAlreadyProposed).length;
+    const allowItemSelection = g.items.length > 2 && changeableCount >= 2;
+
+    g.items.forEach((it, itIdx) => {
       const itemTr = document.createElement('tr');
       itemTr.className = `same-items-group-member-row group-row-${gIdx}`;
+      itemTr.setAttribute('data-item-idx', itIdx);
       itemTr.style.background = 'rgba(15, 23, 42, 0.35)';
-      itemTr.style.display = g.collapsed ? 'none' : 'table-row';
+      itemTr.style.display = (isVisible && !g.collapsed) ? 'table-row' : 'none';
+      itemTr.style.opacity = (it.checked || it.isAlreadyProposed) ? '1' : '0.55';
+      itemTr.style.transition = 'opacity 0.15s ease';
+
+      let checkboxHtml = '';
+      if (allowItemSelection) {
+        checkboxHtml = it.isAlreadyProposed
+          ? `<span title="Base target entry (remains unchanged)" style="display: inline-block; font-size: 0.68rem; font-weight: 700; color: #94a3b8; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); transform: translateX(8px);">Base</span>`
+          : `<input type="checkbox" class="same-items-item-checkbox" data-group-idx="${gIdx}" data-item-idx="${itIdx}" ${it.checked ? 'checked' : ''} style="width: 13px; height: 13px; cursor: pointer; accent-color: #38bdf8; transform: translateX(8px);" title="Include or exclude this specific item from consolidation">`;
+      }
 
       itemTr.innerHTML = `
-        <td></td>
+        <td style="text-align: center; vertical-align: middle; padding: 6px 4px;">
+          ${checkboxHtml}
+        </td>
         <td style="font-size:0.78rem;"><span style="font-weight:600; color:${it.statusColor};">${it.statusLabel}</span></td>
         <td style="font-weight:${it.isAlreadyProposed ? '400' : '600'}; color:${it.isAlreadyProposed ? 'var(--text-muted)' : 'var(--text-primary)'};">${escapeHtml(it.originalTopic)}</td>
         <td style="color:var(--text-muted);">${escapeHtml(it.bookName)}</td>
         <td><code>${escapeHtml(it.pages)}</code></td>
-        <td style="color:#38bdf8; font-weight:600;"><code>${escapeHtml(it.resultingPages)}</code></td>
+        <td style="color:#38bdf8; font-weight:600;"><code class="resulting-pages-code">${escapeHtml(it.resultingPages)}</code></td>
       `;
       tbody.appendChild(itemTr);
     });
 
     // Header click to collapse/expand
     headerTr.addEventListener('click', (e) => {
-      if (e.target.classList.contains('same-items-group-checkbox') || e.target.classList.contains('same-items-group-topic-input')) return;
+      if (e.target.classList.contains('same-items-group-checkbox') || e.target.classList.contains('same-items-group-topic-input') || e.target.closest('.same-items-source-badge')) return;
       g.collapsed = !g.collapsed;
       const icon = headerTr.querySelector('.group-collapse-icon');
       if (icon) icon.setAttribute('data-lucide', g.collapsed ? 'chevron-right' : 'chevron-down');
@@ -4095,66 +4424,148 @@ function renderSameItemsReviewGroups(groups) {
     }
   });
 
-  if (elements.sameItemsHeaderCheckbox) {
-    elements.sameItemsHeaderCheckbox.checked = true;
-    elements.sameItemsHeaderCheckbox.onchange = () => {
-      const isChecked = elements.sameItemsHeaderCheckbox.checked;
-      sameItemsGroups.forEach(g => { g.checked = isChecked; });
-      tbody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = isChecked; });
-      updateSameItemsGroupStats();
-    };
-  }
-
+  // Attach change listener for group header checkboxes
   tbody.querySelectorAll('.same-items-group-checkbox').forEach(cb => {
     cb.addEventListener('change', (e) => {
       e.stopPropagation();
-      const idx = parseInt(e.target.getAttribute('data-group-idx'), 10);
-      if (sameItemsGroups[idx]) {
-        sameItemsGroups[idx].checked = e.target.checked;
-      }
+      const gIdx = parseInt(e.target.getAttribute('data-group-idx'), 10);
+      const g = sameItemsGroups[gIdx];
+      if (!g) return;
+
+      const isChecked = e.target.checked;
+      g.checked = isChecked;
+
+      // Toggle all member items that can be changed
+      g.items.forEach(it => {
+        if (!it.isAlreadyProposed) {
+          it.checked = isChecked;
+        }
+      });
+
+      // Update DOM checkboxes & row styles
+      tbody.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(itemCb => {
+        itemCb.checked = isChecked;
+      });
+
+      recalculateGroupPages(g);
+      g.items.forEach((it, itIdx) => {
+        const row = tbody.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+        if (row) {
+          row.style.opacity = (it.checked || it.isAlreadyProposed) ? '1' : '0.55';
+          const resCode = row.querySelector('.resulting-pages-code');
+          if (resCode) resCode.textContent = it.resultingPages;
+        }
+      });
+
       updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
+    });
+  });
+
+  // Attach change listener for individual item checkboxes
+  tbody.querySelectorAll('.same-items-item-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation();
+      const gIdx = parseInt(e.target.getAttribute('data-group-idx'), 10);
+      const itIdx = parseInt(e.target.getAttribute('data-item-idx'), 10);
+      const g = sameItemsGroups[gIdx];
+      if (!g || !g.items[itIdx]) return;
+
+      g.items[itIdx].checked = e.target.checked;
+
+      const row = tbody.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+      if (row) {
+        row.style.opacity = e.target.checked ? '1' : '0.55';
+      }
+
+      recalculateGroupPages(g);
+      g.items.forEach((it, idx) => {
+        const itemRow = tbody.querySelector(`.group-row-${gIdx}[data-item-idx="${idx}"]`);
+        if (itemRow) {
+          const resCode = itemRow.querySelector('.resulting-pages-code');
+          if (resCode) resCode.textContent = it.resultingPages;
+        }
+      });
+
+      updateGroupCheckboxState(g, gIdx);
+      updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
     });
   });
 
   lucide.createIcons();
   updateSameItemsGroupStats();
+  updateSameItemsHeaderCheckboxState();
   updateCollapseAllButtonText();
 }
 
 function updateCollapseAllButtonText() {
   if (!elements.sameItemsToggleCollapseBtn) return;
-  const anyOpen = sameItemsGroups.some(g => !g.collapsed);
+  const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+  const anyOpen = visibleGroups.some(g => !g.collapsed);
   elements.sameItemsToggleCollapseBtn.textContent = anyOpen ? 'Collapse All' : 'Expand All';
 }
 
 function updateSameItemsGroupStats() {
   const totalGroups = sameItemsGroups.length;
-  let totalItems = 0;
-  let selectedGroups = 0;
+  const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+  let totalChangeable = 0;
+  let selectedChangeable = 0;
+  let activeGroupsCount = 0;
+  let visibleActiveCount = 0;
 
   sameItemsGroups.forEach(g => {
-    totalItems += g.items.length;
-    if (g.checked) selectedGroups++;
+    const changeable = g.items.filter(it => !it.isAlreadyProposed);
+    totalChangeable += changeable.length;
+    const checked = changeable.filter(it => it.checked).length;
+    selectedChangeable += checked;
+    if (checked > 0) activeGroupsCount++;
   });
 
-  if (elements.sameItemsStatTotal) elements.sameItemsStatTotal.textContent = `${totalGroups} Groups`;
-  if (elements.sameItemsStatMerge) elements.sameItemsStatMerge.textContent = `${totalItems} Total Items`;
-  if (elements.sameItemsStatSelected) elements.sameItemsStatSelected.textContent = `${selectedGroups} Groups Selected`;
+  visibleGroups.forEach(g => {
+    const changeable = g.items.filter(it => !it.isAlreadyProposed);
+    const checked = changeable.filter(it => it.checked).length;
+    if (checked > 0) visibleActiveCount++;
+  });
+
+  if (elements.sameItemsStatTotal) {
+    if (sameItemsActiveFilter !== 'all') {
+      elements.sameItemsStatTotal.textContent = `${visibleGroups.length} of ${totalGroups} Groups Shown`;
+    } else {
+      elements.sameItemsStatTotal.textContent = `${totalGroups} Groups`;
+    }
+  }
+  if (elements.sameItemsStatMerge) {
+    elements.sameItemsStatMerge.textContent = `${totalChangeable} Items to Consolidate`;
+  }
+  if (elements.sameItemsStatSelected) {
+    if (sameItemsActiveFilter !== 'all') {
+      elements.sameItemsStatSelected.textContent = `${visibleActiveCount} of ${visibleGroups.length} Groups Active (${selectedChangeable} Items Selected)`;
+    } else {
+      elements.sameItemsStatSelected.textContent = `${activeGroupsCount} Groups Active (${selectedChangeable} Items Selected)`;
+    }
+  }
 }
 
 function handleAcceptSameItems() {
-  const selectedGroups = sameItemsGroups.filter(g => g.checked);
+  let totalSelectedItems = 0;
+  let activeGroupsCount = 0;
 
-  if (selectedGroups.length === 0) {
-    alert("Please select at least one group to combine.");
+  sameItemsGroups.forEach(g => {
+    const changeableChecked = g.items.filter(it => !it.isAlreadyProposed && it.checked);
+    if (changeableChecked.length > 0) {
+      activeGroupsCount++;
+      totalSelectedItems += changeableChecked.length;
+    }
+  });
+
+  if (totalSelectedItems === 0) {
+    alert("Please select at least one item to combine.");
     return;
   }
 
-  let totalSelectedItems = 0;
-  selectedGroups.forEach(g => { totalSelectedItems += g.items.length; });
-
   if (elements.sameItemsConfirmMsg) {
-    elements.sameItemsConfirmMsg.textContent = `Are you sure you want to permanently consolidate ${totalSelectedItems} items across the ${selectedGroups.length} selected group(s)? This action cannot be undone.`;
+    elements.sameItemsConfirmMsg.textContent = `Are you sure you want to permanently consolidate ${totalSelectedItems} items across ${activeGroupsCount} group(s)? This action cannot be undone.`;
   }
   if (elements.sameItemsConfirmDialog) {
     elements.sameItemsConfirmDialog.showModal();
@@ -4166,18 +4577,25 @@ function applySameItemsConsolidation() {
   if (elements.sameItemsReviewDialog) elements.sameItemsReviewDialog.close();
 
   let updatedCount = 0;
+  let affectedGroups = 0;
 
   sameItemsGroups.forEach(g => {
-    if (!g.checked) return;
     const proposed = g.proposedTopic;
+    let groupHadUpdates = false;
 
     g.items.forEach(it => {
-      const entry = state.entries.find(e => e.id === it.entryId);
-      if (entry && entry.topic !== proposed) {
-        entry.topic = proposed;
-        updatedCount++;
+      // Only execute for items that are checked and not already the proposed topic
+      if (it.checked && !it.isAlreadyProposed) {
+        const entry = state.entries.find(e => e.id === it.entryId);
+        if (entry && entry.topic !== proposed) {
+          entry.topic = proposed;
+          updatedCount++;
+          groupHadUpdates = true;
+        }
       }
     });
+
+    if (groupHadUpdates) affectedGroups++;
   });
 
   const deduplicated = [];
@@ -4204,10 +4622,11 @@ function applySameItemsConsolidation() {
   saveState();
   renderAll();
 
+  const msg = `Successfully consolidated ${updatedCount} index entries across ${affectedGroups} groups!`;
   if (typeof showToast === 'function') {
-    showToast(`Successfully consolidated ${updatedCount} index entries across ${sameItemsGroups.filter(g => g.checked).length} groups!`);
+    showToast(msg);
   } else {
-    alert(`Successfully consolidated ${updatedCount} index entries across ${sameItemsGroups.filter(g => g.checked).length} groups!`);
+    alert(msg);
   }
 }
 
@@ -4253,43 +4672,141 @@ function initPdfIndexImportBindings() {
   }
   if (elements.sameItemsSelectAllBtn) {
     elements.sameItemsSelectAllBtn.addEventListener('click', () => {
-      sameItemsGroups.forEach(g => { g.checked = true; });
-      if (elements.sameItemsHeaderCheckbox) elements.sameItemsHeaderCheckbox.checked = true;
-      if (elements.sameItemsTableBody) {
-        elements.sameItemsTableBody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = true; });
-      }
+      sameItemsGroups.forEach((g, gIdx) => {
+        if (isSameItemGroupVisible(g)) {
+          g.checked = true;
+          g.items.forEach(it => { if (!it.isAlreadyProposed) it.checked = true; });
+          const groupCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+          if (groupCb) {
+            groupCb.checked = true;
+            groupCb.indeterminate = false;
+          }
+          elements.sameItemsTableBody?.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(cb => {
+            cb.checked = true;
+          });
+          recalculateGroupPages(g);
+          g.items.forEach((it, itIdx) => {
+            const row = elements.sameItemsTableBody?.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+            if (row) {
+              row.style.opacity = '1';
+              const resCode = row.querySelector('.resulting-pages-code');
+              if (resCode) resCode.textContent = it.resultingPages;
+            }
+          });
+        }
+      });
       updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
     });
   }
   if (elements.sameItemsDeselectAllBtn) {
     elements.sameItemsDeselectAllBtn.addEventListener('click', () => {
-      sameItemsGroups.forEach(g => { g.checked = false; });
-      if (elements.sameItemsHeaderCheckbox) elements.sameItemsHeaderCheckbox.checked = false;
-      if (elements.sameItemsTableBody) {
-        elements.sameItemsTableBody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = false; });
-      }
+      sameItemsGroups.forEach((g, gIdx) => {
+        if (isSameItemGroupVisible(g)) {
+          g.checked = false;
+          g.items.forEach(it => { if (!it.isAlreadyProposed) it.checked = false; });
+          const groupCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+          if (groupCb) {
+            groupCb.checked = false;
+            groupCb.indeterminate = false;
+          }
+          elements.sameItemsTableBody?.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(cb => {
+            cb.checked = false;
+          });
+          recalculateGroupPages(g);
+          g.items.forEach((it, itIdx) => {
+            const row = elements.sameItemsTableBody?.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+            if (row) {
+              row.style.opacity = it.isAlreadyProposed ? '1' : '0.55';
+              const resCode = row.querySelector('.resulting-pages-code');
+              if (resCode) resCode.textContent = it.resultingPages;
+            }
+          });
+        }
+      });
       updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
+    });
+  }
+  if (elements.sameItemsHeaderCheckbox) {
+    elements.sameItemsHeaderCheckbox.addEventListener('change', () => {
+      const isChecked = elements.sameItemsHeaderCheckbox.checked;
+      sameItemsGroups.forEach((g, gIdx) => {
+        if (isSameItemGroupVisible(g)) {
+          g.checked = isChecked;
+          g.items.forEach(it => { if (!it.isAlreadyProposed) it.checked = isChecked; });
+          const groupCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+          if (groupCb) {
+            groupCb.checked = isChecked;
+            groupCb.indeterminate = false;
+          }
+          elements.sameItemsTableBody?.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(cb => {
+            cb.checked = isChecked;
+          });
+          recalculateGroupPages(g);
+          g.items.forEach((it, itIdx) => {
+            const row = elements.sameItemsTableBody?.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+            if (row) {
+              row.style.opacity = (isChecked || it.isAlreadyProposed) ? '1' : '0.55';
+              const resCode = row.querySelector('.resulting-pages-code');
+              if (resCode) resCode.textContent = it.resultingPages;
+            }
+          });
+        }
+      });
+      updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
     });
   }
   if (elements.sameItemsToggleCollapseBtn) {
     elements.sameItemsToggleCollapseBtn.addEventListener('click', () => {
-      const anyOpen = sameItemsGroups.some(g => !g.collapsed);
+      const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+      const anyOpen = visibleGroups.some(g => !g.collapsed);
       const shouldCollapse = anyOpen;
-      sameItemsGroups.forEach(g => { g.collapsed = shouldCollapse; });
+      visibleGroups.forEach(g => { g.collapsed = shouldCollapse; });
       if (elements.sameItemsTableBody) {
         sameItemsGroups.forEach((g, gIdx) => {
-          elements.sameItemsTableBody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
-            r.style.display = shouldCollapse ? 'none' : 'table-row';
-          });
-        });
-        elements.sameItemsTableBody.querySelectorAll('.group-collapse-icon').forEach(icon => {
-          icon.setAttribute('data-lucide', shouldCollapse ? 'chevron-right' : 'chevron-down');
+          if (isSameItemGroupVisible(g)) {
+            elements.sameItemsTableBody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
+              r.style.display = shouldCollapse ? 'none' : 'table-row';
+            });
+            const headerTr = elements.sameItemsTableBody.querySelector(`.same-items-group-header-row[data-group-idx="${gIdx}"]`);
+            const icon = headerTr?.querySelector('.group-collapse-icon');
+            if (icon) icon.setAttribute('data-lucide', shouldCollapse ? 'chevron-right' : 'chevron-down');
+          }
         });
       }
       lucide.createIcons();
       updateCollapseAllButtonText();
     });
   }
+
+  // Segmented Source Filter buttons
+  const filterBtns = document.querySelectorAll('.same-items-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const source = btn.getAttribute('data-source') || 'all';
+      sameItemsActiveFilter = source;
+      filterBtns.forEach(b => {
+        const isMatch = b.getAttribute('data-source') === source;
+        b.classList.toggle('active', isMatch);
+        b.style.background = isMatch ? 'var(--color-accent)' : 'transparent';
+        b.style.color = isMatch ? '#ffffff' : 'var(--text-muted)';
+        b.style.fontWeight = isMatch ? '600' : '500';
+      });
+      applySameItemsFilterVisibility();
+    });
+  });
+
+  // Combine Mode Radios
+  const modeRadios = document.querySelectorAll('input[name="combine-mode"]');
+  modeRadios.forEach(radio => {
+    radio.addEventListener('change', async () => {
+      const mode = radio.value;
+      updateCombineModeUI(mode);
+      await refreshCombineStats(mode);
+    });
+  });
   if (elements.sameItemsAcceptBtn) {
     elements.sameItemsAcceptBtn.addEventListener('click', handleAcceptSameItems);
   }

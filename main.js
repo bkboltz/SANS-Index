@@ -2124,9 +2124,9 @@ ${chunkText}`;
 // ==========================================================================
 // Candidate Clustering & Inverted Index Engine for Same Items Consolidation
 // ==========================================================================
-function buildCandidatePairsCluster(entries, acronyms) {
+function buildCandidatePairsCluster(entries, acronyms, { skipAi = false, skipRule = false } = {}) {
   if (!entries || entries.length === 0) {
-    return { allCandidatePairs: [], globalAcronymMap: {}, sortedEntries: [] };
+    return { allCandidatePairs: [], geminiCandidatePairs: [], autoCombineProposals: [], globalAcronymMap: {}, sortedEntries: [] };
   }
 
   // 1. Sort entries alphabetically by topic title
@@ -2301,6 +2301,8 @@ function buildCandidatePairsCluster(entries, acronyms) {
     if (!candidateMap.has(pairKey)) {
       candidateMap.set(pairKey, {
         pairId: candidateMap.size + 1,
+        idxA: minIdx,
+        idxB: maxIdx,
         termA: e1.topic,
         bookA: e1.bookNum || e1.book || 1,
         pagesA: e1.pages || '',
@@ -2375,22 +2377,155 @@ function buildCandidatePairsCluster(entries, acronyms) {
     }
   });
 
-  const allCandidatePairs = Array.from(candidateMap.values());
-  logDebug(`[Same Items Consolidation] Clustered ${allCandidatePairs.length} high-confidence unique candidate pairs.`);
+  // 6. Partition Candidate Pairs into Auto-Combined proposals and Gemini evaluation pairs
+  function pickCanonicalTopic(topicA, topicB) {
+    const tA = (topicA || '').trim();
+    const tB = (topicB || '').trim();
 
-  return { allCandidatePairs, globalAcronymMap, sortedEntries };
+    // 1. Prefer term with parenthetical acronym definition (e.g. "Active Directory (AD)" over "AD")
+    const hasParenA = /\([A-Z0-9-]{2,}\)/.test(tA);
+    const hasParenB = /\([A-Z0-9-]{2,}\)/.test(tB);
+    if (hasParenA && !hasParenB) return { canonical: tA, original: tB };
+    if (hasParenB && !hasParenA) return { canonical: tB, original: tA };
+
+    // 2. Prefer spaces over underscores/hyphens (e.g. "Slow Query Log" over "slow_query_log")
+    const underscoresA = (tA.match(/_/g) || []).length;
+    const underscoresB = (tB.match(/_/g) || []).length;
+    if (underscoresA === 0 && underscoresB > 0) return { canonical: tA, original: tB };
+    if (underscoresB === 0 && underscoresA > 0) return { canonical: tB, original: tA };
+
+    // 3. Prefer Title Case / Capitalized over all-lowercase
+    const isLowerA = tA === tA.toLowerCase();
+    const isLowerB = tB === tB.toLowerCase();
+    if (!isLowerA && isLowerB) return { canonical: tA, original: tB };
+    if (!isLowerB && isLowerA) return { canonical: tB, original: tA };
+
+    // 4. Default: Alphabetical
+    if (tA.localeCompare(tB) <= 0) {
+      return { canonical: tA, original: tB };
+    } else {
+      return { canonical: tB, original: tA };
+    }
+  }
+
+  const autoCombineProposals = [];
+  const geminiCandidatePairs = [];
+
+  candidateMap.forEach(pair => {
+    const e1 = sortedEntries[pair.idxA];
+    const e2 = sortedEntries[pair.idxB];
+
+    // Clean pair object for Gemini prompt (omit internal index fields)
+    const cleanGeminiPair = {
+      pairId: geminiCandidatePairs.length + 1,
+      termA: pair.termA,
+      bookA: pair.bookA,
+      pagesA: pair.pagesA,
+      termB: pair.termB,
+      bookB: pair.bookB,
+      pagesB: pair.pagesB,
+      signals: pair.signals
+    };
+
+    // If skipRule is set, all candidates go to Gemini without rule auto-combination
+    if (skipRule) {
+      if (!skipAi) geminiCandidatePairs.push(cleanGeminiPair);
+      return;
+    }
+
+    const b1 = e1.bookNum || e1.book || 1;
+    const b2 = e2.bookNum || e2.book || 1;
+    if (b1 !== b2) {
+      if (!skipAi) geminiCandidatePairs.push(cleanGeminiPair);
+      return;
+    }
+
+    const pListA = parsePages(e1.pages);
+    const pListB = parsePages(e2.pages);
+    if (pListA.length === 0 || pListB.length === 0) {
+      if (!skipAi) geminiCandidatePairs.push(cleanGeminiPair);
+      return;
+    }
+
+    const setA = new Set(pListA);
+    const setB = new Set(pListB);
+    let sharedPageCount = 0;
+    setA.forEach(p => { if (setB.has(p)) sharedPageCount++; });
+
+    const pctA = sharedPageCount / setA.size;
+    const pctB = sharedPageCount / setB.size;
+
+    // Both entries must share >= 50% of their pages
+    if (pctA < 0.5 || pctB < 0.5) {
+      if (!skipAi) geminiCandidatePairs.push(cleanGeminiPair);
+      return;
+    }
+
+    // Check valid non-no_bucket words (excluding dynamic generic stop-word stems)
+    const wordsA = tokenize(e1.topic);
+    const wordsB = tokenize(e2.topic);
+    const stemsA = wordsA.map(stemWord).filter(s => !noBucketStems.has(s) && s.length >= 2);
+    const stemsB = wordsB.map(stemWord).filter(s => !noBucketStems.has(s) && s.length >= 2);
+
+    const setStemsA = new Set(stemsA);
+    const setStemsB = new Set(stemsB);
+    let sharedStemCount = 0;
+    setStemsA.forEach(s => { if (setStemsB.has(s)) sharedStemCount++; });
+
+    if (sharedStemCount === 0) {
+      if (!skipAi) geminiCandidatePairs.push(cleanGeminiPair);
+      return;
+    }
+
+    const unionStems = new Set([...setStemsA, ...setStemsB]).size;
+    const wordJaccard = unionStems > 0 ? (sharedStemCount / unionStems) : 0;
+
+    // Hybrid auto-combine condition:
+    // Either >= 3 shared distinct pages, OR (< 3 shared pages with >= 66% word match)
+    const isAutoCombine = (sharedPageCount >= 3) || (wordJaccard >= 0.66);
+
+    if (!isAutoCombine) {
+      if (!skipAi) geminiCandidatePairs.push(cleanGeminiPair);
+      return;
+    }
+
+    const { canonical, original } = pickCanonicalTopic(e1.topic, e2.topic);
+    const reason = sharedPageCount >= 3
+      ? `Auto-combined: Multi-page co-occurrence (${sharedPageCount} shared pages, ${Math.round(pctA * 100)}% / ${Math.round(pctB * 100)}% page overlap)`
+      : `Auto-combined: High keyword similarity (${Math.round(wordJaccard * 100)}% word match) on shared page(s)`;
+
+    autoCombineProposals.push({
+      originalTopic: original,
+      book: b1,
+      proposedTopic: canonical,
+      targetTopic: canonical,
+      reason,
+      source: 'rule'
+    });
+  });
+
+  const allCandidatePairs = Array.from(candidateMap.values());
+  logDebug(`[Same Items Consolidation] Clustered ${allCandidatePairs.length} candidate pairs (skipAi=${skipAi}, skipRule=${skipRule}). Auto-combined: ${autoCombineProposals.length} pairs. Sending ${geminiCandidatePairs.length} pairs to Gemini.`);
+
+  return { allCandidatePairs, geminiCandidatePairs, autoCombineProposals, globalAcronymMap, sortedEntries };
 }
 
 // IPC Handler: Pre-calculate candidate stats for setup dialog
-ipcMain.handle('get-combine-candidate-stats', async (event, { entries, acronyms }) => {
+ipcMain.handle('get-combine-candidate-stats', async (event, { entries, acronyms, mode = 'both' }) => {
   try {
-    const { allCandidatePairs } = buildCandidatePairsCluster(entries, acronyms);
+    const skipAi = mode === 'rule-only';
+    const skipRule = mode === 'ai-only';
+    const { allCandidatePairs, geminiCandidatePairs, autoCombineProposals } = buildCandidatePairsCluster(entries, acronyms, { skipAi, skipRule });
     const totalPairs = allCandidatePairs.length;
+    const geminiPairs = geminiCandidatePairs.length;
+    const autoPairs = autoCombineProposals.length;
     const pairChunkSize = 500;
-    const totalBatches = Math.ceil(totalPairs / pairChunkSize);
+    const totalBatches = Math.ceil(geminiPairs / pairChunkSize);
     return {
       success: true,
       totalPairs,
+      geminiPairs,
+      autoPairs,
       totalBatches,
       pairChunkSize
     };
@@ -2402,11 +2537,14 @@ ipcMain.handle('get-combine-candidate-stats', async (event, { entries, acronyms 
 // ==========================================================================
 // IPC Handler: Combine Same Items using Gemini AI (Candidate-Clustering Engine)
 // ==========================================================================
-ipcMain.handle('combine-same-items', async (event, { entries, acronyms, geminiApiKey, geminiModel, concurrency: requestedConcurrency }) => {
-  logDebug(`[Same Items Consolidation] Starting candidate-clustered AI analysis for ${entries.length} entries.`);
+ipcMain.handle('combine-same-items', async (event, { entries, acronyms, geminiApiKey, geminiModel, concurrency: requestedConcurrency, mode = 'both' }) => {
+  logDebug(`[Same Items Consolidation] Starting candidate-clustered analysis for ${entries.length} entries (mode: ${mode}).`);
 
-  if (!geminiApiKey) {
-    return { success: false, error: 'Gemini API key is required.' };
+  const skipAi = mode === 'rule-only';
+  const skipRule = mode === 'ai-only';
+
+  if (!skipAi && !geminiApiKey) {
+    return { success: false, error: 'Gemini API key is required for AI analysis.' };
   }
 
   if (!entries || entries.length === 0) {
@@ -2424,9 +2562,9 @@ ipcMain.handle('combine-same-items', async (event, { entries, acronyms, geminiAp
       });
     }
 
-    const { allCandidatePairs, globalAcronymMap } = buildCandidatePairsCluster(entries, acronyms);
+    const { allCandidatePairs, geminiCandidatePairs, autoCombineProposals, globalAcronymMap } = buildCandidatePairsCluster(entries, acronyms, { skipAi, skipRule });
 
-    if (allCandidatePairs.length === 0) {
+    if (geminiCandidatePairs.length === 0 && autoCombineProposals.length === 0) {
       logDebug(`[Same Items Consolidation] No candidate pairs identified. Index appears fully consolidated.`);
       if (event) {
         event.sender.send('pdf-import-progress', {
@@ -2438,24 +2576,36 @@ ipcMain.handle('combine-same-items', async (event, { entries, acronyms, geminiAp
       return { success: true, proposals: [] };
     }
 
+    const allProposals = [...autoCombineProposals];
+
+    if (skipAi || geminiCandidatePairs.length === 0) {
+      logDebug(`[Same Items Consolidation] Skipping Gemini API calls (mode: ${mode}, auto-combined proposals: ${autoCombineProposals.length}).`);
+      if (event) {
+        event.sender.send('pdf-import-progress', {
+          percent: 100,
+          message: `Consolidation complete! Found ${autoCombineProposals.length} rule-based proposal(s).`
+        });
+      }
+      return { success: true, proposals: autoCombineProposals };
+    }
+
     if (event) {
       event.sender.send('pdf-import-progress', {
         percent: 15,
-        message: `Identified ${allCandidatePairs.length} candidate pairs. Starting AI evaluation...`,
-        candidatePairsCount: allCandidatePairs.length
+        message: `Identified ${geminiCandidatePairs.length} candidate pairs for AI evaluation (${autoCombineProposals.length} auto-combined). Starting evaluation...`,
+        candidatePairsCount: geminiCandidatePairs.length
       });
     }
 
     // Split candidate pairs into batches of at most 500 pairs to keep prompt compact and fast
     const pairChunkSize = 500;
     const pairChunks = [];
-    for (let i = 0; i < allCandidatePairs.length; i += pairChunkSize) {
-      pairChunks.push(allCandidatePairs.slice(i, i + pairChunkSize));
+    for (let i = 0; i < geminiCandidatePairs.length; i += pairChunkSize) {
+      pairChunks.push(geminiCandidatePairs.slice(i, i + pairChunkSize));
     }
 
     const totalChunks = pairChunks.length;
     let completedChunks = 0;
-    const allProposals = [];
 
     const processPairBatch = async (chunk, cIdx) => {
       const systemPrompt = `You are an index consolidation assistant. Your task is to consolidate similar, duplicate, or equivalent index topics into clean, unified entries.
@@ -2554,7 +2704,10 @@ ${JSON.stringify(chunk, null, 2)}
           if (responseText) {
             const batchProposals = tryParseJSONArray(responseText);
             if (Array.isArray(batchProposals) && batchProposals.length > 0) {
-              return batchProposals;
+              return batchProposals.map(p => ({
+                ...p,
+                source: 'ai'
+              }));
             }
           }
         }
@@ -2593,7 +2746,12 @@ ${JSON.stringify(chunk, null, 2)}
       if (!p || !p.originalTopic || !p.proposedTopic) return;
       const key = `${p.originalTopic.toLowerCase()}_${p.book || 1}_${p.proposedTopic.toLowerCase()}`;
       if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, p);
+        uniqueMap.set(key, { ...p, source: p.source || 'ai' });
+      } else {
+        const existing = uniqueMap.get(key);
+        if (existing.source !== (p.source || 'ai')) {
+          existing.source = 'both';
+        }
       }
     });
 
