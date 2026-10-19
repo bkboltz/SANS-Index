@@ -18,7 +18,37 @@ const elements = {
   exportCsvBtn: document.getElementById('export-csv-btn'),
   exportJsonBtn: document.getElementById('export-json-btn'),
   importBtn: document.getElementById('import-btn'),
+  revertBackupBtn: document.getElementById('revert-backup-btn'),
+  autoIndexRevertBtn: document.getElementById('auto-index-revert-btn'),
   lastSaveTime: document.getElementById('last-save-time'),
+  
+  // Revert Version Modal
+  revertVersionDialog: document.getElementById('revert-version-dialog'),
+  revertDialogCloseX: document.getElementById('revert-dialog-close-x'),
+  revertCancelBtn: document.getElementById('revert-cancel-btn'),
+  confirmRevertBtn: document.getElementById('confirm-revert-btn'),
+  confirmRevertBtnLabel: document.getElementById('confirm-revert-btn-label'),
+  revertCourseSelect: document.getElementById('revert-course-select'),
+  revertModalCourseName: document.getElementById('revert-modal-course-name'),
+  revertSearchInput: document.getElementById('revert-search-input'),
+  revertRefreshBtn: document.getElementById('revert-refresh-btn'),
+  revertVersionsList: document.getElementById('revert-versions-list'),
+  revertVersionCount: document.getElementById('revert-version-count'),
+  revertPreviewLoading: document.getElementById('revert-preview-loading'),
+  revertPreviewEmpty: document.getElementById('revert-preview-empty'),
+  revertPreviewContent: document.getElementById('revert-preview-content'),
+  revertPreviewTimestamp: document.getElementById('revert-preview-timestamp'),
+  revertPreviewAge: document.getElementById('revert-preview-age'),
+  revertPreviewBadges: document.getElementById('revert-preview-badges'),
+  revertStatCurrEntries: document.getElementById('revert-stat-curr-entries'),
+  revertStatTargetEntries: document.getElementById('revert-stat-target-entries'),
+  revertEntriesDeltaBadge: document.getElementById('revert-entries-delta-badge'),
+  revertStatCurrNotes: document.getElementById('revert-stat-curr-notes'),
+  revertStatTargetNotes: document.getElementById('revert-stat-target-notes'),
+  revertNotesDeltaBadge: document.getElementById('revert-notes-delta-badge'),
+  revertStatCourseName: document.getElementById('revert-stat-course-name'),
+  revertStatCourseEntries: document.getElementById('revert-stat-course-entries'),
+  revertBreakdownTbody: document.getElementById('revert-breakdown-tbody'),
   
   // Dashboard Header & Stats
   currentCourseTitle: document.getElementById('current-course-title'),
@@ -216,6 +246,10 @@ const elements = {
   curationCardLocal05b: document.getElementById('curation-card-local-0.5b'),
   curationCardLocal15b: document.getElementById('curation-card-local-1.5b'),
   curationCardLocal3b: document.getElementById('curation-card-local-3b'),
+  localSlmToggle: document.getElementById('local-slm-toggle'),
+  localSlmContainer: document.getElementById('local-slm-container'),
+  localSlmToggleStatus: document.getElementById('local-slm-toggle-status'),
+  localSlmToggleIcon: document.getElementById('local-slm-toggle-icon'),
   geminiSettingsContainer: document.getElementById('gemini-settings-container'),
   localSlmInfoContainer: document.getElementById('local-slm-info-container'),
   aiCurationOptionsContainer: document.getElementById('ai-curation-options-container'),
@@ -233,6 +267,12 @@ const elements = {
   geminiCustomPrompt: document.getElementById('gemini-custom-prompt'),
   resetGeminiPromptBtn: document.getElementById('reset-gemini-prompt-btn'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
+  refreshGeminiModelsBtn: document.getElementById('refresh-gemini-models-btn'),
+  refreshGeminiModelsIcon: document.getElementById('refresh-gemini-models-icon'),
+  geminiModelsSyncStatus: document.getElementById('gemini-models-sync-status'),
+  autoIndexGeminiTierSelect: document.getElementById('auto-index-gemini-tier-select'),
+  geminiTierBadge: document.getElementById('gemini-tier-badge'),
+  geminiTierDescription: document.getElementById('gemini-tier-description'),
   apiKeyLockBtn: document.getElementById('api-key-lock-btn'),
   apiKeyStatusIcon: document.getElementById('api-key-status-icon'),
   getFreeKeyBtn: document.getElementById('get-free-key-btn'),
@@ -247,6 +287,7 @@ const elements = {
   aiCurationErrorText: document.getElementById('ai-curation-error-text'),
   aiCurationRetryBtn: document.getElementById('ai-curation-retry-btn'),
   aiCurationRetryModelSelect: document.getElementById('ai-curation-retry-model-select'),
+  aiCurationRetryTierSelect: document.getElementById('ai-curation-retry-tier-select'),
   aiCurationConfirmModal: document.getElementById('ai-curation-confirm-modal'),
   aiCurationCancelBtn: document.getElementById('ai-curation-cancel-btn'),
   aiCurationContinueBtn: document.getElementById('ai-curation-continue-btn'),
@@ -396,10 +437,6 @@ const elements = {
   scorecardRetryBtn: document.getElementById('scorecard-retry-btn'),
   scorecardCloseBtn: document.getElementById('scorecard-close-btn'),
 
-  autoIndexGenerateQuiz: document.getElementById('auto-index-generate-quiz'),
-  quizGenerationSettings: document.getElementById('quiz-generation-settings'),
-  autoIndexQuizCount: document.getElementById('auto-index-quiz-count'),
-  autoIndexQuizDifficulty: document.getElementById('auto-index-quiz-difficulty'),
   quizGenerationErrorAlert: document.getElementById('quiz-generation-error-alert'),
   quizGenerationErrorText: document.getElementById('quiz-generation-error-text'),
 
@@ -464,9 +501,133 @@ let lastQuizError = null;
 let lastFailedChunks = [];
 
 // ==========================================================================
+// THEME & MENU MANAGEMENT
+// ==========================================================================
+const AVAILABLE_THEMES = [
+  'theme-default',
+  'theme-midnight',
+  'theme-hacker',
+  'theme-pink',
+  'theme-bright',
+  'theme-win95'
+];
+
+function applyAppTheme(themeKey) {
+  if (!AVAILABLE_THEMES.includes(themeKey)) {
+    themeKey = 'theme-default';
+  }
+
+  // Remove existing themes and apply selected
+  AVAILABLE_THEMES.forEach(t => document.body.classList.remove(t));
+  document.body.classList.add(themeKey);
+
+  // Persist preference
+  localStorage.setItem('sans_app_theme', themeKey);
+
+  // Sync menu state back to main process
+  if (window.api && window.api.sendThemeChanged) {
+    window.api.sendThemeChanged(themeKey);
+  }
+}
+
+function handleMenuAction(action, ...args) {
+  switch (action) {
+    case 'new-entry':
+      const manualTab = document.querySelector('.workspace-tabs button[data-view-tab="manual-index"]');
+      if (manualTab) manualTab.click();
+      if (elements.entryTopicInput) {
+        elements.entryTopicInput.focus();
+        elements.entryTopicInput.select();
+      }
+      break;
+
+    case 'print':
+      if (typeof openPrintPreview === 'function') {
+        openPrintPreview();
+      } else if (elements.printIndexBtn) {
+        elements.printIndexBtn.click();
+      }
+      break;
+
+    case 'export-csv':
+      if (elements.exportCsvBtn) elements.exportCsvBtn.click();
+      break;
+
+    case 'export-json':
+      if (elements.exportJsonBtn) elements.exportJsonBtn.click();
+      break;
+
+    case 'import-data':
+      if (elements.importBtn) elements.importBtn.click();
+      break;
+
+    case 'revert-version':
+      openRevertVersionModal();
+      break;
+
+    case 'toggle-sidebar':
+      if (elements.sidebarToggleBtn) elements.sidebarToggleBtn.click();
+      break;
+
+    case 'switch-tab':
+      const targetTabKey = args[0];
+      const targetTabBtn = document.querySelector(`.workspace-tabs button[data-view-tab="${targetTabKey}"]`);
+      if (targetTabBtn) targetTabBtn.click();
+      break;
+
+    case 'shortcuts':
+      alert(
+        "SANS Study Indexer - Keyboard Shortcuts:\n\n" +
+        "• Ctrl+N : Focus & Add New Entry\n" +
+        "• Ctrl+P : Print Index Preview\n" +
+        "• Ctrl+B : Toggle Sidebar\n" +
+        "• Ctrl+1 : Switch to My Index\n" +
+        "• Ctrl+2 : Switch to Auto Index\n" +
+        "• Ctrl+3 : Switch to My Acronyms\n" +
+        "• Ctrl+4 : Switch to Notes\n" +
+        "• F11    : Toggle Full Screen\n" +
+        "• Esc    : Clear Form / Cancel Edit"
+      );
+      break;
+
+    case 'check-updates':
+      if (window.api && window.api.checkForUpdates) {
+        window.api.checkForUpdates(false).then(res => {
+          if (res && res.updateAvailable) {
+            alert(`Update Available!\n\nVersion ${res.latestVersion} is ready to install.`);
+          } else {
+            alert("You are running the latest version of SANS Study Indexer.");
+          }
+        }).catch(err => {
+          alert("Could not reach update server: " + (err.message || err));
+        });
+      }
+      break;
+  }
+}
+
+// ==========================================================================
 // APP INITIALIZATION & SYNC
 // ==========================================================================
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize App Theme from storage
+  const savedAppTheme = localStorage.getItem('sans_app_theme') || 'theme-default';
+  applyAppTheme(savedAppTheme);
+
+  // Listen for Theme Changes from Electron Menu
+  if (window.api && window.api.onSetTheme) {
+    window.api.onSetTheme((themeKey) => {
+      applyAppTheme(themeKey);
+    });
+  }
+
+  // Listen for Menu Actions from Electron Menu
+  if (window.api && window.api.onMenuAction) {
+    window.api.onMenuAction((action, ...args) => {
+      handleMenuAction(action, ...args);
+    });
+  }
+
   // Initialize Lucide Icons
   lucide.createIcons();
   
@@ -3203,14 +3364,6 @@ function processImport() {
       return;
     }
 
-    const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
-    if (activeBooks.length === 0) {
-      alert("Please configure at least one book in this course before importing a CSV index.");
-      elements.importDialog.close();
-      openBookDialog();
-      return;
-    }
-
     const reader = new FileReader();
     reader.onload = function(e) {
       try {
@@ -3222,14 +3375,66 @@ function processImport() {
           return;
         }
 
-        const headers = lines[0].map(h => h.trim().toLowerCase());
+        const headers = lines[0].map(h => h.trim().toLowerCase().replace(/^\ufeff/, ''));
         const topicIdx = headers.indexOf('topic');
         const pagesIdx = headers.indexOf('pages');
+        const notesIdx = headers.indexOf('notes');
         const bookIdx = headers.indexOf('book');
 
         if (topicIdx === -1 || pagesIdx === -1) {
           alert("CSV requires at least 'Topic' and 'Pages' headers.");
           return;
+        }
+
+        const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+        const resolvedBooksMap = new Map();
+        const csvPresetColors = ['#0d9488', '#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#ca8a04', '#4b5563'];
+        let nextColorIdx = activeBooks.length;
+
+        function getOrCreateBook(bookStr) {
+          const rawName = (bookStr || '').trim();
+          const cleanName = rawName || 'Book 1';
+          const lookupKey = cleanName.toLowerCase();
+
+          if (resolvedBooksMap.has(lookupKey)) {
+            return resolvedBooksMap.get(lookupKey);
+          }
+
+          // 1. Try exact name match with existing books in this course
+          let existing = activeBooks.find(b => b && b.name.trim().toLowerCase() === lookupKey);
+
+          // 2. If no exact name match, try matching by book number
+          if (!existing) {
+            const m = cleanName.match(/(\d+)/);
+            if (m) {
+              const num = parseInt(m[1], 10);
+              existing = activeBooks.find(b => {
+                if (!b || !b.name) return false;
+                const bm = b.name.match(/(\d+)/);
+                return bm && parseInt(bm[1], 10) === num;
+              });
+            }
+          }
+
+          if (existing) {
+            const info = { id: existing.id, name: existing.name, isPending: false, bookObj: existing };
+            resolvedBooksMap.set(lookupKey, info);
+            return info;
+          }
+
+          // 3. Not found in existing books: prepare a pending book to be auto-created
+          const newId = `book-${state.currentCourseId}-${Date.now()}-${resolvedBooksMap.size + 1}`;
+          const assignedColor = csvPresetColors[nextColorIdx % csvPresetColors.length];
+          nextColorIdx++;
+          const newBookObj = {
+            id: newId,
+            courseId: state.currentCourseId,
+            name: cleanName,
+            color: assignedColor
+          };
+          const info = { id: newId, name: cleanName, isPending: true, bookObj: newBookObj };
+          resolvedBooksMap.set(lookupKey, info);
+          return info;
         }
 
         const parsedEntries = [];
@@ -3239,31 +3444,24 @@ function processImport() {
 
           const topic = row[topicIdx]?.trim();
           const pages = row[pagesIdx]?.trim();
+          const notes = notesIdx !== -1 ? (row[notesIdx]?.trim() || '') : '';
           const csvBookStr = bookIdx !== -1 ? row[bookIdx]?.trim() : '';
 
           if (!topic || !pages) continue;
 
-          let bookNum = 1;
-          if (csvBookStr) {
-            const m = csvBookStr.match(/(\d+)/);
-            if (m) {
-              bookNum = parseInt(m[1], 10);
-            } else {
-              const matched = activeBooks.find(b => b && b.name.toLowerCase() === csvBookStr.toLowerCase());
-              if (matched) {
-                const bm = matched.name.match(/(\d+)/);
-                if (bm) bookNum = parseInt(bm[1], 10);
-              }
-            }
-          }
-
+          const bookInfo = getOrCreateBook(csvBookStr);
           const validation = parseAndValidatePages(pages);
           const finalPages = validation.isValid ? validation.formatted : pages;
 
           parsedEntries.push({
             topic,
-            book: bookNum,
-            pages: finalPages
+            book: bookInfo.name,
+            bookName: bookInfo.name,
+            bookId: bookInfo.id,
+            pendingBook: bookInfo.isPending ? bookInfo.bookObj : null,
+            pages: finalPages,
+            notes,
+            source: 'csv-import'
           });
         }
 
@@ -3417,16 +3615,27 @@ function buildPdfReviewData(rawEntries, bypassCap = false) {
     const { topic, book, pages } = entry;
     const topicLower = topic.toLowerCase();
 
-    // Match book by number — look for "Book N" or "book-N" style matches
-    const matchedBook = activeBooks.find(b => {
-      const nameNum = b.name.match(/(\d+)/);
-      return nameNum && parseInt(nameNum[1], 10) === book;
-    }) || null;
+    // Check if entry already has a pre-resolved book (from CSV import) or match by number/name
+    let matchedBook = null;
+    let bookId = null;
+    let bookName = '';
 
-    const bookId = matchedBook ? matchedBook.id : null;
+    if (entry.bookId) {
+      bookId = entry.bookId;
+      matchedBook = activeBooks.find(b => b && b.id === bookId) || entry.pendingBook || null;
+      bookName = matchedBook ? matchedBook.name : (entry.bookName || `Book ${book}`);
+    } else {
+      // PDF index / legacy JSON mode: match book by number — look for "Book N" or "book-N" style matches
+      matchedBook = activeBooks.find(b => {
+        const nameNum = b.name.match(/(\d+)/);
+        return nameNum && parseInt(nameNum[1], 10) === book;
+      }) || null;
+      bookId = matchedBook ? matchedBook.id : null;
+      bookName = matchedBook ? matchedBook.name : `Book ${book} (not found)`;
+    }
 
     // Find existing entry in current course for this topic+book
-    const existingEntry = bookId
+    const existingEntry = (bookId && !entry.pendingBook)
       ? state.entries.find(e =>
           e && e.courseId === state.currentCourseId &&
           e.bookId === bookId &&
@@ -3478,7 +3687,19 @@ function buildPdfReviewData(rawEntries, bypassCap = false) {
       action = 'NEW';
     }
 
-    return { topic, book, pages: pagesToUse, bookId, bookName: matchedBook ? matchedBook.name : `Book ${book} (not found)`, existingEntry, mergedPages, action };
+    return {
+      topic,
+      book: bookName,
+      bookName,
+      pages: pagesToUse,
+      bookId,
+      pendingBook: entry.pendingBook || null,
+      notes: entry.notes || '',
+      source: entry.source || 'pdf-index-import',
+      existingEntry,
+      mergedPages,
+      action
+    };
   });
 }
 
@@ -3508,7 +3729,7 @@ function renderPdfIndexReviewTable(entries) {
         <input type="checkbox" class="pdf-review-checkbox" data-idx="${idx}" ${isChecked ? 'checked' : ''}>
       </td>
       <td style="font-size:0.85rem;">${escapeHtml(entry.topic)}</td>
-      <td style="font-size:0.82rem; color:var(--text-muted);">${entry.book}</td>
+      <td style="font-size:0.82rem; color:var(--text-muted);">${escapeHtml(entry.bookName || String(entry.book || ''))}</td>
       <td style="font-size:0.82rem;">${escapeHtml(entry.pages)}</td>
       <td style="font-size:0.82rem; color:var(--text-muted);">${entry.existingEntry ? escapeHtml(entry.existingEntry.pages) : '—'}</td>
       <td><span style="font-size:0.78rem; font-weight:600; color:${cfg.color};">${cfg.label}</span>${entry.action === 'MERGE' ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px;">→ ${escapeHtml(entry.mergedPages || '')}</div>` : ''}</td>
@@ -3585,12 +3806,19 @@ async function commitImportSelectedEntries() {
 
   const checkboxes = elements.pdfReviewTableBody.querySelectorAll('.pdf-review-checkbox');
   let countNew = 0, countMerge = 0, countSkipped = 0;
+  let countBooksCreated = 0;
 
   checkboxes.forEach((cb) => {
     if (!cb.checked) return;
     const realIdx = parseInt(cb.getAttribute('data-idx'), 10);
     const entry = pdfIndexParsedEntries[realIdx];
     if (!entry || !entry.bookId) { countSkipped++; return; }
+
+    // If this entry references a pending book that hasn't been added to state.books yet, add it now
+    if (entry.pendingBook && !state.books.some(b => b.id === entry.pendingBook.id)) {
+      state.books.push(entry.pendingBook);
+      countBooksCreated++;
+    }
 
     const { topic, pages, bookId, existingEntry, mergedPages, action } = entry;
 
@@ -3601,8 +3829,8 @@ async function commitImportSelectedEntries() {
         bookId,
         topic,
         pages: compressPageList(pages),
-        notes: '',
-        source: 'pdf-index-import',
+        notes: entry.notes || '',
+        source: entry.source || 'pdf-index-import',
         createdAt: new Date().toISOString()
       });
       countNew++;
@@ -3624,7 +3852,7 @@ async function commitImportSelectedEntries() {
     }
   });
 
-  if (countNew + countMerge === 0) {
+  if (countNew + countMerge === 0 && countBooksCreated === 0) {
     showToast('No changes made.');
     closePdfIndexReviewDialog();
     return;
@@ -3633,7 +3861,8 @@ async function commitImportSelectedEntries() {
   await saveState();
   renderAll();
   closePdfIndexReviewDialog();
-  showToast(`Import complete: ${countNew} new, ${countMerge} merged, ${countSkipped} skipped.`, 3000);
+  const bookMsg = countBooksCreated > 0 ? `, ${countBooksCreated} book${countBooksCreated > 1 ? 's' : ''} created` : '';
+  showToast(`Import complete: ${countNew} new, ${countMerge} merged${bookMsg}, ${countSkipped} skipped.`, 3000);
 }
 
 // ==========================================================================
@@ -5982,6 +6211,19 @@ function renderPrintPreview() {
       font-size: 6.5pt !important;
       padding: 1.5px 3px !important;
     }
+    @media print {
+      .print-only .index-table {
+        margin-bottom: 0 !important;
+      }
+      .print-only .print-acronyms-table {
+        margin-bottom: 0 !important;
+      }
+      .print-only .print-preview-page-sheet {
+        box-sizing: border-box !important;
+        max-height: 10.5in !important;
+        overflow: hidden !important;
+      }
+    }
   `;
 
   // 2. Off-screen DOM Measurement Pass for 100% Pixel-Accurate Row Heights
@@ -6036,7 +6278,9 @@ function renderPrintPreview() {
   measureContainer.innerHTML = ''; // Clean up off-screen DOM
 
   // Sequential Left-First, Right-Second Page Sheet & Column Building Algorithm
-  const maxColumnHeight = cols === '2' ? 903 : 950;
+  // Calibrated column height budget: 1008px printable height minus ~90px header/thead overhead
+  // minus 45-50px engineering safety buffer to absorb print typography line-wrap deviations
+  const maxColumnHeight = cols === '2' ? 865 : 865;
   const indexPageSheets = [];
 
   if (includeIndex) {
@@ -6135,8 +6379,8 @@ function renderPrintPreview() {
     measureContainer.innerHTML = '';
   }
 
-  // Group acronym items into 2-column page sheets using 2-column max page height (878px) ALL THE TIME, regardless of index column setting
-  const maxAcronymColumnHeight = 878;
+  // Group acronym items into 2-column page sheets using safe column height (865px)
+  const maxAcronymColumnHeight = 865;
   const acronymPageSheets = [];
   let acIdx = 0;
 
@@ -6599,6 +6843,13 @@ function generateTopicByBookPrintHTML(activeEntries) {
     elements.importCsvFile.value = '';
     elements.importDialog.showModal();
   });
+
+  if (elements.revertBackupBtn) {
+    elements.revertBackupBtn.addEventListener('click', openRevertVersionModal);
+  }
+  if (elements.autoIndexRevertBtn) {
+    elements.autoIndexRevertBtn.addEventListener('click', openRevertVersionModal);
+  }
   
   elements.confirmImportBtn.addEventListener('click', processImport);
   
@@ -6877,6 +7128,17 @@ function initAutoIndexingBindings() {
     const unlockSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
 
     const updateLockUi = () => {
+      const keyVal = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
+      const hasLockedKey = isKeyLocked && keyVal.length > 0;
+
+      if (elements.getFreeKeyBtn) {
+        if (hasLockedKey) {
+          elements.getFreeKeyBtn.classList.remove('api-key-guide-glowing');
+        } else {
+          elements.getFreeKeyBtn.classList.add('api-key-guide-glowing');
+        }
+      }
+
       if (isKeyLocked) {
         elements.autoIndexGeminiKey.readOnly = true;
         elements.autoIndexGeminiKey.style.opacity = '0.7';
@@ -6912,6 +7174,9 @@ function initAutoIndexingBindings() {
         localStorage.setItem('gemini_api_key', keyVal);
         isKeyLocked = !isKeyLocked;
         updateLockUi();
+        if (isKeyLocked && keyVal && typeof refreshGeminiModels === 'function') {
+          refreshGeminiModels(false);
+        }
       });
     }
 
@@ -7166,9 +7431,34 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       });
     }
 
+    if (elements.localSlmToggle && elements.localSlmContainer) {
+      elements.localSlmToggle.addEventListener('click', () => {
+        const isCollapsed = elements.localSlmContainer.classList.contains('hidden');
+        if (isCollapsed) {
+          elements.localSlmContainer.classList.remove('hidden');
+          elements.localSlmToggle.classList.add('active');
+          if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(90deg)';
+          if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Expanded';
+        } else {
+          elements.localSlmContainer.classList.add('hidden');
+          elements.localSlmToggle.classList.remove('active');
+          if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(0deg)';
+          if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Collapsed';
+        }
+      });
+    }
+
     const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
     const savedModel = localStorage.getItem('local_slm_model') || '1.5b';
     setCurationEngine(savedEngine, savedModel);
+
+    // If previously saved engine was local-slm, expand the container so user sees their selection
+    if (savedEngine === 'local-slm' && elements.localSlmContainer) {
+      elements.localSlmContainer.classList.remove('hidden');
+      if (elements.localSlmToggle) elements.localSlmToggle.classList.add('active');
+      if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(90deg)';
+      if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Expanded';
+    }
 
     const initialKey = localStorage.getItem('gemini_api_key') || '';
     elements.autoIndexGeminiKey.value = initialKey;
@@ -7193,6 +7483,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
     elements.autoIndexGeminiKey.addEventListener('input', () => {
       localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
       validateGeminiKey();
+      updateLockUi();
     });
 
     elements.autoIndexUseAi.addEventListener('change', () => {
@@ -7200,29 +7491,278 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       updateAiOptionsVisibility();
     });
 
-    // Model selection persistence and sync
-    if (elements.autoIndexModelSelect) {
-      const savedModel = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
-      elements.autoIndexModelSelect.value = savedModel;
-      if (elements.aiCurationRetryModelSelect) {
-        elements.aiCurationRetryModelSelect.value = savedModel;
-      }
-      
-      elements.autoIndexModelSelect.addEventListener('change', () => {
-        localStorage.setItem('gemini_model', elements.autoIndexModelSelect.value);
-        if (elements.aiCurationRetryModelSelect) {
-          elements.aiCurationRetryModelSelect.value = elements.autoIndexModelSelect.value;
+    // -------------------------------------------------------------------------
+    // Dynamic Gemini Model Discovery & Categorization
+    // -------------------------------------------------------------------------
+    const DEFAULT_FALLBACK_MODELS = [
+      { id: 'gemini-flash-latest', displayName: 'Gemini Flash Latest (Auto-Updated)', group: 'alias' },
+      { id: 'gemini-pro-latest', displayName: 'Gemini Pro Latest (Auto-Updated)', group: 'alias' },
+      { id: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash (Recommended - High Speed)', group: 'gemini-2' },
+      { id: 'gemini-2.0-flash', displayName: 'Gemini 2.0 Flash (Fast & Stable)', group: 'gemini-2' },
+      { id: 'gemini-2.0-flash-lite', displayName: 'Gemini 2.0 Flash Lite (Lightweight, High RPM)', group: 'gemini-2' },
+      { id: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro (Advanced Pro Reasoning)', group: 'gemini-2' },
+      { id: 'gemini-3.7-flash', displayName: 'Gemini 3.7 Flash', group: 'gemini-3' },
+      { id: 'gemini-3.6-flash', displayName: 'Gemini 3.6 Flash', group: 'gemini-3' },
+      { id: 'gemini-3.5-flash', displayName: 'Gemini 3.5 Flash', group: 'gemini-3' },
+      { id: 'gemini-3.1-pro', displayName: 'Gemini 3.1 Pro', group: 'gemini-3' },
+      { id: 'gemini-1.5-flash', displayName: 'Gemini 1.5 Flash (Legacy)', group: 'gemini-1' },
+      { id: 'gemini-1.5-pro', displayName: 'Gemini 1.5 Pro (Legacy)', group: 'gemini-1' }
+    ];
+
+    function categorizeModel(modelId) {
+      const lower = modelId.toLowerCase();
+      if (lower.includes('-latest') || lower === 'gemini-flash-latest' || lower === 'gemini-pro-latest') return 'alias';
+      if (lower.startsWith('gemini-3')) return 'gemini-3';
+      if (lower.startsWith('gemini-2')) return 'gemini-2';
+      if (lower.startsWith('gemini-1')) return 'gemini-1';
+      return 'other';
+    }
+
+    function populateModelSelectElement(selectEl, modelsList, selectedValue) {
+      if (!selectEl) return;
+      selectEl.innerHTML = '';
+
+      const groups = {
+        alias: { label: '🔄 Auto-Updating Production Aliases', options: [] },
+        'gemini-3': { label: '✨ Gemini 3.x Series (Latest Generation)', options: [] },
+        'gemini-2': { label: '⚡ Gemini 2.x Series (High Speed & Quotas)', options: [] },
+        'gemini-1': { label: '🏛️ Gemini 1.5 Legacy Series', options: [] },
+        other: { label: '🧪 Other / Experimental Models', options: [] }
+      };
+
+      const aliases = [
+        { id: 'gemini-flash-latest', displayName: 'Gemini Flash Latest (Auto-Updated by Google)' },
+        { id: 'gemini-pro-latest', displayName: 'Gemini Pro Latest (Auto-Updated by Google)' }
+      ];
+      aliases.forEach(a => groups.alias.options.push(a));
+
+      const seenIds = new Set(aliases.map(a => a.id));
+
+      modelsList.forEach(m => {
+        const id = m.id || m.name || m;
+        if (seenIds.has(id)) return;
+        seenIds.add(id);
+
+        const groupKey = m.group || categorizeModel(id);
+        const targetGroup = groups[groupKey] || groups.other;
+        targetGroup.options.push({
+          id: id,
+          displayName: m.displayName || id
+        });
+      });
+
+      // Append optgroups with options
+      Object.keys(groups).forEach(gk => {
+        const g = groups[gk];
+        if (g.options.length > 0) {
+          const optgroup = document.createElement('optgroup');
+          optgroup.label = g.label;
+          g.options.forEach(opt => {
+            const optionEl = document.createElement('option');
+            optionEl.value = opt.id;
+            optionEl.textContent = opt.displayName;
+            if (opt.id === selectedValue) optionEl.selected = true;
+            optgroup.appendChild(optionEl);
+          });
+          selectEl.appendChild(optgroup);
         }
+      });
+
+      // Custom option
+      const customGroup = document.createElement('optgroup');
+      customGroup.label = '⚙️ Custom';
+
+      if (selectedValue && !seenIds.has(selectedValue) && selectedValue !== '__custom__') {
+        const customOpt = document.createElement('option');
+        customOpt.value = selectedValue;
+        customOpt.textContent = `${selectedValue} (Custom)`;
+        customOpt.selected = true;
+        customGroup.appendChild(customOpt);
+      }
+
+      const promptCustomOpt = document.createElement('option');
+      promptCustomOpt.value = '__custom__';
+      promptCustomOpt.textContent = '+ Enter Custom Model Name...';
+      customGroup.appendChild(promptCustomOpt);
+      selectEl.appendChild(customGroup);
+
+      if (!selectEl.value && selectEl.options.length > 0) {
+        selectEl.selectedIndex = 0;
+      }
+    }
+
+    function renderAllGeminiModelDropdowns() {
+      let models = DEFAULT_FALLBACK_MODELS;
+      try {
+        const cached = localStorage.getItem('cached_gemini_models');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            models = parsed;
+          }
+        }
+      } catch (e) {}
+
+      const currentModel = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
+      populateModelSelectElement(elements.autoIndexModelSelect, models, currentModel);
+      populateModelSelectElement(elements.aiCurationRetryModelSelect, models, currentModel);
+
+      const lastSync = localStorage.getItem('cached_gemini_models_time');
+      if (elements.geminiModelsSyncStatus) {
+        if (lastSync) {
+          const syncDate = new Date(parseInt(lastSync));
+          elements.geminiModelsSyncStatus.textContent = `Synced: ${syncDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          elements.geminiModelsSyncStatus.title = `Retrieved ${models.length} models from Google AI on ${syncDate.toLocaleDateString()}`;
+        } else {
+          elements.geminiModelsSyncStatus.textContent = '';
+        }
+      }
+    }
+
+    async function refreshGeminiModels(isUserTriggered = false) {
+      const apiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : (localStorage.getItem('gemini_api_key') || '');
+      if (!apiKey) {
+        if (isUserTriggered) {
+          alert('Please enter and lock your Google Gemini API key first to discover available models.');
+        }
+        return;
+      }
+
+      if (elements.refreshGeminiModelsIcon) {
+        elements.refreshGeminiModelsIcon.classList.add('spin-animation');
+      }
+      if (elements.geminiModelsSyncStatus) {
+        elements.geminiModelsSyncStatus.textContent = 'Checking Google AI...';
+      }
+
+      try {
+        const result = await window.api.fetchGeminiModels(apiKey);
+        if (result && result.success && Array.isArray(result.models) && result.models.length > 0) {
+          localStorage.setItem('cached_gemini_models', JSON.stringify(result.models));
+          localStorage.setItem('cached_gemini_models_time', Date.now().toString());
+          renderAllGeminiModelDropdowns();
+          if (isUserTriggered) {
+            alert(`Found ${result.models.length} compatible Gemini models from Google AI! Dropdown updated.`);
+          }
+        } else {
+          if (isUserTriggered) {
+            alert(`Could not fetch models: ${(result && result.error) || 'Unknown error'}`);
+          }
+          renderAllGeminiModelDropdowns();
+        }
+      } catch (err) {
+        if (isUserTriggered) {
+          alert(`Error fetching models: ${err.message}`);
+        }
+        renderAllGeminiModelDropdowns();
+      } finally {
+        if (elements.refreshGeminiModelsIcon) {
+          elements.refreshGeminiModelsIcon.classList.remove('spin-animation');
+        }
+      }
+    }
+
+    function handleModelSelectChange(selectEl, otherSelectEl) {
+      const val = selectEl.value;
+      if (val === '__custom__') {
+        const customName = prompt('Enter the exact Google Gemini model name (e.g. gemini-2.5-flash-preview):');
+        if (customName && customName.trim()) {
+          const cleaned = customName.trim().replace(/^models\//, '');
+          localStorage.setItem('gemini_model', cleaned);
+          renderAllGeminiModelDropdowns();
+        } else {
+          const previous = localStorage.getItem('gemini_model') || 'gemini-flash-latest';
+          selectEl.value = previous;
+        }
+      } else {
+        localStorage.setItem('gemini_model', val);
+        if (otherSelectEl) otherSelectEl.value = val;
+      }
+      if (typeof updateSummaryCard === 'function') updateSummaryCard();
+    }
+
+    if (elements.autoIndexModelSelect) {
+      elements.autoIndexModelSelect.addEventListener('change', () => {
+        handleModelSelectChange(elements.autoIndexModelSelect, elements.aiCurationRetryModelSelect);
       });
     }
 
     if (elements.aiCurationRetryModelSelect) {
       elements.aiCurationRetryModelSelect.addEventListener('change', () => {
-        localStorage.setItem('gemini_model', elements.aiCurationRetryModelSelect.value);
-        if (elements.autoIndexModelSelect) {
-          elements.autoIndexModelSelect.value = elements.aiCurationRetryModelSelect.value;
-        }
+        handleModelSelectChange(elements.aiCurationRetryModelSelect, elements.autoIndexModelSelect);
       });
+    }
+
+    if (elements.refreshGeminiModelsBtn) {
+      elements.refreshGeminiModelsBtn.addEventListener('click', () => {
+        refreshGeminiModels(true);
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // API Quota Tier Management (Free Safe Pacing vs Paid Turbo Mode)
+    // -------------------------------------------------------------------------
+    function updateGeminiTierUi(tier) {
+      const activeTier = tier === 'paid' ? 'paid' : 'free';
+      localStorage.setItem('gemini_api_tier', activeTier);
+
+      if (elements.autoIndexGeminiTierSelect) elements.autoIndexGeminiTierSelect.value = activeTier;
+      if (elements.aiCurationRetryTierSelect) elements.aiCurationRetryTierSelect.value = activeTier;
+
+      if (elements.geminiTierBadge) {
+        if (activeTier === 'free') {
+          elements.geminiTierBadge.textContent = 'Safe Mode (15 RPM)';
+          elements.geminiTierBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+          elements.geminiTierBadge.style.color = '#10b981';
+          elements.geminiTierBadge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        } else {
+          elements.geminiTierBadge.textContent = 'Turbo Mode (High Speed)';
+          elements.geminiTierBadge.style.background = 'rgba(59, 130, 246, 0.15)';
+          elements.geminiTierBadge.style.color = '#38bdf8';
+          elements.geminiTierBadge.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+        }
+      }
+
+      if (elements.geminiTierDescription) {
+        if (activeTier === 'free') {
+          elements.geminiTierDescription.innerHTML = '• <strong>Free Tier:</strong> Paces requests (~4.5s intervals, 1 batch at a time) to stay safely under Google\'s 15 requests/min quota. Prevents 429 quota exhaustion and failed chunks.';
+        } else {
+          elements.geminiTierDescription.innerHTML = '• <strong>Paid Tier:</strong> High-speed parallel processing (up to 3 concurrent batches). Uses your Google Cloud / AI Studio pay-as-you-go quota without throttling.';
+        }
+      }
+
+      const geminiRateLimitCard = document.getElementById('gemini-rate-limit-card');
+      if (geminiRateLimitCard) {
+        const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
+        const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+        if (useAi && !isLocalSlm && activeTier === 'free') {
+          geminiRateLimitCard.classList.remove('hidden');
+        } else {
+          geminiRateLimitCard.classList.add('hidden');
+        }
+      }
+    }
+
+    if (elements.autoIndexGeminiTierSelect) {
+      elements.autoIndexGeminiTierSelect.addEventListener('change', () => {
+        updateGeminiTierUi(elements.autoIndexGeminiTierSelect.value);
+      });
+    }
+
+    if (elements.aiCurationRetryTierSelect) {
+      elements.aiCurationRetryTierSelect.addEventListener('change', () => {
+        updateGeminiTierUi(elements.aiCurationRetryTierSelect.value);
+      });
+    }
+
+    // Initial render of models and tier
+    renderAllGeminiModelDropdowns();
+    const savedTier = localStorage.getItem('gemini_api_tier') || 'free';
+    updateGeminiTierUi(savedTier);
+
+    // If an initial API key is present, silently check for updated models in background
+    if (initialKey) {
+      setTimeout(() => refreshGeminiModels(false), 600);
     }
   }
 
@@ -7412,8 +7952,9 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
     elements.partialRetryFailedBtn.addEventListener('click', async () => {
       if (!lastFailedChunks || lastFailedChunks.length === 0) return;
       const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
-      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-3.7-flash';
+      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : (localStorage.getItem('gemini_model') || 'gemini-flash-latest');
       const geminiPrompt = elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '';
+      const geminiApiTier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
       if (!geminiApiKey) {
         alert("Please enter a valid Gemini API key first to retry AI curation.");
         return;
@@ -7427,7 +7968,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       startFunFactsRotation();
 
       try {
-        const result = await window.api.retryFailedChunks({ failedChunks: lastFailedChunks, geminiApiKey, geminiModel, geminiPrompt });
+        const result = await window.api.retryFailedChunks({ failedChunks: lastFailedChunks, geminiApiKey, geminiModel, geminiPrompt, geminiApiTier });
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
 
@@ -7459,7 +8000,9 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
   if (elements.aiCurationRetryBtn) {
     elements.aiCurationRetryBtn.addEventListener('click', async () => {
       const geminiApiKey = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
-      const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
+      const geminiModel = elements.aiCurationRetryModelSelect ? elements.aiCurationRetryModelSelect.value : (elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : (localStorage.getItem('gemini_model') || 'gemini-flash-latest'));
+      const geminiPrompt = elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '';
+      const geminiApiTier = elements.aiCurationRetryTierSelect ? elements.aiCurationRetryTierSelect.value : (elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free'));
       if (!geminiApiKey) {
         alert("Please enter a valid Gemini API key first to retry AI curation.");
         return;
@@ -7497,7 +8040,7 @@ Output ONLY a raw JSON array of strings containing the kept terms. Do NOT includ
       });
 
       try {
-        const result = await window.api.retryCuration({ entries: autoExtractedEntries, geminiApiKey, geminiModel });
+        const result = await window.api.retryCuration({ entries: autoExtractedEntries, geminiApiKey, geminiModel, geminiPrompt, geminiApiTier });
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
 
@@ -7797,7 +8340,8 @@ async function handleAutoIndexSubmit(e) {
   const lname = elements.autoIndexLname.value.trim();
   const email = elements.autoIndexEmail.value.trim();
   const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-  const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : 'gemini-flash-latest';
+  const geminiModel = elements.autoIndexModelSelect ? elements.autoIndexModelSelect.value : (localStorage.getItem('gemini_model') || 'gemini-flash-latest');
+  const geminiApiTier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
   const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
   const curationEngine = elements.autoIndexCurationEngine ? elements.autoIndexCurationEngine.value : 'gemini';
@@ -7808,6 +8352,7 @@ async function handleAutoIndexSubmit(e) {
     localSlmModel: selectedLocalModel,
     localSlmPrompt: elements.localSlmCustomPrompt ? elements.localSlmCustomPrompt.value.trim() : '',
     geminiPrompt: elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '',
+    geminiApiTier: geminiApiTier,
     offset: parseInt(elements.autoIndexOffset.value) || 0,
     minLength: parseInt(elements.autoIndexMinLen.value) || 2,
     maxLength: parseInt(elements.autoIndexMaxLen.value) || 50,
@@ -7815,9 +8360,9 @@ async function handleAutoIndexSubmit(e) {
     maxFrequency: parseInt(elements.autoIndexMaxFreq.value) || 10,
     zipf: parseFloat(elements.autoIndexZipf.value) || 4.0,
     useOcr: elements.autoIndexUseOcr.checked,
-    generateQuiz: elements.autoIndexGenerateQuiz ? elements.autoIndexGenerateQuiz.checked : false,
-    quizCount: parseInt(elements.autoIndexQuizCount.value) || 10,
-    quizDifficulty: elements.autoIndexQuizDifficulty.value || 'Conceptual'
+    generateQuiz: false,
+    quizCount: 10,
+    quizDifficulty: 'Conceptual'
   };
 
   const startProcess = () => {
@@ -7873,7 +8418,7 @@ async function handleAutoIndexSubmit(e) {
       }
     });
 
-    window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, geminiModel, settings })
+    window.api.runAutoIndex({ pdfPath, password, fname, lname, email, geminiApiKey, geminiModel, geminiApiTier, settings })
       .then((result) => {
         elements.indexingProgressSection.classList.add('hidden');
         stopFunFactsRotation();
@@ -8183,27 +8728,6 @@ function initAutoIndexWizard() {
       openBookDialog();
     });
   }
-
-  if (elements.autoIndexGenerateQuiz) {
-    const quizToggleClone = elements.autoIndexGenerateQuiz.cloneNode(true);
-    elements.autoIndexGenerateQuiz.parentNode.replaceChild(quizToggleClone, elements.autoIndexGenerateQuiz);
-    elements.autoIndexGenerateQuiz = quizToggleClone;
-    
-    elements.autoIndexGenerateQuiz.checked = false;
-    elements.autoIndexGenerateQuiz.disabled = true;
-    
-    elements.quizGenerationSettings = document.getElementById('quiz-generation-settings');
-    elements.autoIndexQuizCount = document.getElementById('auto-index-quiz-count');
-    elements.autoIndexQuizDifficulty = document.getElementById('auto-index-quiz-difficulty');
-    
-    const syncQuizToggle = () => {
-      elements.autoIndexGenerateQuiz.checked = false;
-      if (elements.quizGenerationSettings) elements.quizGenerationSettings.classList.add('hidden');
-    };
-    
-    elements.autoIndexGenerateQuiz.addEventListener('change', syncQuizToggle);
-    syncQuizToggle();
-  }
 }
 
 function validateWizardStep(step) {
@@ -8231,7 +8755,7 @@ function validateWizardStep(step) {
 }
 
 function updateWizardUI() {
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 4; i++) {
     const panel = document.getElementById(`step-panel-${i}`);
     if (panel) {
       if (i === wizardCurrentStep) {
@@ -8253,7 +8777,7 @@ function updateWizardUI() {
   }
 
   if (elements.wizardProgressBar) {
-    const percentage = ((wizardCurrentStep - 1) / 4) * 100;
+    const percentage = ((wizardCurrentStep - 1) / 3) * 100;
     elements.wizardProgressBar.style.width = `${percentage}%`;
   }
 
@@ -8263,7 +8787,7 @@ function updateWizardUI() {
     elements.wizardPrevBtn.classList.remove('hidden');
   }
 
-  if (wizardCurrentStep === 5) {
+  if (wizardCurrentStep === 4) {
     elements.wizardNextBtn.classList.add('hidden');
     elements.startIndexingBtn.classList.remove('hidden');
     updateWizardSummary();
@@ -8279,7 +8803,6 @@ function updateWizardSummary() {
   const summaryWatermarkStatus = document.getElementById('summary-watermark-status');
   const summaryAiCuration = document.getElementById('summary-ai-curation');
   const summaryGeminiModel = document.getElementById('summary-gemini-model');
-  const summaryQuizStatus = document.getElementById('summary-quiz-status');
 
   if (summaryTargetBook) {
     const selectedOpt = elements.autoIndexBookSelect.options[elements.autoIndexBookSelect.selectedIndex];
@@ -8311,12 +8834,16 @@ function updateWizardSummary() {
   if (summaryGeminiModel) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
     const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
+    const tier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
     if (useAi) {
       if (isLocalSlm) {
         summaryGeminiModel.textContent = 'Qwen 0.5B (Offline)';
-      } else if (elements.autoIndexModelSelect) {
+      } else if (elements.autoIndexModelSelect && elements.autoIndexModelSelect.selectedIndex >= 0) {
         const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
-        summaryGeminiModel.textContent = selectedModelOpt ? selectedModelOpt.textContent.split(' ')[0] : '-';
+        const rawName = selectedModelOpt ? (selectedModelOpt.textContent || selectedModelOpt.value) : 'Gemini Flash';
+        const shortName = rawName.split(' (')[0];
+        const tierTag = tier === 'free' ? ' [15 RPM]' : ' [Turbo]';
+        summaryGeminiModel.textContent = shortName + tierTag;
       } else {
         summaryGeminiModel.textContent = 'Gemini Flash';
       }
@@ -8325,16 +8852,13 @@ function updateWizardSummary() {
     }
   }
 
-  if (summaryQuizStatus) {
-    summaryQuizStatus.textContent = 'Disabled (Coming Soon)';
-  }
-
-  // Toggle API Free Tier rate limit advisory card (only show if Gemini Cloud AI is selected)
+  // Toggle API Free Tier rate limit advisory card (only show if Gemini Cloud AI is selected AND in Free tier mode)
   const geminiRateLimitCard = document.getElementById('gemini-rate-limit-card');
   if (geminiRateLimitCard) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
     const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
-    if (useAi && !isLocalSlm) {
+    const tier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
+    if (useAi && !isLocalSlm && tier === 'free') {
       geminiRateLimitCard.classList.remove('hidden');
     } else {
       geminiRateLimitCard.classList.add('hidden');
@@ -10244,3 +10768,602 @@ document.querySelectorAll('#acronyms-table th.sortable').forEach(th => {
     }
   });
 });
+
+// ==========================================================================
+// REVERT TO PREVIOUS INDEX VERSION MODULE (COURSE-SCOPED)
+// ==========================================================================
+let revertBackupsList = [];
+let selectedBackupItem = null;
+let selectedBackupDetails = null;
+
+function formatRelativeTime(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffSec < 45) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+function formatBackupFileSize(bytes) {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function getSelectedRevertCourseId() {
+  if (elements.revertCourseSelect && elements.revertCourseSelect.value) {
+    return elements.revertCourseSelect.value;
+  }
+  return state.currentCourseId || (state.courses[0] && state.courses[0].id) || 'all';
+}
+
+function getSelectedRevertCourseName() {
+  const courseId = getSelectedRevertCourseId();
+  if (courseId === 'all') return 'All Courses (Full Database)';
+  const course = (state.courses || []).find(c => c && c.id === courseId);
+  return course ? course.name : 'Current Course';
+}
+
+async function openRevertVersionModal() {
+  if (!elements.revertVersionDialog) return;
+
+  // Check if auto-indexing is actively running
+  if (elements.indexingProgressSection && !elements.indexingProgressSection.classList.contains('hidden')) {
+    alert("Auto-indexing is currently in progress. Please wait for it to complete or cancel it before reverting.");
+    return;
+  }
+
+  // Populate course dropdown in the revert modal
+  if (elements.revertCourseSelect) {
+    elements.revertCourseSelect.innerHTML = '';
+    (state.courses || []).forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      opt.selected = (c.id === state.currentCourseId);
+      elements.revertCourseSelect.appendChild(opt);
+    });
+
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = 'All Courses (Full Database)';
+    elements.revertCourseSelect.appendChild(allOpt);
+
+    // Default to the current active course
+    if (state.currentCourseId) {
+      elements.revertCourseSelect.value = state.currentCourseId;
+    } else if (state.courses && state.courses.length > 0) {
+      elements.revertCourseSelect.value = state.courses[0].id;
+    } else {
+      elements.revertCourseSelect.value = 'all';
+    }
+  }
+
+  updateRevertCourseHeaders();
+
+  // Reset UI state
+  if (elements.revertSearchInput) elements.revertSearchInput.value = '';
+  if (elements.confirmRevertBtn) elements.confirmRevertBtn.disabled = true;
+  selectedBackupItem = null;
+  selectedBackupDetails = null;
+
+  if (elements.revertPreviewLoading) elements.revertPreviewLoading.classList.add('hidden');
+  if (elements.revertPreviewContent) elements.revertPreviewContent.classList.add('hidden');
+  if (elements.revertPreviewEmpty) elements.revertPreviewEmpty.classList.remove('hidden');
+
+  elements.revertVersionDialog.showModal();
+  lucide.createIcons();
+
+  await loadRevertVersionList();
+}
+
+function updateRevertCourseHeaders() {
+  const courseName = getSelectedRevertCourseName();
+  const courseId = getSelectedRevertCourseId();
+
+  if (elements.revertModalCourseName) {
+    elements.revertModalCourseName.textContent = courseName;
+  }
+
+  if (elements.confirmRevertBtnLabel) {
+    if (courseId === 'all') {
+      elements.confirmRevertBtnLabel.textContent = 'Revert Full Database to Selected Version';
+    } else {
+      elements.confirmRevertBtnLabel.textContent = `Revert ${courseName} to Selected Version`;
+    }
+  }
+}
+
+async function loadRevertVersionList() {
+  if (!elements.revertVersionsList) return;
+
+  const courseId = getSelectedRevertCourseId();
+  const courseName = getSelectedRevertCourseName();
+
+  updateRevertCourseHeaders();
+
+  elements.revertVersionsList.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">Loading versions for ${escapeHtml(courseName)}...</div>`;
+
+  try {
+    const res = await window.api.getBackupsList(courseId);
+    if (!res || !res.success) {
+      elements.revertVersionsList.innerHTML = '<div style="padding: 16px; text-align: center; color: #f87171; font-size: 0.8rem;">Failed to load backup list: ' + escapeHtml(res ? res.error : 'Unknown error') + '</div>';
+      return;
+    }
+
+    revertBackupsList = res.backups || [];
+    if (elements.revertVersionCount) {
+      elements.revertVersionCount.textContent = revertBackupsList.length;
+    }
+
+    renderRevertVersionsList();
+
+    // Automatically select the first version if available
+    if (revertBackupsList.length > 0) {
+      selectRevertBackupVersion(revertBackupsList[0]);
+    } else {
+      if (elements.confirmRevertBtn) elements.confirmRevertBtn.disabled = true;
+      if (elements.revertPreviewContent) elements.revertPreviewContent.classList.add('hidden');
+      if (elements.revertPreviewEmpty) {
+        elements.revertPreviewEmpty.innerHTML = `<i data-lucide="file-clock" style="width: 36px; height: 36px; opacity: 0.5;"></i><span>No previous versions found for ${escapeHtml(courseName)}.</span>`;
+        elements.revertPreviewEmpty.classList.remove('hidden');
+        lucide.createIcons();
+      }
+    }
+  } catch (err) {
+    elements.revertVersionsList.innerHTML = '<div style="padding: 16px; text-align: center; color: #f87171; font-size: 0.8rem;">Error loading backups: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function renderRevertVersionsList() {
+  if (!elements.revertVersionsList) return;
+
+  const courseId = getSelectedRevertCourseId();
+  const courseName = getSelectedRevertCourseName();
+  const query = elements.revertSearchInput ? elements.revertSearchInput.value.toLowerCase().trim() : '';
+
+  const filtered = revertBackupsList.filter(b => {
+    if (!query) return true;
+    const mdate = new Date(b.mtime);
+    const dateStr = mdate.toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric' }).toLowerCase();
+    const relStr = formatRelativeTime(mdate).toLowerCase();
+    const isPre = b.isPreRevert ? 'safety snapshot pre-revert' : '';
+    return dateStr.includes(query) || relStr.includes(query) || b.filename.toLowerCase().includes(query) || isPre.includes(query);
+  });
+
+  if (filtered.length === 0) {
+    elements.revertVersionsList.innerHTML = `<div style="padding: 24px 12px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">No versions found for ${escapeHtml(courseName)} matching your search.</div>`;
+    return;
+  }
+
+  elements.revertVersionsList.innerHTML = '';
+  filtered.forEach((backup) => {
+    const card = document.createElement('div');
+    card.className = 'revert-version-card';
+    if (selectedBackupItem && selectedBackupItem.filename === backup.filename) {
+      card.classList.add('active');
+    }
+
+    const mdate = new Date(backup.mtime);
+    const timeStr = mdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateStr = mdate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    const relStr = formatRelativeTime(mdate);
+    const sizeStr = formatBackupFileSize(backup.size);
+
+    let badgeHtml = '';
+    if (backup.isPreRevert) {
+      badgeHtml = '<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.68rem; padding: 1px 5px;"><i data-lucide="shield-check" style="width:10px;height:10px;vertical-align:middle;margin-right:2px;"></i>Safety Snapshot</span>';
+    } else if (revertBackupsList.length > 0 && backup.filename === revertBackupsList[0].filename) {
+      badgeHtml = '<span class="badge" style="background: rgba(20, 184, 166, 0.2); color: var(--color-accent); border: 1px solid rgba(20, 184, 166, 0.35); font-size: 0.68rem; padding: 1px 5px;">Latest</span>';
+    }
+
+    let entriesSummaryHtml = '';
+    if (courseId !== 'all') {
+      const cEntries = backup.courseEntries != null ? backup.courseEntries : 0;
+      const cNotes = backup.courseNotes != null ? backup.courseNotes : 0;
+      entriesSummaryHtml = `<span style="font-weight: 600; color: var(--color-accent);">${cEntries.toLocaleString()} terms <span style="color: var(--text-muted); font-weight: normal; font-size: 0.76rem;">• ${cNotes.toLocaleString()} notes</span></span>`;
+    } else {
+      const totEntries = backup.totalEntries != null ? backup.totalEntries : 0;
+      const totNotes = backup.totalNotes != null ? backup.totalNotes : 0;
+      entriesSummaryHtml = `<span>${totEntries.toLocaleString()} terms <span style="color: var(--text-muted); font-size: 0.76rem;">• ${totNotes.toLocaleString()} notes</span></span>`;
+    }
+
+    card.innerHTML = `
+      <div class="revert-card-top">
+        <span class="revert-card-time">${escapeHtml(timeStr)}</span>
+        ${badgeHtml}
+      </div>
+      <div class="revert-card-date">${escapeHtml(dateStr)} (${escapeHtml(relStr)})</div>
+      <div class="revert-card-bottom">
+        ${entriesSummaryHtml}
+        <span class="revert-card-size">${escapeHtml(sizeStr)}</span>
+      </div>
+    `;
+
+    card.addEventListener('click', () => {
+      selectRevertBackupVersion(backup);
+    });
+
+    elements.revertVersionsList.appendChild(card);
+  });
+
+  lucide.createIcons();
+}
+
+async function selectRevertBackupVersion(backup) {
+  selectedBackupItem = backup;
+  const courseId = getSelectedRevertCourseId();
+
+  // Update active state in cards
+  if (elements.revertVersionsList) {
+    elements.revertVersionsList.querySelectorAll('.revert-version-card').forEach(c => c.classList.remove('active'));
+    const cards = elements.revertVersionsList.querySelectorAll('.revert-version-card');
+    cards.forEach(card => {
+      if (card.textContent.includes(new Date(backup.mtime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))) {
+        card.classList.add('active');
+      }
+    });
+  }
+
+  // Show loading in preview pane
+  if (elements.revertPreviewEmpty) elements.revertPreviewEmpty.classList.add('hidden');
+  if (elements.revertPreviewContent) elements.revertPreviewContent.classList.add('hidden');
+  if (elements.revertPreviewLoading) elements.revertPreviewLoading.classList.remove('hidden');
+  if (elements.confirmRevertBtn) elements.confirmRevertBtn.disabled = true;
+
+  try {
+    const details = await window.api.getBackupDetails(backup.filename, courseId);
+    if (!details || !details.success) {
+      if (elements.revertPreviewLoading) elements.revertPreviewLoading.classList.add('hidden');
+      if (elements.revertPreviewEmpty) {
+        elements.revertPreviewEmpty.innerHTML = '<span style="color:#f87171;">Failed to inspect backup details: ' + escapeHtml(details ? details.error : 'Unknown error') + '</span>';
+        elements.revertPreviewEmpty.classList.remove('hidden');
+      }
+      return;
+    }
+
+    selectedBackupDetails = details;
+    renderRevertPreviewDetails(details);
+  } catch (err) {
+    if (elements.revertPreviewLoading) elements.revertPreviewLoading.classList.add('hidden');
+    if (elements.revertPreviewEmpty) {
+      elements.revertPreviewEmpty.innerHTML = '<span style="color:#f87171;">Error reading backup: ' + escapeHtml(err.message) + '</span>';
+      elements.revertPreviewEmpty.classList.remove('hidden');
+    }
+  }
+}
+
+function renderRevertPreviewDetails(details) {
+  const courseId = getSelectedRevertCourseId();
+  const d = new Date(details.mtime);
+
+  if (elements.revertPreviewTimestamp) {
+    elements.revertPreviewTimestamp.textContent = d.toLocaleString([], {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
+  if (elements.revertPreviewAge) {
+    elements.revertPreviewAge.textContent = `${formatRelativeTime(d)} • ${formatBackupFileSize(details.size)}`;
+  }
+
+  // Badges
+  if (elements.revertPreviewBadges) {
+    let badgesHtml = '';
+    if (details.isPreRevert) {
+      badgesHtml += '<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); font-size: 0.72rem; padding: 2px 8px;"><i data-lucide="shield-check" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>Pre-Revert Safety Snapshot</span>';
+    }
+    if (revertBackupsList.length > 0 && details.filename === revertBackupsList[0].filename) {
+      badgesHtml += '<span class="badge" style="background: rgba(20, 184, 166, 0.2); color: var(--color-accent); border: 1px solid rgba(20, 184, 166, 0.35); font-size: 0.72rem; padding: 2px 8px;">Latest Version</span>';
+    }
+    elements.revertPreviewBadges.innerHTML = badgesHtml;
+  }
+
+  // Entries comparison: Course-scoped or Full Database
+  let currentTotal, targetTotal;
+  if (courseId !== 'all') {
+    currentTotal = (state.entries || []).filter(e => e && e.courseId === courseId).length;
+    targetTotal = (details.entriesPerCourse && details.entriesPerCourse[courseId]) != null
+      ? details.entriesPerCourse[courseId]
+      : (details.targetCourseEntries != null ? details.targetCourseEntries : 0);
+  } else {
+    currentTotal = (state.entries || []).length;
+    targetTotal = details.totalEntries || 0;
+  }
+
+  const delta = targetTotal - currentTotal;
+
+  if (elements.revertStatCurrEntries) elements.revertStatCurrEntries.textContent = currentTotal.toLocaleString();
+  if (elements.revertStatTargetEntries) elements.revertStatTargetEntries.textContent = targetTotal.toLocaleString();
+
+  if (elements.revertEntriesDeltaBadge) {
+    const scopeLabel = courseId !== 'all' ? 'in course' : 'total';
+    if (delta < 0) {
+      elements.revertEntriesDeltaBadge.className = 'badge revert-delta-pill neg';
+      elements.revertEntriesDeltaBadge.textContent = `${delta.toLocaleString()} entries (${scopeLabel})`;
+    } else if (delta > 0) {
+      elements.revertEntriesDeltaBadge.className = 'badge revert-delta-pill pos';
+      elements.revertEntriesDeltaBadge.textContent = `+${delta.toLocaleString()} entries (${scopeLabel})`;
+    } else {
+      elements.revertEntriesDeltaBadge.className = 'badge revert-delta-pill zero';
+      elements.revertEntriesDeltaBadge.textContent = `No change (${scopeLabel})`;
+    }
+  }
+
+  // Notes comparison: Course-scoped or Full Database
+  let currentNotes, targetNotes;
+  if (courseId !== 'all') {
+    currentNotes = (state.entries || []).filter(e => e && e.courseId === courseId && e.notes && e.notes.trim().length > 0).length;
+    targetNotes = (details.notesPerCourse && details.notesPerCourse[courseId]) != null
+      ? details.notesPerCourse[courseId]
+      : (details.targetCourseNotes != null ? details.targetCourseNotes : 0);
+  } else {
+    currentNotes = (state.entries || []).filter(e => e && e.notes && e.notes.trim().length > 0).length;
+    targetNotes = details.totalNotes != null ? details.totalNotes : 0;
+  }
+
+  const notesDelta = targetNotes - currentNotes;
+
+  if (elements.revertStatCurrNotes) elements.revertStatCurrNotes.textContent = currentNotes.toLocaleString();
+  if (elements.revertStatTargetNotes) elements.revertStatTargetNotes.textContent = targetNotes.toLocaleString();
+
+  if (elements.revertNotesDeltaBadge) {
+    if (notesDelta < 0) {
+      elements.revertNotesDeltaBadge.className = 'badge revert-delta-pill neg';
+      elements.revertNotesDeltaBadge.textContent = `${notesDelta.toLocaleString()} notes`;
+    } else if (notesDelta > 0) {
+      elements.revertNotesDeltaBadge.className = 'badge revert-delta-pill pos';
+      elements.revertNotesDeltaBadge.textContent = `+${notesDelta.toLocaleString()} notes`;
+    } else {
+      elements.revertNotesDeltaBadge.className = 'badge revert-delta-pill zero';
+      elements.revertNotesDeltaBadge.textContent = `No change`;
+    }
+  }
+
+  // Active course
+  const activeCourse = (state.courses || []).find(c => c && c.id === (courseId !== 'all' ? courseId : state.currentCourseId));
+  const effectiveCourseId = activeCourse ? activeCourse.id : (courseId !== 'all' ? courseId : state.currentCourseId);
+  const targetCourseEntries = (details.entriesPerCourse && effectiveCourseId) ? (details.entriesPerCourse[effectiveCourseId] || 0) : 0;
+  const currentCourseEntries = (state.entries || []).filter(e => e && e.courseId === effectiveCourseId).length;
+  const targetCourseNotes = (details.notesPerCourse && effectiveCourseId) ? (details.notesPerCourse[effectiveCourseId] || 0) : 0;
+  const currentCourseNotes = (state.entries || []).filter(e => e && e.courseId === effectiveCourseId && e.notes && e.notes.trim().length > 0).length;
+
+  if (elements.revertStatCourseName) {
+    elements.revertStatCourseName.textContent = activeCourse ? activeCourse.name : (courseId === 'all' ? "All Courses" : "Selected Course");
+    elements.revertStatCourseName.title = activeCourse ? activeCourse.name : "";
+  }
+
+  if (elements.revertStatCourseEntries) {
+    const courseDelta = targetCourseEntries - currentCourseEntries;
+    const courseDeltaStr = courseDelta === 0 ? 'same as now' : (courseDelta > 0 ? `+${courseDelta} vs now` : `${courseDelta} vs now`);
+    elements.revertStatCourseEntries.textContent = `${targetCourseEntries.toLocaleString()} entries • ${targetCourseNotes.toLocaleString()} notes (${courseDeltaStr})`;
+  }
+
+  // Book breakdown table for the selected course
+  if (elements.revertBreakdownTbody) {
+    elements.revertBreakdownTbody.innerHTML = '';
+    const activeBooks = (state.books || []).filter(b => b && b.courseId === effectiveCourseId);
+
+    if (activeBooks.length === 0) {
+      elements.revertBreakdownTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 12px;">No books configured for this course.</td></tr>';
+    } else {
+      activeBooks.forEach(book => {
+        const tr = document.createElement('tr');
+        const currBookCount = (state.entries || []).filter(e => e && e.bookId === book.id).length;
+        const targetBookCount = (details.entriesPerBook && details.entriesPerBook[book.id]) || 0;
+        const bDelta = targetBookCount - currBookCount;
+
+        const currBookNotes = (state.entries || []).filter(e => e && e.bookId === book.id && e.notes && e.notes.trim().length > 0).length;
+        const targetBookNotes = (details.notesPerBook && details.notesPerBook[book.id]) || 0;
+        const bNotesDelta = targetBookNotes - currBookNotes;
+
+        let termsPill = '';
+        if (bDelta < 0) {
+          termsPill = `<span class="revert-delta-pill neg" title="Terms change: ${bDelta}">${bDelta}</span>`;
+        } else if (bDelta > 0) {
+          termsPill = `<span class="revert-delta-pill pos" title="Terms change: +${bDelta}">+${bDelta}</span>`;
+        } else {
+          termsPill = `<span class="revert-delta-pill zero" title="Terms change: 0">0</span>`;
+        }
+
+        let notesPill = '';
+        if (bNotesDelta < 0) {
+          notesPill = `<span class="revert-delta-pill neg" style="font-size: 0.7rem; padding: 1px 5px;" title="Notes change: ${bNotesDelta}">${bNotesDelta} notes</span>`;
+        } else if (bNotesDelta > 0) {
+          notesPill = `<span class="revert-delta-pill pos" style="font-size: 0.7rem; padding: 1px 5px;" title="Notes change: +${bNotesDelta}">+${bNotesDelta} notes</span>`;
+        }
+
+        tr.innerHTML = `
+          <td>
+            <div class="revert-book-cell">
+              <span class="revert-book-dot" style="background-color: ${escapeHtml(book.color || '#0d9488')};"></span>
+              <span style="font-weight: 500;">${escapeHtml(book.name)}</span>
+            </div>
+          </td>
+          <td style="text-align: right; color: var(--text-secondary);">
+            <span style="font-weight: 500;">${currBookCount.toLocaleString()}</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: 4px;">(${currBookNotes.toLocaleString()} notes)</span>
+          </td>
+          <td style="text-align: right; font-weight: 600;">
+            <span>${targetBookCount.toLocaleString()}</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; margin-left: 4px;">(${targetBookNotes.toLocaleString()} notes)</span>
+          </td>
+          <td style="text-align: right;">
+            <div style="display: flex; gap: 4px; justify-content: flex-end; align-items: center;">
+              ${termsPill}
+              ${notesPill}
+            </div>
+          </td>
+        `;
+        elements.revertBreakdownTbody.appendChild(tr);
+      });
+    }
+  }
+
+  if (elements.revertPreviewLoading) elements.revertPreviewLoading.classList.add('hidden');
+  if (elements.revertPreviewContent) elements.revertPreviewContent.classList.remove('hidden');
+  if (elements.confirmRevertBtn) elements.confirmRevertBtn.disabled = false;
+
+  lucide.createIcons();
+}
+
+async function executeRevertVersion() {
+  if (!selectedBackupItem || !selectedBackupDetails) return;
+
+  const courseId = getSelectedRevertCourseId();
+  const courseName = getSelectedRevertCourseName();
+
+  const mdate = new Date(selectedBackupDetails.mtime);
+  const targetDateStr = mdate.toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  let currentTotal, targetTotal;
+  let currentNotes, targetNotes;
+  if (courseId !== 'all') {
+    currentTotal = (state.entries || []).filter(e => e && e.courseId === courseId).length;
+    targetTotal = (selectedBackupDetails.entriesPerCourse && selectedBackupDetails.entriesPerCourse[courseId]) != null
+      ? selectedBackupDetails.entriesPerCourse[courseId]
+      : (selectedBackupDetails.targetCourseEntries != null ? selectedBackupDetails.targetCourseEntries : 0);
+
+    currentNotes = (state.entries || []).filter(e => e && e.courseId === courseId && e.notes && e.notes.trim().length > 0).length;
+    targetNotes = (selectedBackupDetails.notesPerCourse && selectedBackupDetails.notesPerCourse[courseId]) != null
+      ? selectedBackupDetails.notesPerCourse[courseId]
+      : (selectedBackupDetails.targetCourseNotes != null ? selectedBackupDetails.targetCourseNotes : 0);
+  } else {
+    currentTotal = (state.entries || []).length;
+    targetTotal = selectedBackupDetails.totalEntries || 0;
+
+    currentNotes = (state.entries || []).filter(e => e && e.notes && e.notes.trim().length > 0).length;
+    targetNotes = selectedBackupDetails.totalNotes != null ? selectedBackupDetails.totalNotes : 0;
+  }
+
+  const delta = targetTotal - currentTotal;
+  const deltaText = delta === 0 ? "No change in entry count" : (delta > 0 ? `+${delta.toLocaleString()} entries` : `${delta.toLocaleString()} entries`);
+
+  const notesDelta = targetNotes - currentNotes;
+  const notesDeltaText = notesDelta === 0 ? "No change in notes" : (notesDelta > 0 ? `+${notesDelta.toLocaleString()} notes` : `${notesDelta.toLocaleString()} notes`);
+
+  let noteWarning = '';
+  if (notesDelta < 0) {
+    noteWarning = `\n⚠️ ATTENTION: This version has ${Math.abs(notesDelta).toLocaleString()} FEWER entries with notes than your current index!\n`;
+  }
+
+  let confirmMsg = '';
+  if (courseId !== 'all') {
+    confirmMsg =
+      `Are you sure you want to revert "${courseName}" to the backup from ${targetDateStr}?\n\n` +
+      `• Target course entries: ${targetTotal.toLocaleString()} (${deltaText})\n` +
+      `• Target course notes: ${targetNotes.toLocaleString()} (${notesDeltaText})\n` +
+      noteWarning +
+      `\nSAFEGUARD: Only "${courseName}" will be reverted. All your other courses remain untouched.\n` +
+      `A pre-revert safety snapshot of your full database will be saved before reverting so you can undo at any time.`;
+  } else {
+    confirmMsg =
+      `Are you sure you want to revert your entire index database to the backup from ${targetDateStr}?\n\n` +
+      `• Target Total Entries: ${targetTotal.toLocaleString()} (${deltaText})\n` +
+      `• Target Entries with Notes: ${targetNotes.toLocaleString()} (${notesDeltaText})\n` +
+      noteWarning +
+      `\nSAFEGUARD: A pre-revert safety snapshot of your current database will be saved automatically before reverting so you can always undo.`;
+  }
+
+  if (!confirm(confirmMsg)) return;
+
+  // Set loading state on button
+  if (elements.confirmRevertBtn) {
+    elements.confirmRevertBtn.disabled = true;
+    elements.confirmRevertBtn.innerHTML = '<div class="spinner" style="width: 14px; height: 14px; border-width: 2px; display: inline-block; vertical-align: middle; margin-right: 6px;"></div> Reverting Index...';
+  }
+
+  try {
+    const result = await window.api.revertToBackup({
+      filename: selectedBackupItem.filename,
+      courseId: courseId
+    });
+
+    if (result && result.success) {
+      state = result.data;
+
+      // Ensure courses and active course ID are valid
+      if (state.courses && state.courses.length > 0) {
+        const valid = state.courses.find(c => c && c.id === state.currentCourseId);
+        if (!valid) {
+          state.currentCourseId = state.courses[0].id;
+        }
+      }
+
+      // Re-render entire application
+      renderAll();
+      checkExamDateAlerts();
+
+      if (elements.lastSaveTime) {
+        elements.lastSaveTime.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+
+      if (elements.revertVersionDialog) {
+        elements.revertVersionDialog.close();
+      }
+
+      if (courseId !== 'all') {
+        showToast(`Course "${courseName}" reverted to version from ${targetDateStr}! (Safety backup saved)`);
+      } else {
+        showToast(`Index database reverted to version from ${targetDateStr}! (Safety backup saved)`);
+      }
+    } else {
+      alert("Error reverting index: " + (result ? result.error : 'Unknown error'));
+    }
+  } catch (err) {
+    alert("Unexpected error reverting index: " + err.message);
+  } finally {
+    if (elements.confirmRevertBtn) {
+      elements.confirmRevertBtn.disabled = false;
+      updateRevertCourseHeaders();
+      elements.confirmRevertBtn.innerHTML = `<i data-lucide="rotate-ccw"></i><span id="confirm-revert-btn-label">${elements.confirmRevertBtnLabel ? elements.confirmRevertBtnLabel.textContent : 'Revert to Selected Version'}</span>`;
+      lucide.createIcons();
+    }
+  }
+}
+
+// Revert version listeners
+if (elements.revertCourseSelect) {
+  elements.revertCourseSelect.addEventListener('change', () => {
+    loadRevertVersionList();
+  });
+}
+
+if (elements.revertSearchInput) {
+  elements.revertSearchInput.addEventListener('input', () => {
+    renderRevertVersionsList();
+  });
+}
+
+if (elements.revertRefreshBtn) {
+  elements.revertRefreshBtn.addEventListener('click', () => {
+    loadRevertVersionList();
+  });
+}
+
+if (elements.confirmRevertBtn) {
+  elements.confirmRevertBtn.addEventListener('click', executeRevertVersion);
+}
+
+

@@ -15,7 +15,7 @@
   <!-- Stylesheets -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="dark-theme">
+<body class="theme-default">
 
   <!-- Main Container -->
   <div class="app-layout">
@@ -110,6 +110,10 @@
             <i data-lucide="upload"></i>
             <span>Import Data</span>
           </button>
+          <button id="revert-backup-btn" class="btn btn-secondary btn-full">
+            <i data-lucide="history"></i>
+            <span>Revert to Previous Version</span>
+          </button>
         </div>
         <div class="backup-info">
           <div class="info-row">
@@ -168,13 +172,6 @@
           <p class="summary-text">Index your course topics for rapid lookups during your open-book exam.</p>
         </div>
         <div class="header-actions">
-          <button id="practice-quiz-btn" class="btn btn-secondary" title="Practice Quiz (Feature coming soon)" style="margin-right: 8px; opacity: 0.55; cursor: not-allowed;">
-            <i data-lucide="brain"></i>
-            <span>Practice Quiz (Coming Soon)</span>
-          </button>
-          <div id="quiz-new-questions-toast" class="bounce-tag hidden">
-            New questions added!
-          </div>
           <button id="update-bell-btn" class="btn btn-secondary update-bell hidden" title="New Update Available" style="margin-right: 8px;">
             <i data-lucide="bell" class="bell-icon"></i>
             <span class="bell-badge"></span>
@@ -192,17 +189,17 @@
           <i data-lucide="edit-3"></i>
           <span>My Index</span>
         </button>
+        <button class="tab-btn" data-view-tab="auto-index" id="auto-index-nav-btn">
+          <i data-lucide="cpu"></i>
+          <span>Auto Index</span>
+        </button>
         <button class="tab-btn" data-view-tab="my-acronyms" id="my-acronyms-nav-btn">
           <i data-lucide="book-type"></i>
           <span>My Acronyms</span>
         </button>
-        <button class="tab-btn" data-view-tab="auto-index" id="auto-index-nav-btn">
-          <i data-lucide="cpu"></i>
-          <span>Auto-Index PDF Tool</span>
-        </button>
         <button class="tab-btn" data-view-tab="notes-editor" id="notes-editor-nav-btn">
           <i data-lucide="file-text"></i>
-          <span>Notes Editor</span>
+          <span>Notes</span>
         </button>
       </div>
 
@@ -510,9 +507,15 @@
       <!-- Auto-Indexing Workspace View -->
       <div id="auto-index-view" class="workspace-view hidden no-print">
         <!-- Dependency Status Banner / OCR Info -->
-        <section class="auto-index-header" style="margin-bottom: 20px;">
-          <h2>Auto-Index SANS Book PDF</h2>
-          <p class="summary-text">Compile a comprehensive index from your course book PDF using custom keywords and phrases extraction rules.</p>
+        <section class="auto-index-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
+          <div>
+            <h2>Auto-Index SANS Book PDF</h2>
+            <p class="summary-text">Compile a comprehensive index from your course book PDF using custom keywords and phrases extraction rules.</p>
+          </div>
+          <button type="button" id="auto-index-revert-btn" class="btn btn-secondary btn-sm" title="Revert index to a previous version if terms were imported incorrectly" style="display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; margin-top: 4px;">
+            <i data-lucide="history" style="width: 14px; height: 14px;"></i>
+            <span>Revert to Previous Version</span>
+          </button>
         </section>
 
         <!-- Collapsible Dependency Checker Panel -->
@@ -639,10 +642,6 @@
                 </div>
                 <div class="wizard-step-indicator" data-step="4">
                   <div class="step-num">4</div>
-                  <div class="step-text">Quiz Setup</div>
-                </div>
-                <div class="wizard-step-indicator" data-step="5">
-                  <div class="step-num">5</div>
                   <div class="step-text">Review</div>
                 </div>
                 <!-- Connector Line -->
@@ -821,136 +820,148 @@
                     <option value="local-slm">Local 0.5B SLM Engine</option>
                   </select>
 
-                  <!-- Selectable Cards Grid -->
+                  <!-- Selectable AI Engine Card -->
                   <div style="margin-bottom: 8px;">
                     <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Select AI Engine</label>
                   </div>
 
-                  <div class="curation-card-grid">
-                    <!-- Gemini Cloud AI Card -->
-                    <div class="curation-engine-card active" id="curation-card-gemini" data-engine="gemini">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
-                            </div>
+                  <!-- Google Gemini (Cloud AI) - Recommended Default Card -->
+                  <div class="curation-engine-card active" id="curation-card-gemini" data-engine="gemini" style="margin-bottom: 12px;">
+                    <div>
+                      <div class="curation-card-header">
+                        <div class="curation-card-icon-title">
+                          <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                            <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
+                          </div>
+                          <div>
                             <div class="curation-card-title">Google Gemini (Cloud AI)</div>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">High-speed Google cloud models</span>
                           </div>
-                          <span class="badge badge-success" style="font-size: 0.68rem;">Cloud</span>
                         </div>
-                        <div class="curation-card-description">
-                          Highest quality curation using Google Gemini cloud models. Simple manual API key setup required. Uses 0% local PC resources (best for lightweight laptops). Prone to free-tier traffic rate limits.
-                        </div>
+                        <span class="badge" style="background: rgba(20, 184, 166, 0.2); color: var(--color-accent); border: 1px solid rgba(20, 184, 166, 0.45); font-size: 0.7rem; font-weight: 700; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;">
+                          <i data-lucide="sparkles" style="width: 11px; height: 11px;"></i>Recommended
+                        </span>
                       </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> 0 MB (Cloud)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> 0% PC RAM/CPU</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: #eab308;">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★★★★ (Top)</span>
-                        </div>
+                      <div class="curation-card-description" style="margin-bottom: 12px;">
+                        Highest quality curation using Google Gemini cloud models. Fast execution, uses 0% local PC resources (ideal for lightweight laptops), and supports all Gemini 2.x/3.x models.
+                      </div>
+                    </div>
+                    <div class="curation-card-features" style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 16px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
+                      <div class="curation-card-feature-item">
+                        <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
+                        <span><strong>Download Size:</strong> 0 MB (Cloud)</span>
+                      </div>
+                      <div class="curation-card-feature-item">
+                        <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
+                        <span><strong>Hardware Demand:</strong> 0% PC RAM/CPU</span>
+                      </div>
+                      <div class="curation-card-feature-item" style="color: #eab308;">
+                        <i data-lucide="star" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
+                        <span><strong>Curation Quality:</strong> ★★★★★ (Top)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Collapsed Local Offline SLM Models -->
+                  <div style="margin-bottom: 16px;">
+                    <div id="local-slm-toggle" class="collapsible-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(30, 41, 59, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; user-select: none;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="cpu" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
+                        <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);">Offline Local SLM Models (Optional / Advanced)</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="local-slm-toggle-status" style="font-size: 0.7rem; color: var(--text-muted);">Collapsed</span>
+                        <i data-lucide="chevron-right" class="collapse-icon" id="local-slm-toggle-icon" style="transition: transform 0.2s ease;"></i>
                       </div>
                     </div>
 
-                    <!-- Local Qwen 1.5B (Recommended) -->
-                    <div class="curation-engine-card" id="curation-card-local-1.5b" data-engine="local-slm" data-model="1.5b">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="zap" style="width: 18px; height: 18px;"></i>
+                    <div id="local-slm-container" class="hidden" style="margin-top: 10px; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: rgba(15, 23, 42, 0.25);">
+                      <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.45;">
+                        Small language models run 100% offline without API keys, but require downloading multi-gigabyte files and utilize significant local CPU/RAM.
+                      </p>
+                      <div class="curation-card-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 0; margin-bottom: 0;">
+                        <!-- Local Qwen 1.5B -->
+                        <div class="curation-engine-card" id="curation-card-local-1.5b" data-engine="local-slm" data-model="1.5b">
+                          <div>
+                            <div class="curation-card-header">
+                              <div class="curation-card-icon-title">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                                  <i data-lucide="zap" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div class="curation-card-title">Qwen 1.5B (Fast & Smart)</div>
+                              </div>
+                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-1.5b">1.5B Local</span>
                             </div>
-                            <div class="curation-card-title">Qwen 1.5B (Fast & Smart) ⭐</div>
+                            <div class="curation-card-description">
+                              Fast execution with technical English vocabulary. Runs 100% offline without API keys.
+                            </div>
                           </div>
-                          <span class="badge badge-success model-status-badge" style="font-size: 0.68rem;" id="badge-model-1.5b">Recommended</span>
+                          <div class="curation-card-features">
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Download:</strong> ~1.1 GB</span>
+                            </div>
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Demand:</strong> ~1.5 GB RAM</span>
+                            </div>
+                          </div>
                         </div>
-                        <div class="curation-card-description">
-                          Recommended sweet spot for local curation! Excellent technical English vocabulary, fast execution, and strict JSON output. Runs 100% offline without API keys.
-                        </div>
-                      </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> ~1.1 GB (One-time)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> ~1.5 GB RAM (Low)</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: #38bdf8;">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★★★☆ (Great)</span>
-                        </div>
-                      </div>
-                    </div>
 
-                    <!-- Local Qwen 3B (Near Cloud Quality) -->
-                    <div class="curation-engine-card" id="curation-card-local-3b" data-engine="local-slm" data-model="3b">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="brain-circuit" style="width: 18px; height: 18px;"></i>
+                        <!-- Local Qwen 3B (Near Cloud Quality) -->
+                        <div class="curation-engine-card" id="curation-card-local-3b" data-engine="local-slm" data-model="3b">
+                          <div>
+                            <div class="curation-card-header">
+                              <div class="curation-card-icon-title">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                                  <i data-lucide="brain-circuit" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div class="curation-card-title">Qwen 3B (Near-Cloud)</div>
+                              </div>
+                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-3b">3B Local</span>
                             </div>
-                            <div class="curation-card-title">Qwen 3B (Near-Cloud)</div>
+                            <div class="curation-card-description">
+                              High reasoning capacity for complex technical terms and protocol names completely offline.
+                            </div>
                           </div>
-                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-3b">Near-Cloud</span>
+                          <div class="curation-card-features">
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="download" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Download:</strong> ~2.0 GB</span>
+                            </div>
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Demand:</strong> ~2.8 GB RAM</span>
+                            </div>
+                          </div>
                         </div>
-                        <div class="curation-card-description">
-                          High reasoning capacity for complex technical terms, tool names, and protocols. Produces near-cloud quality results completely offline without API rate limits.
-                        </div>
-                      </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="download" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> ~2.0 GB (One-time)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> ~2.8 GB RAM (Medium)</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: #a78bfa;">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★★★½ (High)</span>
-                        </div>
-                      </div>
-                    </div>
 
-                    <!-- Local Qwen 0.5B (Ultra-Lightweight) -->
-                    <div class="curation-engine-card" id="curation-card-local-0.5b" data-engine="local-slm" data-model="0.5b">
-                      <div>
-                        <div class="curation-card-header">
-                          <div class="curation-card-icon-title">
-                            <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                              <i data-lucide="feather" style="width: 18px; height: 18px;"></i>
+                        <!-- Local Qwen 0.5B (Ultra-Lightweight) -->
+                        <div class="curation-engine-card" id="curation-card-local-0.5b" data-engine="local-slm" data-model="0.5b">
+                          <div>
+                            <div class="curation-card-header">
+                              <div class="curation-card-icon-title">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
+                                  <i data-lucide="feather" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div class="curation-card-title">Qwen 0.5B (Ultra-Light)</div>
+                              </div>
+                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-0.5b">0.5B Micro</span>
                             </div>
-                            <div class="curation-card-title">Qwen 0.5B (Ultra-Light)</div>
+                            <div class="curation-card-description">
+                              Smallest, lightweight model for basic offline filtering. Lowest resource demand.
+                            </div>
                           </div>
-                          <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-0.5b">Micro</span>
-                        </div>
-                        <div class="curation-card-description">
-                          Smallest, ultra-fast model for basic offline index cleaning. Lowest resource demand, but basic reasoning capabilities (recommended to review final list).
-                        </div>
-                      </div>
-                      <div class="curation-card-features">
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Download Size:</strong> ~398 MB (One-time)</span>
-                        </div>
-                        <div class="curation-card-feature-item">
-                          <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Hardware Demand:</strong> ~800 MB RAM (Micro)</span>
-                        </div>
-                        <div class="curation-card-feature-item" style="color: var(--text-muted);">
-                          <i data-lucide="star" style="width: 13px; height: 13px; color: var(--text-muted); flex-shrink: 0; margin-top: 1px;"></i>
-                          <span><strong>Curation Quality:</strong> ★★☆☆☆ (Basic)</span>
+                          <div class="curation-card-features">
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Download:</strong> ~398 MB</span>
+                            </div>
+                            <div class="curation-card-feature-item">
+                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
+                              <span><strong>Demand:</strong> ~800 MB RAM</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -977,37 +988,65 @@
                           <span>Lock</span>
                         </button>
                       </div>
+                      <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
+                        <span style="color: var(--color-accent); font-weight: 600;">Suggested:</span> Adding Google's minimum ~$10 billing credit to your Google AI Studio account avoids RPM rate limit delays and unlocks all models. (100% of payment goes directly to Google, not the app developers).
+                      </div>
                     </div>
 
                     <!-- Gemini Model Selection -->
                     <div class="form-group">
-                      <label for="auto-index-model-select">Gemini Model Selection</label>
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <label for="auto-index-model-select" style="margin-bottom: 0;">Gemini Model Selection</label>
+                        <div style="display: inline-flex; align-items: center; gap: 8px;">
+                          <span id="gemini-models-sync-status" style="font-size: 0.7rem; color: var(--text-muted);"></span>
+                          <button type="button" id="refresh-gemini-models-btn" class="btn btn-xs btn-secondary" title="Fetch latest models directly from Google AI" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; font-size: 0.72rem; border-radius: 4px; cursor: pointer;">
+                            <i data-lucide="refresh-cw" id="refresh-gemini-models-icon" style="width: 11px; height: 11px;"></i>
+                            <span>Check for New Models</span>
+                          </button>
+                        </div>
+                      </div>
                       <select id="auto-index-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
-                        <optgroup label="✨ Gemini 3.x Series (Latest Generation)">
-                          <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash (Recommended - Fastest & Most Capable)</option>
-                          <option value="gemini-3.6-flash">Gemini 3.6 Flash (High Performance)</option>
-                          <option value="gemini-3.5-flash">Gemini 3.5 Flash (Preview)</option>
-                          <option value="gemini-3.1-pro">Gemini 3.1 Pro (Deep Reasoning)</option>
-                        </optgroup>
-
-                        <optgroup label="⚡ Gemini 2.x Series (High Speed & High Quotas)">
-                          <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Stable)</option>
-                          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight, Highest RPM)</option>
-                          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced Pro Reasoning)</option>
-                        </optgroup>
-
                         <optgroup label="🔄 Auto-Updating Production Aliases">
-                          <option value="gemini-flash-latest">Gemini Flash Latest (Auto-Updated by Google)</option>
+                          <option value="gemini-flash-latest" selected>Gemini Flash Latest (Auto-Updated by Google)</option>
                           <option value="gemini-pro-latest">Gemini Pro Latest (Auto-Updated by Google)</option>
                         </optgroup>
-
+                        <optgroup label="⚡ Gemini 2.x Series (High Speed)">
+                          <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                          <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast & Stable)</option>
+                          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight)</option>
+                          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Advanced Pro Reasoning)</option>
+                        </optgroup>
+                        <optgroup label="✨ Gemini 3.x Series (Preview)">
+                          <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                          <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                          <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                          <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                        </optgroup>
                         <optgroup label="🏛️ Gemini 1.5 Legacy Series">
                           <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
                           <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
                         </optgroup>
+                        <optgroup label="⚙️ Custom">
+                          <option value="__custom__">+ Enter Custom Model Name...</option>
+                        </optgroup>
                       </select>
                       <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
-                        * Upgrade to paid billing in Google AI Studio for higher quotas, or switch models if you encounter rate limits during peak traffic.
+                        * Models update dynamically from Google Generative AI when your API key is active.
+                      </div>
+                    </div>
+
+                    <!-- Gemini API Quota Tier Selection -->
+                    <div class="form-group" style="margin-top: 14px;">
+                      <label for="auto-index-gemini-tier-select" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span>Google API Quota Tier</span>
+                        <span id="gemini-tier-badge" style="font-size: 0.68rem; padding: 2px 7px; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.3);">Safe Mode (15 RPM)</span>
+                      </label>
+                      <select id="auto-index-gemini-tier-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
+                        <option value="free" selected>🛡️ Free Tier (Safe Mode — 15 RPM Pacing)</option>
+                        <option value="paid">⚡ Paid Tier (Turbo Mode — Parallel Multi-Batch)</option>
+                      </select>
+                      <div id="gemini-tier-description" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; line-height: 1.45;">
+                        • <strong>Free Tier:</strong> Paces requests (~4.5s intervals, 1 batch at a time) to stay safely under Google's 15 requests/min quota. Prevents 429 quota exhaustion and failed chunks.
                       </div>
                     </div>
 
@@ -1026,7 +1065,7 @@
                           Customize system instructions sent to Gemini AI. You can fine-tune inclusion/exclusion rules or add specific terms relevant to your course.
                         </div>
 
-                        <textarea id="gemini-custom-prompt" rows="8" style="width: 100%; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: monospace; font-size: 0.75rem; padding: 10px; line-height: 1.45; resize: vertical; outline: none;"></textarea>
+                        <textarea id="gemini-custom-prompt" class="prompt-editor-textarea" rows="10" placeholder="Customize system instructions sent to Gemini AI..." style="width: 100%; height: 220px; min-height: 180px; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-mono, monospace); font-size: 0.82rem; padding: 12px 14px; line-height: 1.5; resize: vertical; overflow-y: auto; outline: none; box-sizing: border-box;"></textarea>
 
                         <div style="display: flex; justify-content: flex-end;">
                           <button type="button" id="reset-gemini-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
@@ -1062,7 +1101,7 @@
                           Customize system instructions sent to your local model. You can fine-tune inclusion/exclusion rules or add specific terms relevant to your course.
                         </div>
 
-                        <textarea id="local-slm-custom-prompt" rows="8" style="width: 100%; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: monospace; font-size: 0.75rem; padding: 10px; line-height: 1.45; resize: vertical; outline: none;"></textarea>
+                        <textarea id="local-slm-custom-prompt" class="prompt-editor-textarea" rows="10" placeholder="Customize system instructions sent to your local model..." style="width: 100%; height: 220px; min-height: 180px; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-mono, monospace); font-size: 0.82rem; padding: 12px 14px; line-height: 1.5; resize: vertical; overflow-y: auto; outline: none; box-sizing: border-box;"></textarea>
 
                         <div style="display: flex; justify-content: flex-end;">
                           <button type="button" id="reset-local-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
@@ -1076,63 +1115,10 @@
                 </div>
               </div>
 
-              <!-- Step 4: Practice Quiz Setup (Optional) -->
+              <!-- Step 4: Review & API Warnings -->
               <div class="wizard-step-panel hidden" id="step-panel-4">
                 <div style="margin-bottom: 20px;">
-                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 4: Practice Quiz Setup (Optional)</h3>
-                  <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Automatically generate mock questions based on the PDF content.</p>
-                </div>
-                
-                <div style="background: rgba(124, 58, 237, 0.04); border: 1px dashed rgba(124, 58, 237, 0.25); opacity: 0.75; padding: 14px 18px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                  <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-weight: 600; color: #a78bfa; font-size: 0.9rem;">Generate Practice Quiz</span>
-                      <span style="font-size: 0.7rem; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 2px 8px; border-radius: 10px; font-weight: 600;">Feature Coming Soon</span>
-                    </div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">Create multiple-choice questions for the quiz hub</span>
-                  </div>
-                  <label class="switch-toggle" style="cursor: not-allowed;" title="Feature coming soon">
-                    <input type="checkbox" id="auto-index-generate-quiz" disabled>
-                    <span class="slider-toggle" style="cursor: not-allowed; opacity: 0.5;"></span>
-                  </label>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #f87171; border-radius: 4px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45; margin-bottom: 20px;">
-                  <i data-lucide="clock" style="width: 18px; height: 18px; color: #f87171; flex-shrink: 0;"></i>
-                  <span><strong>Feature Coming Soon:</strong> AI Practice Quiz generation is temporarily locked while we optimize the engine for reduced token consumption and local model support.</span>
-                </div>
-
-                <!-- Quiz parameters (Visible only when toggle checked) -->
-                <div id="quiz-generation-settings" class="hidden" style="display: flex; flex-direction: column; gap: 16px;">
-                  <div class="form-group">
-                    <label for="auto-index-quiz-count">Number of Questions</label>
-                    <select id="auto-index-quiz-count" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
-                      <option value="10" selected>10 Questions</option>
-                      <option value="20">20 Questions</option>
-                      <option value="50">50 Questions</option>
-                    </select>
-                  </div>
-                  
-                  <div class="form-group">
-                    <label for="auto-index-quiz-difficulty">Difficulty Level</label>
-                    <select id="auto-index-quiz-difficulty" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; cursor: pointer; outline: none; width: 100%;">
-                      <option value="Conceptual" selected>Conceptual (Definitions, Architecture)</option>
-                      <option value="Practical">Practical (Commands, Tool Syntax, Logs)</option>
-                      <option value="Advanced">Advanced (Scenarios, Attack Vector Analysis)</option>
-                    </select>
-                  </div>
-                  
-                  <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; padding: 10px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                    <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--color-accent); flex-shrink: 0; margin-top: 1px;"></i>
-                    <span>This runs a separate AI generation pass that scans the textbook text, creating tailored cyber-security multiple choice questions.</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Step 5: Review & API Warnings -->
-              <div class="wizard-step-panel hidden" id="step-panel-5">
-                <div style="margin-bottom: 20px;">
-                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 5: Review & API Warnings</h3>
+                  <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: var(--text-primary);">Step 4: Review & API Warnings</h3>
                   <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">Confirm your setup before initiating the extraction pipeline.</p>
                 </div>
                 
@@ -1160,10 +1146,6 @@
                     <div>
                       <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Gemini Model:</span>
                       <strong id="summary-gemini-model" style="color: var(--text-primary);">-</strong>
-                    </div>
-                    <div>
-                      <span style="color: var(--text-muted); display: block; margin-bottom: 2px;">Practice Quiz:</span>
-                      <strong id="summary-quiz-status" style="color: var(--text-primary);">Disabled</strong>
                     </div>
                   </div>
                 </div>
@@ -1329,20 +1311,21 @@
                 <div style="display: inline-flex; align-items: center; gap: 6px;">
                   <span style="font-size: 0.75rem; color: var(--text-secondary);">using</span>
                   <select id="ai-curation-retry-model-select" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.78rem; cursor: pointer; outline: none;">
-                    <optgroup label="✨ Gemini 3.x Series">
-                      <option value="gemini-3.7-flash" selected>Gemini 3.7 Flash</option>
-                      <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
-                      <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                      <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
+                    <optgroup label="🔄 Production Aliases">
+                      <option value="gemini-flash-latest" selected>Gemini Flash Latest</option>
+                      <option value="gemini-pro-latest">Gemini Pro Latest</option>
                     </optgroup>
                     <optgroup label="⚡ Gemini 2.x Series">
+                      <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                       <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                       <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
                       <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                     </optgroup>
-                    <optgroup label="🔄 Production Aliases">
-                      <option value="gemini-flash-latest">Gemini Flash Latest</option>
-                      <option value="gemini-pro-latest">Gemini Pro Latest</option>
+                    <optgroup label="✨ Gemini 3.x Series">
+                      <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                      <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                      <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                      <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
                     </optgroup>
                     <optgroup label="🏛️ Gemini 1.5 Series">
                       <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
@@ -1350,8 +1333,15 @@
                     </optgroup>
                   </select>
                 </div>
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 0.75rem; color: var(--text-secondary);">in</span>
+                  <select id="ai-curation-retry-tier-select" title="API Quota Tier" style="background-color: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.78rem; cursor: pointer; outline: none;">
+                    <option value="free" selected>🛡️ Free Tier (15 RPM Safe)</option>
+                    <option value="paid">⚡ Paid Tier (Turbo)</option>
+                  </select>
+                </div>
                 <span style="font-size: 0.72rem; color: var(--text-muted);">
-                  <strong>Rate Limit Hint:</strong> Google's free tier has a limit of 15 requests per minute.
+                  <strong>Rate Limit Hint:</strong> Free tier safe mode paces requests at ~13 RPM to prevent quota exhaustion.
                 </span>
               </div>
             </div>
@@ -2191,6 +2181,155 @@
     </div>
   </dialog>
 
+  <!-- Revert to Previous Index Version Modal -->
+  <dialog id="revert-version-dialog" class="custom-dialog revert-version-modal">
+    <div class="dialog-content revert-modal-content">
+      
+      <!-- Modal Header -->
+      <div class="revert-modal-header">
+        <div class="revert-modal-title-group">
+          <div class="revert-modal-icon-badge">
+            <i data-lucide="history"></i>
+          </div>
+          <div>
+            <h3 id="revert-modal-title">Revert to Previous Index Version</h3>
+            <p class="dialog-text" id="revert-modal-subtitle">
+              Showing versions for <strong id="revert-modal-course-name" style="color: var(--color-accent);">-</strong>. A safety snapshot is saved before reverting.
+            </p>
+          </div>
+        </div>
+        <button type="button" class="close-dialog-btn revert-close-btn" id="revert-dialog-close-x" title="Close dialog">&times;</button>
+      </div>
+
+      <!-- Course Scope Selector, Search & Refresh Bar -->
+      <div class="revert-controls-bar">
+        <div class="revert-course-filter-group" style="display: flex; align-items: center; gap: 8px;">
+          <label for="revert-course-select" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">Course:</label>
+          <select id="revert-course-select" style="padding: 6px 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 0.82rem; font-weight: 500; outline: none; cursor: pointer; max-width: 220px;">
+            <!-- Populated dynamically with current course selected -->
+          </select>
+        </div>
+        <div class="revert-search-wrapper">
+          <i data-lucide="search" class="revert-search-icon"></i>
+          <input type="text" id="revert-search-input" placeholder="Search versions by date or time...">
+        </div>
+        <button type="button" id="revert-refresh-btn" class="btn btn-secondary btn-sm" title="Refresh backup list">
+          <i data-lucide="refresh-cw"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+
+      <!-- Main Split View -->
+      <div class="revert-split-container">
+        <!-- Left Column: Backups List -->
+        <div class="revert-list-column">
+          <div class="revert-list-header">
+            <span>Available Versions (<span id="revert-version-count">0</span>)</span>
+            <span class="revert-list-tip">Newest first</span>
+          </div>
+          <div id="revert-versions-list" class="revert-versions-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Right Column: Details & Comparison Preview -->
+        <div class="revert-preview-column">
+          <div id="revert-preview-loading" class="revert-preview-state hidden">
+            <div class="spinner"></div>
+            <span>Loading version details...</span>
+          </div>
+          <div id="revert-preview-empty" class="revert-preview-state">
+            <i data-lucide="file-clock" style="width: 36px; height: 36px; opacity: 0.5;"></i>
+            <span>Select a version on the left to preview changes</span>
+          </div>
+          <div id="revert-preview-content" class="revert-preview-content hidden">
+            
+            <!-- Version Header Card -->
+            <div class="revert-preview-header">
+              <div>
+                <div class="revert-preview-timestamp" id="revert-preview-timestamp">-</div>
+                <div class="revert-preview-age" id="revert-preview-age">-</div>
+              </div>
+              <div id="revert-preview-badges" class="revert-preview-badges">
+                <!-- Badges dynamically added -->
+              </div>
+            </div>
+
+            <!-- Comparison Stats Grid -->
+            <div class="revert-stats-grid">
+              <div class="revert-stat-box">
+                <span class="revert-stat-label">Total Terms</span>
+                <div class="revert-stat-val-group">
+                  <span class="revert-stat-curr" id="revert-stat-curr-entries">0</span>
+                  <i data-lucide="arrow-right" class="revert-stat-arrow"></i>
+                  <span class="revert-stat-target" id="revert-stat-target-entries">0</span>
+                </div>
+                <span id="revert-entries-delta-badge" class="badge">0</span>
+              </div>
+              <div class="revert-stat-box">
+                <span class="revert-stat-label">Entries with Notes</span>
+                <div class="revert-stat-val-group">
+                  <span class="revert-stat-curr" id="revert-stat-curr-notes">0</span>
+                  <i data-lucide="arrow-right" class="revert-stat-arrow"></i>
+                  <span class="revert-stat-target" id="revert-stat-target-notes">0</span>
+                </div>
+                <span id="revert-notes-delta-badge" class="badge">0</span>
+              </div>
+              <div class="revert-stat-box">
+                <span class="revert-stat-label">Active Course</span>
+                <div class="revert-stat-val-course" id="revert-stat-course-name">-</div>
+                <span class="revert-stat-sub" id="revert-stat-course-entries">0 entries</span>
+              </div>
+            </div>
+
+            <!-- Book Breakdown Table -->
+            <div class="revert-breakdown-section">
+              <div class="revert-breakdown-title">
+                <span>Active Course Book Breakdown</span>
+                <span class="revert-breakdown-sub">Terms and Notes count per book</span>
+              </div>
+              <div class="revert-breakdown-table-wrapper">
+                <table class="revert-breakdown-table">
+                  <thead>
+                    <tr>
+                      <th>Book</th>
+                      <th style="text-align: right;">Current (Terms / Notes)</th>
+                      <th style="text-align: right;">This Version</th>
+                      <th style="text-align: right;">Change</th>
+                    </tr>
+                  </thead>
+                  <tbody id="revert-breakdown-tbody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Safeguard Notice Banner -->
+      <div class="revert-safeguard-banner">
+        <i data-lucide="shield-check" class="revert-safeguard-icon"></i>
+        <div class="revert-safeguard-text">
+          <strong>Safe Revert Guarantee:</strong>
+          Before reverting, your current database is automatically preserved as a <em>Pre-Revert Safety Snapshot</em>. Reverting restores only the selected course, keeping your other courses untouched.
+        </div>
+      </div>
+
+      <!-- Footer Actions -->
+      <div class="dialog-actions revert-dialog-actions">
+        <button type="button" class="btn btn-secondary close-dialog-btn" id="revert-cancel-btn">Cancel</button>
+        <button type="button" id="confirm-revert-btn" class="btn btn-accent" disabled>
+          <i data-lucide="rotate-ccw"></i>
+          <span id="confirm-revert-btn-label">Revert Course to Selected Version</span>
+        </button>
+      </div>
+
+    </div>
+  </dialog>
+
   <!-- PDF Index AI Parsing Loading Dialog -->
   <dialog id="pdf-index-loading-dialog" class="custom-dialog" style="max-width: 480px; text-align: center; padding: 32px 24px;">
     <div class="dialog-content" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
@@ -2404,69 +2543,85 @@
   </dialog>
 
   <!-- Gemini API Key Guide Modal -->
-  <dialog id="api-key-guide-modal" class="custom-dialog" style="max-width: 520px;">
+  <dialog id="api-key-guide-modal" class="custom-dialog" style="max-width: 520px; width: 90vw;">
     <div class="dialog-content">
-      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+      <!-- Modal Header (Fixed) -->
+      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px; flex-shrink: 0;">
         <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary); border-bottom: none; padding-bottom: 0;">
           <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
             <i data-lucide="key" style="width: 16px; height: 16px;"></i>
           </div>
           <span>How to Get a Free Gemini API Key</span>
         </h3>
-        <button type="button" id="api-key-guide-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
+        <button type="button" id="api-key-guide-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;" title="Close dialog">
           <i data-lucide="x" style="width: 18px; height: 18px;"></i>
         </button>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+      <!-- Scrollable Steps & Recommendations Body -->
+      <div class="guide-modal-scroll">
         <!-- Step 1 -->
-        <div style="display: flex; gap: 12px; align-items: flex-start;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">1</div>
-          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">1</div>
+          <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">
             <strong style="color: var(--text-primary);">Open Google AI Studio:</strong><br>
             Open <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #38bdf8; text-decoration: underline;">Google AI Studio</a> and sign in with your Google account.
           </div>
         </div>
 
         <!-- Step 2 -->
-        <div style="display: flex; gap: 12px; align-items: flex-start;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">2</div>
-          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">2</div>
+          <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">
             <strong style="color: var(--text-primary);">Create your API Key:</strong><br>
-            Click the blue <strong style="color: var(--text-primary);">"Create API key"</strong> button. Select or create a project (name it anything you like, e.g. <em>"SANS Indexer"</em>).
+            Click the blue <strong style="color: var(--text-primary);">"Create API key"</strong> button. Select or create a project (e.g. <em>"SANS Indexer"</em>).
           </div>
         </div>
 
         <!-- Step 3 -->
-        <div style="display: flex; gap: 12px; align-items: flex-start;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">3</div>
-          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">3</div>
+          <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">
             <strong style="color: var(--text-primary);">Copy the key:</strong><br>
             Click the <strong style="color: var(--text-primary);">"Copy"</strong> button next to your new API key string.
           </div>
         </div>
 
         <!-- Step 4 -->
-        <div style="display: flex; gap: 12px; align-items: flex-start;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">4</div>
-          <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.45;">
+        <div style="display: flex; gap: 10px; align-items: flex-start;">
+          <div style="width: 22px; height: 22px; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; font-weight: 700; font-size: 0.78rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">4</div>
+          <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.45;">
             <strong style="color: var(--text-primary);">Paste & Lock in App:</strong><br>
             Paste the copied key into the <strong style="color: var(--text-primary);">Gemini API Key</strong> box in this app, then click <strong style="color: var(--text-primary);">Lock</strong>.
           </div>
         </div>
 
-        <!-- Tip Box -->
-        <div style="background: rgba(234, 179, 8, 0.08); border: 1px solid rgba(234, 179, 8, 0.25); border-radius: 6px; padding: 10px 14px; font-size: 0.78rem; color: #fef08a; line-height: 1.45;">
-          <strong>💡 Pro Tip:</strong> Google provides generous free tier quotas! If you ever run into high traffic rate limits during peak usage, you can enable paid billing in AI Studio for higher limits across all Gemini models.
+        <!-- Recommended $10 Credit Box -->
+        <div style="background: rgba(20, 184, 166, 0.08); border: 1px solid rgba(20, 184, 166, 0.3); border-radius: 8px; padding: 10px 12px; font-size: 0.78rem; line-height: 1.45; color: var(--text-secondary);">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px;">
+            <i data-lucide="zap" style="width: 14px; height: 14px; color: var(--color-accent); flex-shrink: 0;"></i>
+            <strong style="color: var(--color-accent); font-size: 0.82rem;">Suggested: Optional $10 Google Credit (Pay-As-You-Go)</strong>
+          </div>
+          <p style="margin: 0 0 6px 0;">
+            Google offers a generous free tier (15 requests/min), but adding Google's minimum credit (approx. $10) to your Google AI Studio account is <strong>strongly recommended</strong>:
+          </p>
+          <ul style="margin: 0 0 6px 16px; padding: 0;">
+            <li><strong>Prevents RPM Rate Limits:</strong> Eliminates traffic rate limits and 429 quota delays when auto-indexing large books.</li>
+            <li><strong>Unlocks All Gemini Models:</strong> Provides immediate access to high-speed Flash & Pro reasoning models.</li>
+          </ul>
+          <div style="background: rgba(255, 255, 255, 0.05); border-radius: 4px; padding: 6px 8px; font-size: 0.72rem; color: var(--text-muted); border-left: 3px solid var(--color-accent); margin-top: 5px; line-height: 1.4;">
+            <strong>Note on Payments:</strong> 100% of this money goes directly to Google for API token usage, <em>not to the developers of this app</em>. SANS Study Indexer is 100% free to use. Adding credit is purely optional, never required, but suggested for heavy indexing.
+          </div>
         </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px;">
-        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem;">
+      <!-- Modal Footer (Fixed at Bottom) -->
+      <div class="guide-modal-footer">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; padding: 7px 14px;">
           <i data-lucide="external-link" style="width: 14px; height: 14px;"></i>
           <span>Open Google AI Studio</span>
         </a>
-        <button type="button" id="api-key-guide-close-btn" class="btn btn-accent">Got it!</button>
+        <button type="button" id="api-key-guide-close-btn" class="btn btn-accent" style="padding: 7px 20px;">Got it!</button>
       </div>
     </div>
   </dialog>
