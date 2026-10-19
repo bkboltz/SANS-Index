@@ -173,6 +173,27 @@ const elements = {
   acronymReviewTableBody: document.getElementById('acronym-review-table-body'),
   confirmAcronymReviewBtn: document.getElementById('confirm-acronym-review-btn'),
 
+  // Apply Acronym Definitions Review Dialog
+  applyAcronymsConfirmDialog: document.getElementById('apply-acronyms-confirm-dialog'),
+  applyAcronymsCount: document.getElementById('apply-acronyms-count'),
+  applyAcronymsSelectAllBtn: document.getElementById('apply-acronyms-select-all-btn'),
+  applyAcronymsDeselectAllBtn: document.getElementById('apply-acronyms-deselect-all-btn'),
+  applyAcronymsHeaderCheckbox: document.getElementById('apply-acronyms-header-checkbox'),
+  applyAcronymsTableBody: document.getElementById('apply-acronyms-table-body'),
+  confirmApplyAcronymsBtn: document.getElementById('confirm-apply-acronyms-btn'),
+
+  // Import Class Acronyms Dialog
+  importClassAcronymsBtn: document.getElementById('import-class-acronyms-btn'),
+  importClassAcronymsDialog: document.getElementById('import-class-acronyms-dialog'),
+  importAcronymsSourceCourseSelect: document.getElementById('import-acronyms-source-course-select'),
+  importAcronymsSkipDuplicates: document.getElementById('import-acronyms-skip-duplicates'),
+  importClassAcronymsCount: document.getElementById('import-class-acronyms-count'),
+  importClassAcronymsSelectAllBtn: document.getElementById('import-class-acronyms-select-all-btn'),
+  importClassAcronymsDeselectAllBtn: document.getElementById('import-class-acronyms-deselect-all-btn'),
+  importClassAcronymsHeaderCheckbox: document.getElementById('import-class-acronyms-header-checkbox'),
+  importClassAcronymsTableBody: document.getElementById('import-class-acronyms-table-body'),
+  confirmImportClassAcronymsBtn: document.getElementById('confirm-import-class-acronyms-btn'),
+
   // Sidebar To-Do
   todoInput: document.getElementById('todo-input'),
   addTodoBtn: document.getElementById('add-todo-btn'),
@@ -333,6 +354,11 @@ const elements = {
   pdfReviewFilterMenu: document.getElementById('pdf-review-filter-menu'),
   pdfReviewBypassCapToggle: document.getElementById('pdf-review-bypass-cap-toggle'),
   pdfIndexLoadingDialog: document.getElementById('pdf-index-loading-dialog'),
+  pdfIndexCandidateInfo: document.getElementById('pdf-index-candidate-info'),
+  pdfIndexProgressContainer: document.getElementById('pdf-index-progress-container'),
+  pdfIndexProgressStatus: document.getElementById('pdf-index-progress-status'),
+  pdfIndexProgressPercent: document.getElementById('pdf-index-progress-percent'),
+  pdfIndexProgressBar: document.getElementById('pdf-index-progress-bar'),
   pdfFunFactText: document.getElementById('pdf-fun-fact-text'),
 
   // AI Same Items & Double Confirmation elements
@@ -340,9 +366,20 @@ const elements = {
   combineSameItemsSetupDialog: document.getElementById('combine-same-items-setup-dialog'),
   combineAiKeyRow: document.getElementById('combine-ai-key-row'),
   combineAiGeminiKey: document.getElementById('combine-ai-gemini-key'),
+  combineConcurrencyContainer: document.getElementById('combine-concurrency-container'),
+  combineStatsSummary: document.getElementById('combine-stats-summary'),
+  combineConcurrencySelect: document.getElementById('combine-concurrency-select'),
+  combineWaveCalcText: document.getElementById('combine-wave-calc-text'),
+  combineWaveEstimateText: document.getElementById('combine-wave-estimate-text'),
+  combineWarningBox: document.getElementById('combine-warning-box'),
   startCombineAiBtn: document.getElementById('start-combine-ai-btn'),
+  startCombineBtnText: document.getElementById('start-combine-btn-text'),
   sameItemsReviewDialog: document.getElementById('same-items-review-dialog'),
   sameItemsSummaryText: document.getElementById('same-items-review-summary-text'),
+  sameItemsSourceFilters: document.getElementById('same-items-source-filters'),
+  sameItemsFilterCountAll: document.getElementById('same-items-filter-count-all'),
+  sameItemsFilterCountAi: document.getElementById('same-items-filter-count-ai'),
+  sameItemsFilterCountRule: document.getElementById('same-items-filter-count-rule'),
   sameItemsTableBody: document.getElementById('same-items-table-body'),
   sameItemsHeaderCheckbox: document.getElementById('same-items-header-checkbox'),
   sameItemsSelectAllBtn: document.getElementById('same-items-select-all-btn'),
@@ -422,7 +459,150 @@ const elements = {
   updateProgressView: document.getElementById('update-progress-view'),
   updateProgressText: document.getElementById('update-progress-text'),
   updateProgressBar: document.getElementById('update-progress-bar'),
-  updateBellBtn: document.getElementById('update-bell-btn')
+  updateBellBtn: document.getElementById('update-bell-btn'),
+
+  // Global In-App Alert Dialog
+  appAlertDialog: document.getElementById('app-alert-dialog'),
+  appAlertTitle: document.getElementById('app-alert-title'),
+  appAlertMessage: document.getElementById('app-alert-message'),
+  appAlertOkBtn: document.getElementById('app-alert-ok-btn'),
+  appAlertIconContainer: document.getElementById('app-alert-icon-container'),
+  appAlertIcon: document.getElementById('app-alert-icon')
+};
+
+// ==========================================================================
+// IN-APP DOM ALERT SYSTEM (Replaces native window.alert to prevent Windows focus bug)
+// ==========================================================================
+const alertQueue = [];
+let isAlertOpen = false;
+
+function showInAppAlert(message, customTitle = null) {
+  const msgStr = (message !== undefined && message !== null) ? String(message) : '';
+
+  if (isAlertOpen) {
+    alertQueue.push({ message: msgStr, title: customTitle });
+    return;
+  }
+
+  const dialog = elements.appAlertDialog || document.getElementById('app-alert-dialog');
+  if (!dialog) {
+    console.warn('[InAppAlert] Dialog element not found. Fallback to console:', msgStr);
+    return;
+  }
+
+  isAlertOpen = true;
+
+  const titleEl = elements.appAlertTitle || document.getElementById('app-alert-title');
+  const msgEl = elements.appAlertMessage || document.getElementById('app-alert-message');
+  const iconContainer = elements.appAlertIconContainer || document.getElementById('app-alert-icon-container');
+  const iconEl = elements.appAlertIcon || document.getElementById('app-alert-icon');
+  const okBtn = elements.appAlertOkBtn || document.getElementById('app-alert-ok-btn');
+
+  // Determine alert type based on message text
+  const lower = msgStr.toLowerCase();
+  let type = 'info';
+  let defaultTitle = 'Notice';
+
+  if (lower.includes('error') || lower.includes('failed') || lower.includes('could not')) {
+    type = 'error';
+    defaultTitle = 'Error';
+  } else if (lower.includes('warning') || lower.includes('caution') || lower.includes('notice:')) {
+    type = 'warning';
+    defaultTitle = 'Warning';
+  } else if (lower.includes('success') || lower.includes('imported') || lower.includes('completed') || lower.includes('saved')) {
+    type = 'success';
+    defaultTitle = 'Success';
+  }
+
+  if (titleEl) {
+    titleEl.textContent = customTitle || defaultTitle;
+  }
+
+  if (msgEl) {
+    msgEl.textContent = msgStr;
+  }
+
+  if (iconContainer && iconEl) {
+    if (type === 'error') {
+      iconContainer.style.background = 'rgba(239, 68, 68, 0.15)';
+      iconContainer.style.color = '#f87171';
+      iconEl.setAttribute('data-lucide', 'alert-circle');
+    } else if (type === 'warning') {
+      iconContainer.style.background = 'rgba(245, 158, 11, 0.15)';
+      iconContainer.style.color = '#fbbf24';
+      iconEl.setAttribute('data-lucide', 'alert-triangle');
+    } else if (type === 'success') {
+      iconContainer.style.background = 'rgba(16, 185, 129, 0.15)';
+      iconContainer.style.color = '#34d399';
+      iconEl.setAttribute('data-lucide', 'check-circle');
+    } else {
+      iconContainer.style.background = 'rgba(59, 130, 246, 0.15)';
+      iconContainer.style.color = '#60a5fa';
+      iconEl.setAttribute('data-lucide', 'info');
+    }
+
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+      window.lucide.createIcons({
+        attrs: { class: 'lucide-icon' },
+        nameAttr: 'data-lucide',
+        nodeList: [iconEl]
+      });
+    }
+  }
+
+  const closeAlert = () => {
+    dialog.removeEventListener('close', handleDialogClose);
+    if (okBtn) okBtn.removeEventListener('click', handleOkClick);
+    dialog.removeEventListener('keydown', handleKeydown);
+
+    if (dialog.open) {
+      dialog.close();
+    }
+    isAlertOpen = false;
+
+    // If more alerts queued, display the next one
+    if (alertQueue.length > 0) {
+      const next = alertQueue.shift();
+      setTimeout(() => {
+        showInAppAlert(next.message, next.title);
+      }, 50);
+    }
+  };
+
+  const handleOkClick = (e) => {
+    e.preventDefault();
+    closeAlert();
+  };
+
+  const handleDialogClose = () => {
+    closeAlert();
+  };
+
+  const handleKeydown = (e) => {
+    if (e.key === 'Enter' || e.key === 'Escape') {
+      e.preventDefault();
+      closeAlert();
+    }
+  };
+
+  if (okBtn) {
+    okBtn.addEventListener('click', handleOkClick, { once: true });
+  }
+  dialog.addEventListener('close', handleDialogClose, { once: true });
+  dialog.addEventListener('keydown', handleKeydown);
+
+  try {
+    dialog.showModal();
+    if (okBtn) okBtn.focus();
+  } catch (err) {
+    console.error('[InAppAlert] Error showing modal:', err);
+    isAlertOpen = false;
+  }
+}
+
+// Override global window.alert to always route through in-app DOM modal
+window.alert = function(message) {
+  showInAppAlert(message);
 };
 
 // Application State Store
@@ -1351,14 +1531,7 @@ function renderEntries() {
   const query = elements.tableSearchInput.value.toLowerCase().trim();
   if (query) {
     activeEntries = activeEntries.filter(entry => {
-      const book = state.books.find(b => b && b.id === entry.bookId);
-      const bookName = book ? book.name.toLowerCase() : '';
-      return (
-        entry.topic.toLowerCase().includes(query) ||
-        (entry.notes && entry.notes.toLowerCase().includes(query)) ||
-        isPageMatch(entry.pages, query) ||
-        bookName.includes(query)
-      );
+      return entry.topic && entry.topic.toLowerCase().includes(query);
     });
   }
   
@@ -1645,14 +1818,7 @@ function updateMultiDeleteBarState(activeEntries) {
     const query = elements.tableSearchInput.value.toLowerCase().trim();
     if (query) {
       currentActive = currentActive.filter(entry => {
-        const book = state.books.find(b => b && b.id === entry.bookId);
-        const bookName = book ? book.name.toLowerCase() : '';
-        return (
-          entry.topic.toLowerCase().includes(query) ||
-          (entry.notes && entry.notes.toLowerCase().includes(query)) ||
-          isPageMatch(entry.pages, query) ||
-          bookName.includes(query)
-        );
+        return entry.topic && entry.topic.toLowerCase().includes(query);
       });
     }
     activeEntries = currentActive;
@@ -3506,6 +3672,10 @@ async function initiatePdfIndexParse() {
 
   // Close the import dialog and show the dedicated loading dialog
   elements.importDialog.close();
+  if (elements.pdfIndexCandidateInfo) {
+    elements.pdfIndexCandidateInfo.style.display = 'none';
+    elements.pdfIndexCandidateInfo.innerHTML = '';
+  }
   if (elements.pdfIndexLoadingDialog) {
     const titleEl = elements.pdfIndexLoadingDialog.querySelector('h3');
     const subtextEl = elements.pdfIndexLoadingDialog.querySelector('p');
@@ -3516,12 +3686,24 @@ async function initiatePdfIndexParse() {
   }
   startFunFactsRotation();
 
+  // Reset and prepare progress elements
+  if (elements.pdfIndexProgressStatus) elements.pdfIndexProgressStatus.textContent = parseMode === 'sans-fast' ? 'Reading PDF locally...' : 'Initializing AI Parser...';
+  if (elements.pdfIndexProgressPercent) elements.pdfIndexProgressPercent.textContent = '0%';
+  if (elements.pdfIndexProgressBar) elements.pdfIndexProgressBar.style.width = '0%';
+
   // Listen for live parsing progress
   let removeProgressListener = null;
-  if (window.api && typeof window.api.onPdfParseProgress === 'function') {
-    removeProgressListener = window.api.onPdfParseProgress((event, data) => {
-      if (elements.pdfFunFactText && data.message) {
-        elements.pdfFunFactText.textContent = `${data.message} (${data.percent}%)`;
+  if (window.api && typeof window.api.onPdfImportProgress === 'function') {
+    removeProgressListener = window.api.onPdfImportProgress((data) => {
+      if (!data) return;
+      if (elements.pdfIndexProgressStatus && data.message) {
+        elements.pdfIndexProgressStatus.textContent = data.message;
+      }
+      if (elements.pdfIndexProgressPercent && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressPercent.textContent = `${data.percent}%`;
+      }
+      if (elements.pdfIndexProgressBar && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressBar.style.width = `${Math.min(100, Math.max(0, data.percent))}%`;
       }
     });
   }
@@ -3830,8 +4012,37 @@ async function commitImportSelectedEntries() {
 // AI SAME ITEMS CONSOLIDATION LOGIC (Option 1: Single-Pass Full Context)
 // ==========================================================================
 let sameItemsProposals = [];
+let currentCombineTotalBatches = 1;
 
-function openCombineSameItemsSetupDialog() {
+function updateWaveTimingDisplay() {
+  if (!elements.combineConcurrencySelect) return;
+  const concurrency = parseInt(elements.combineConcurrencySelect.value, 10) || 4;
+  const totalBatches = currentCombineTotalBatches || 1;
+  const waves = Math.ceil(totalBatches / concurrency);
+
+  if (elements.combineWaveCalcText) {
+    elements.combineWaveCalcText.textContent = `Waves = ⌈Total Batches (${totalBatches}) ÷ Batches at once (${concurrency})⌉ = ${waves} wave(s)`;
+  }
+
+  if (elements.combineWaveEstimateText) {
+    let estTime = '';
+    if (waves === 1) {
+      estTime = '~35–45 seconds';
+    } else if (waves === 2) {
+      estTime = '~1 min 15 sec';
+    } else {
+      const minMins = Math.round((waves * 35 / 60) * 10) / 10;
+      const maxMins = Math.round((waves * 45 / 60) * 10) / 10;
+      estTime = `~${minMins}–${maxMins} minutes`;
+    }
+    elements.combineWaveEstimateText.innerHTML = `
+      Each wave takes <strong>~35–45 seconds</strong> for Gemini to evaluate.<br>
+      Estimated total analysis time: <strong style="color: #38bdf8;">${estTime}</strong>.
+    `;
+  }
+}
+
+async function openCombineSameItemsSetupDialog() {
   const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
   if (courseEntries.length === 0) {
     alert("No index entries found in current course to combine.");
@@ -3857,19 +4068,159 @@ function openCombineSameItemsSetupDialog() {
   lucide.createIcons();
   renderAll();
 
-  const storedKey = localStorage.getItem('gemini_api_key') || '';
-  if (!storedKey && elements.combineAiKeyRow) {
-    elements.combineAiKeyRow.style.display = 'block';
-  } else if (elements.combineAiKeyRow) {
-    elements.combineAiKeyRow.style.display = 'none';
-  }
+  // Read current mode selection
+  const selectedRadio = document.querySelector('input[name="combine-mode"]:checked');
+  const mode = selectedRadio ? selectedRadio.value : 'both';
+  updateCombineModeUI(mode);
 
+  // Show setup modal immediately
   if (elements.combineSameItemsSetupDialog) {
     elements.combineSameItemsSetupDialog.showModal();
+  }
+  lucide.createIcons();
+
+  await refreshCombineStats(mode);
+}
+
+function updateCombineModeUI(mode) {
+  const warningBox = elements.combineWarningBox || document.getElementById('combine-warning-box');
+  const keyRow = elements.combineAiKeyRow;
+  const concurrencySelectGroup = elements.combineConcurrencySelect ? elements.combineConcurrencySelect.closest('.form-group') : null;
+  const waveTimingCard = document.getElementById('combine-wave-timing-card');
+  const btnText = elements.startCombineBtnText || document.getElementById('start-combine-btn-text');
+  const storedKey = localStorage.getItem('gemini_api_key') || '';
+
+  if (mode === 'rule-only') {
+    if (warningBox) {
+      warningBox.innerHTML = `<strong>⚡ Instant Rule-Based Mode:</strong> Evaluates candidate index entries using page overlap and title keyword rules. Runs entirely offline on your computer &mdash; no Gemini API key or quota used.`;
+      warningBox.style.background = 'rgba(16, 185, 129, 0.12)';
+      warningBox.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      warningBox.style.color = '#34d399';
+    }
+    if (keyRow) keyRow.style.display = 'none';
+    if (concurrencySelectGroup) concurrencySelectGroup.style.display = 'none';
+    if (waveTimingCard) waveTimingCard.style.display = 'none';
+    if (btnText) btnText.textContent = 'Run Rule-Based Consolidation';
+  } else if (mode === 'ai-only') {
+    if (warningBox) {
+      warningBox.innerHTML = `<strong>⚠️ AI-Only Mode:</strong> Evaluates all candidate pairs exclusively through Gemini AI using your personal API key. You will review all proposals before changes are saved.`;
+      warningBox.style.background = 'rgba(245, 158, 11, 0.12)';
+      warningBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      warningBox.style.color = '#fbbf24';
+    }
+    if (keyRow) keyRow.style.display = storedKey ? 'none' : 'block';
+    if (concurrencySelectGroup) concurrencySelectGroup.style.display = 'block';
+    if (waveTimingCard) waveTimingCard.style.display = 'block';
+    if (btnText) btnText.textContent = 'Start AI Analysis';
+  } else {
+    // 'both'
+    if (warningBox) {
+      warningBox.innerHTML = `<strong>⚠️ Hybrid Mode (Recommended):</strong> High-confidence overlapping pairs are auto-combined, and remaining candidates are evaluated by Gemini AI. Uses your personal API key. You will review all proposals before changes are saved.`;
+      warningBox.style.background = 'rgba(245, 158, 11, 0.12)';
+      warningBox.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      warningBox.style.color = '#fbbf24';
+    }
+    if (keyRow) keyRow.style.display = storedKey ? 'none' : 'block';
+    if (concurrencySelectGroup) concurrencySelectGroup.style.display = 'block';
+    if (waveTimingCard) waveTimingCard.style.display = 'block';
+    if (btnText) btnText.textContent = 'Start Consolidation';
+  }
+}
+
+async function refreshCombineStats(mode = 'both') {
+  if (elements.combineStatsSummary) {
+    elements.combineStatsSummary.textContent = 'Scanning candidate pairs...';
+  }
+
+  const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+  const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym);
+
+  const mappedEntries = courseEntries.map(e => {
+    const matchedBook = activeBooks.find(b => b.id === e.bookId);
+    let bookNum = 1;
+    if (matchedBook) {
+      const m = matchedBook.name.match(/(\d+)/);
+      if (m) bookNum = parseInt(m[1], 10);
+    }
+    return {
+      id: e.id,
+      topic: e.topic,
+      bookNum,
+      pages: e.pages
+    };
+  });
+
+  if (window.api && typeof window.api.getCombineCandidateStats === 'function') {
+    try {
+      const stats = await window.api.getCombineCandidateStats({
+        entries: mappedEntries,
+        acronyms: courseAcronyms.map(a => ({ acronym: a.acronym, term: a.term || '' })),
+        mode
+      });
+
+      if (stats && stats.success) {
+        currentCombineTotalBatches = stats.totalBatches || 0;
+        if (elements.combineStatsSummary) {
+          if (mode === 'rule-only') {
+            elements.combineStatsSummary.textContent = `${(stats.autoPairs || 0).toLocaleString()} rule-matched pairs ready to consolidate (Instant)`;
+          } else if (mode === 'ai-only') {
+            elements.combineStatsSummary.textContent = `${(stats.geminiPairs || stats.totalPairs).toLocaleString()} pairs across ${stats.totalBatches} AI batch(es)`;
+          } else {
+            const aiCount = (stats.geminiPairs || 0).toLocaleString();
+            const ruleCount = (stats.autoPairs || 0).toLocaleString();
+            elements.combineStatsSummary.textContent = `${aiCount} AI pairs (${ruleCount} auto-combined) across ${stats.totalBatches} batch(es)`;
+          }
+        }
+
+        if (elements.combineConcurrencySelect && mode !== 'rule-only') {
+          elements.combineConcurrencySelect.innerHTML = '';
+          const maxConcurrency = Math.max(1, Math.min(15, stats.totalBatches || 1));
+
+          for (let i = 1; i <= maxConcurrency; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            if (i === 4) {
+              opt.textContent = `4 Batches at once (Recommended for Free Tier - safe from 15 RPM limit)`;
+            } else if (i === 8) {
+              opt.textContent = `8 Batches at once (Paid Tier - Balanced)`;
+            } else if (i === 12) {
+              opt.textContent = `12 Batches at once (Paid Tier)`;
+            } else {
+              opt.textContent = `${i} Batch${i > 1 ? 'es' : ''} at once`;
+            }
+            elements.combineConcurrencySelect.appendChild(opt);
+          }
+
+          // Restore previously chosen preference or default based on tier
+          const savedPref = parseInt(localStorage.getItem('combine_concurrency'), 10);
+          if (savedPref && savedPref >= 1 && savedPref <= maxConcurrency) {
+            elements.combineConcurrencySelect.value = savedPref;
+          } else if (maxConcurrency >= 8) {
+            elements.combineConcurrencySelect.value = 8;
+          } else if (maxConcurrency >= 4) {
+            elements.combineConcurrencySelect.value = 4;
+          } else {
+            elements.combineConcurrencySelect.value = maxConcurrency;
+          }
+
+          updateWaveTimingDisplay();
+          if (window.lucide) lucide.createIcons();
+        }
+      }
+    } catch (err) {
+      console.warn('[Same Items] Pre-calculation error:', err);
+      if (elements.combineStatsSummary) {
+        elements.combineStatsSummary.textContent = 'Auto-batching ready';
+      }
+    }
   }
 }
 
 async function startCombineSameItemsAI() {
+  const selectedRadio = document.querySelector('input[name="combine-mode"]:checked');
+  const mode = selectedRadio ? selectedRadio.value : 'both';
+
   const storedKey = localStorage.getItem('gemini_api_key') || '';
   let apiKey = storedKey;
 
@@ -3878,26 +4229,74 @@ async function startCombineSameItemsAI() {
     localStorage.setItem('gemini_api_key', apiKey);
   }
 
-  if (!apiKey) {
+  if (mode !== 'rule-only' && !apiKey) {
     alert("Please enter a valid Gemini API Key to run AI consolidation.");
     return;
+  }
+
+  const chosenConcurrency = elements.combineConcurrencySelect ? parseInt(elements.combineConcurrencySelect.value, 10) || 4 : 4;
+  if (mode !== 'rule-only') {
+    localStorage.setItem('combine_concurrency', chosenConcurrency);
   }
 
   if (elements.combineSameItemsSetupDialog) {
     elements.combineSameItemsSetupDialog.close();
   }
 
+  if (elements.pdfIndexCandidateInfo) {
+    elements.pdfIndexCandidateInfo.style.display = 'none';
+    elements.pdfIndexCandidateInfo.innerHTML = '';
+  }
+
   if (elements.pdfIndexLoadingDialog) {
     const titleEl = elements.pdfIndexLoadingDialog.querySelector('h3');
     const subtextEl = elements.pdfIndexLoadingDialog.querySelector('p');
-    if (titleEl) titleEl.textContent = 'Combining Same Items with Gemini AI...';
-    if (subtextEl) subtextEl.textContent = 'Analyzing topics across your index to group equivalent terms. This can take a few minutes.';
+    if (mode === 'rule-only') {
+      if (titleEl) titleEl.textContent = 'Running Rule-Based Consolidation...';
+      if (subtextEl) subtextEl.textContent = 'Evaluating index entries against overlap and keyword rules...';
+    } else {
+      if (titleEl) titleEl.textContent = 'Combining Same Items with Gemini AI...';
+      if (subtextEl) subtextEl.textContent = 'Analyzing topics across your index to group equivalent terms. This can take a few minutes.';
+    }
     elements.pdfIndexLoadingDialog.showModal();
   }
   startFunFactsRotation();
 
+  if (elements.pdfIndexProgressStatus) {
+    elements.pdfIndexProgressStatus.textContent = mode === 'rule-only' ? 'Applying rules...' : 'Initializing AI Analysis...';
+  }
+  if (elements.pdfIndexProgressPercent) elements.pdfIndexProgressPercent.textContent = '0%';
+  if (elements.pdfIndexProgressBar) elements.pdfIndexProgressBar.style.width = '0%';
+
+  let removeProgressListener = null;
+  if (window.api && typeof window.api.onPdfImportProgress === 'function') {
+    removeProgressListener = window.api.onPdfImportProgress((data) => {
+      if (!data) return;
+      if (elements.pdfIndexProgressStatus && data.message) {
+        elements.pdfIndexProgressStatus.textContent = data.message;
+      }
+      if (elements.pdfIndexProgressPercent && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressPercent.textContent = `${data.percent}%`;
+      }
+      if (elements.pdfIndexProgressBar && typeof data.percent !== 'undefined') {
+        elements.pdfIndexProgressBar.style.width = `${Math.min(100, Math.max(0, data.percent))}%`;
+      }
+      if (elements.pdfIndexCandidateInfo && typeof data.candidatePairsCount !== 'undefined') {
+        elements.pdfIndexCandidateInfo.style.display = 'block';
+        elements.pdfIndexCandidateInfo.innerHTML = `
+          <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 9999px; font-size: 0.8rem; color: #38bdf8; font-weight: 500;">
+            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+            <span>Candidate Entry Pairs Passed to Gemini: <strong style="color: #ffffff; font-weight: 700;">${data.candidatePairsCount.toLocaleString()}</strong></span>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+      }
+    });
+  }
+
   const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
   const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.acronym);
 
   const mappedEntries = courseEntries.map(e => {
     const matchedBook = activeBooks.find(b => b.id === e.bookId);
@@ -3917,22 +4316,36 @@ async function startCombineSameItemsAI() {
   try {
     const result = await window.api.combineSameItems({
       entries: mappedEntries,
+      acronyms: courseAcronyms.map(a => ({ acronym: a.acronym, term: a.term || '' })),
       geminiApiKey: apiKey,
-      geminiModel: 'gemini-flash-latest'
+      geminiModel: 'gemini-flash-latest',
+      concurrency: chosenConcurrency,
+      mode: mode
     });
 
     if (elements.pdfIndexLoadingDialog) {
       elements.pdfIndexLoadingDialog.close();
     }
+    if (elements.pdfIndexCandidateInfo) {
+      elements.pdfIndexCandidateInfo.style.display = 'none';
+      elements.pdfIndexCandidateInfo.innerHTML = '';
+    }
     stopFunFactsRotation();
+    if (removeProgressListener && typeof removeProgressListener === 'function') removeProgressListener();
+    if (window.api && typeof window.api.removeListener === 'function') {
+      window.api.removeListener('pdf-import-progress');
+    }
 
     if (!result.success) {
-      alert(`AI consolidation failed: ${result.error}`);
+      alert(`Consolidation failed: ${result.error}`);
       return;
     }
 
     if (!result.proposals || result.proposals.length === 0) {
-      alert('AI analysis finished: No identical or duplicate topics were found to combine.');
+      const emptyMsg = mode === 'rule-only'
+        ? 'Rule analysis finished: No duplicate topics met the rule criteria to combine.'
+        : 'Analysis finished: No identical or duplicate topics were found to combine.';
+      alert(emptyMsg);
       return;
     }
 
@@ -3940,9 +4353,22 @@ async function startCombineSameItemsAI() {
     sameItemsGroups = buildSameItemsGroups(sameItemsProposals);
 
     if (sameItemsGroups.length === 0) {
-      alert('AI analysis finished: No identical or duplicate topics were found to combine.');
+      const emptyMsg = mode === 'rule-only'
+        ? 'Rule analysis finished: No duplicate topics met the rule criteria to combine.'
+        : 'Analysis finished: No identical or duplicate topics were found to combine.';
+      alert(emptyMsg);
       return;
     }
+
+    // Reset filter to 'all' on new review session
+    sameItemsActiveFilter = 'all';
+    document.querySelectorAll('.same-items-filter-btn').forEach(b => {
+      const isAll = b.getAttribute('data-source') === 'all';
+      b.classList.toggle('active', isAll);
+      b.style.background = isAll ? 'var(--color-accent)' : 'transparent';
+      b.style.color = isAll ? '#ffffff' : 'var(--text-muted)';
+      b.style.fontWeight = isAll ? '600' : '500';
+    });
 
     renderSameItemsReviewGroups(sameItemsGroups);
     if (elements.sameItemsReviewDialog) {
@@ -3954,53 +4380,244 @@ async function startCombineSameItemsAI() {
     if (elements.pdfIndexLoadingDialog) {
       elements.pdfIndexLoadingDialog.close();
     }
+    if (elements.pdfIndexCandidateInfo) {
+      elements.pdfIndexCandidateInfo.style.display = 'none';
+      elements.pdfIndexCandidateInfo.innerHTML = '';
+    }
     stopFunFactsRotation();
-    alert(`Error during AI consolidation: ${err.message}`);
+    if (removeProgressListener && typeof removeProgressListener === 'function') removeProgressListener();
+    if (window.api && typeof window.api.removeListener === 'function') {
+      window.api.removeListener('pdf-import-progress');
+    }
+    alert(`Error during consolidation: ${err.message}`);
   }
 }
 
 let sameItemsGroups = [];
+let sameItemsActiveFilter = 'all';
+
+function isSameItemGroupVisible(g) {
+  if (!g) return false;
+  if (sameItemsActiveFilter === 'all') return true;
+  if (sameItemsActiveFilter === 'ai') return g.source === 'ai' || g.source === 'both';
+  if (sameItemsActiveFilter === 'rule') return g.source === 'rule' || g.source === 'both';
+  return true;
+}
+
+function applySameItemsFilterVisibility() {
+  const tbody = elements.sameItemsTableBody;
+  if (!tbody) return;
+
+  sameItemsGroups.forEach((g, gIdx) => {
+    const isVisible = isSameItemGroupVisible(g);
+    const headerTr = tbody.querySelector(`.same-items-group-header-row[data-group-idx="${gIdx}"]`);
+    if (headerTr) {
+      headerTr.style.display = isVisible ? 'table-row' : 'none';
+    }
+    tbody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
+      r.style.display = (isVisible && !g.collapsed) ? 'table-row' : 'none';
+    });
+  });
+
+  updateSameItemsGroupStats();
+  updateSameItemsHeaderCheckboxState();
+  updateCollapseAllButtonText();
+}
+
+function updateSameItemsHeaderCheckboxState() {
+  if (!elements.sameItemsHeaderCheckbox) return;
+  const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+  if (visibleGroups.length === 0) {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+    return;
+  }
+  const allChangeable = [];
+  visibleGroups.forEach(g => {
+    g.items.forEach(it => {
+      if (!it.isAlreadyProposed) allChangeable.push(it);
+    });
+  });
+  if (allChangeable.length === 0) {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+    return;
+  }
+  const checkedCount = allChangeable.filter(it => it.checked).length;
+  if (checkedCount === allChangeable.length) {
+    elements.sameItemsHeaderCheckbox.checked = true;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+  } else if (checkedCount === 0) {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = false;
+  } else {
+    elements.sameItemsHeaderCheckbox.checked = false;
+    elements.sameItemsHeaderCheckbox.indeterminate = true;
+  }
+}
+
+function updateGroupCheckboxState(g, gIdx) {
+  const changeableItems = g.items.filter(it => !it.isAlreadyProposed);
+  if (changeableItems.length < 2) return;
+
+  const checkedCount = changeableItems.filter(it => it.checked).length;
+  const headerCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+
+  if (checkedCount === changeableItems.length) {
+    g.checked = true;
+    if (headerCb) {
+      headerCb.checked = true;
+      headerCb.indeterminate = false;
+    }
+  } else if (checkedCount === 0) {
+    g.checked = false;
+    if (headerCb) {
+      headerCb.checked = false;
+      headerCb.indeterminate = false;
+    }
+  } else {
+    g.checked = true; // Group has partial active items
+    if (headerCb) {
+      headerCb.checked = false;
+      headerCb.indeterminate = true;
+    }
+  }
+}
+
+function recalculateGroupPages(g) {
+  if (!g || !g.items) return;
+  const bookPagesMap = new Map();
+
+  g.items.forEach(it => {
+    // Only include in resulting pages if it's the base entry or it's checked
+    if (!it.isAlreadyProposed && !it.checked) return;
+    if (!bookPagesMap.has(it.bookId)) {
+      bookPagesMap.set(it.bookId, it.pages);
+    } else {
+      const merged = mergePageStrings(bookPagesMap.get(it.bookId), it.pages);
+      bookPagesMap.set(it.bookId, merged.merged);
+    }
+  });
+
+  g.items.forEach(it => {
+    if (!it.isAlreadyProposed && !it.checked) {
+      it.resultingPages = it.pages; // Revert to original
+    } else {
+      it.resultingPages = bookPagesMap.get(it.bookId) || it.pages;
+    }
+  });
+}
 
 function buildSameItemsGroups(proposals) {
   const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
   const courseEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
 
-  // Group proposals by proposedTopic (case-insensitive)
-  const groupMap = new Map();
+  if (!proposals || proposals.length === 0) return [];
+
+  // Disjoint Set (Union-Find) to cluster interconnected pairs into single components
+  const parent = new Map();
+
+  function find(x) {
+    if (!parent.has(x)) parent.set(x, x);
+    if (parent.get(x) !== x) {
+      parent.set(x, find(parent.get(x)));
+    }
+    return parent.get(x);
+  }
+
+  function union(x, y) {
+    const rx = find(x);
+    const ry = find(y);
+    if (rx !== ry) {
+      parent.set(rx, ry);
+    }
+  }
+
+  proposals.forEach(p => {
+    if (!p) return;
+    const orig = p.originalTopic?.trim().toLowerCase();
+    const prop = p.proposedTopic?.trim().toLowerCase();
+    if (orig && prop && orig !== prop) {
+      union(orig, prop);
+    }
+    if (p.targetTopic) {
+      const tgt = p.targetTopic.trim().toLowerCase();
+      if (tgt && tgt !== prop) union(tgt, prop);
+    }
+  });
+
+  const clusterMap = new Map(); // root -> { topics: Set, proposals: [], sourcesSet: Set, reasons: [] }
 
   proposals.forEach(p => {
     if (!p || !p.proposedTopic) return;
-    const key = p.proposedTopic.trim().toLowerCase();
-    if (!groupMap.has(key)) {
-      groupMap.set(key, {
-        proposedTopic: p.proposedTopic.trim(),
-        targetTopicsSet: new Set(),
-        originalTopicsSet: new Set()
+    const propLower = p.proposedTopic.trim().toLowerCase();
+    const root = find(propLower);
+
+    if (!clusterMap.has(root)) {
+      clusterMap.set(root, {
+        topics: new Set(),
+        proposals: [],
+        sourcesSet: new Set(),
+        reasons: []
       });
     }
-    const g = groupMap.get(key);
-    if (p.originalTopic) g.originalTopicsSet.add(p.originalTopic.trim().toLowerCase());
-    if (p.targetTopic) g.targetTopicsSet.add(p.targetTopic.trim().toLowerCase());
+
+    const cl = clusterMap.get(root);
+    cl.topics.add(propLower);
+    if (p.originalTopic) cl.topics.add(p.originalTopic.trim().toLowerCase());
+    if (p.targetTopic) cl.topics.add(p.targetTopic.trim().toLowerCase());
+    cl.proposals.push(p);
+
+    const pSrc = p.source || 'ai';
+    if (pSrc === 'both') {
+      cl.sourcesSet.add('ai');
+      cl.sourcesSet.add('rule');
+    } else {
+      cl.sourcesSet.add(pSrc);
+    }
+
+    if (p.reason && !cl.reasons.includes(p.reason)) {
+      cl.reasons.push(p.reason);
+    }
   });
 
   const resultGroups = [];
 
-  groupMap.forEach((gData, key) => {
-    const proposedLower = key;
-    const targetTopics = Array.from(gData.targetTopicsSet);
-    const originalTopics = Array.from(gData.originalTopicsSet);
-
-    // Find ALL entries in current course that match proposedTopic, targetTopic, OR originalTopic!
+  clusterMap.forEach((cl) => {
+    // Find all matching entries in current course for this cluster
     const memberEntries = courseEntries.filter(e => {
       if (!e || !e.topic) return false;
-      const tLower = e.topic.trim().toLowerCase();
-      return tLower === proposedLower || targetTopics.includes(tLower) || originalTopics.includes(tLower);
+      return cl.topics.has(e.topic.trim().toLowerCase());
     });
 
-    // Consolidation requires at least 2 items to combine. Ignore lone 1-item groups!
+    // Consolidation requires at least 2 distinct entries in the course
     if (memberEntries.length < 2) return;
 
-    // Build details for each member entry
+    // Determine the single best canonical topic for this cluster
+    const propCounts = new Map();
+    cl.proposals.forEach(p => {
+      const pt = p.proposedTopic?.trim();
+      if (pt) propCounts.set(pt, (propCounts.get(pt) || 0) + 1);
+    });
+
+    let bestCanonical = '';
+    let bestScore = -1;
+    propCounts.forEach((count, pt) => {
+      let score = count * 10;
+      if (memberEntries.some(e => e.topic.trim() === pt)) score += 5;
+      if (pt.includes('(') && pt.includes(')')) score += 3;
+      if (score > bestScore) {
+        bestScore = score;
+        bestCanonical = pt;
+      }
+    });
+
+    if (!bestCanonical && memberEntries.length > 0) {
+      bestCanonical = memberEntries[0].topic.trim();
+    }
+    const proposedLower = bestCanonical.toLowerCase();
+
+    // Build items
     const items = memberEntries.map(entry => {
       const bookObj = activeBooks.find(b => b.id === entry.bookId);
       const bNumMatch = bookObj ? bookObj.name.match(/(\d+)/) : null;
@@ -4013,23 +4630,23 @@ function buildSameItemsGroups(proposals) {
         bookName: `Book ${bookNum}`,
         originalTopic: entry.topic,
         pages: entry.pages,
-        isAlreadyProposed
+        isAlreadyProposed,
+        checked: true // Checked by default
       };
     });
 
-    // Calculate resulting pages per book if this group is accepted!
-    const bookPagesMap = new Map();
-    items.forEach(it => {
-      if (!bookPagesMap.has(it.bookId)) {
-        bookPagesMap.set(it.bookId, it.pages);
-      } else {
-        const merged = mergePageStrings(bookPagesMap.get(it.bookId), it.pages);
-        bookPagesMap.set(it.bookId, merged.merged);
-      }
+    // Sort items so the Base entry is at the top of the group
+    items.sort((a, b) => {
+      if (a.isAlreadyProposed && !b.isAlreadyProposed) return -1;
+      if (!a.isAlreadyProposed && b.isAlreadyProposed) return 1;
+      return a.bookName.localeCompare(b.bookName, undefined, { numeric: true });
     });
 
+    // Initial page calculation
+    const tempGroup = { items };
+    recalculateGroupPages(tempGroup);
+
     items.forEach(it => {
-      it.resultingPages = bookPagesMap.get(it.bookId);
       if (it.isAlreadyProposed) {
         it.statusLabel = 'Existing (No Change)';
         it.statusColor = '#94a3b8';
@@ -4042,12 +4659,23 @@ function buildSameItemsGroups(proposals) {
       }
     });
 
+    let groupSource = 'ai';
+    if (cl.sourcesSet.has('ai') && cl.sourcesSet.has('rule')) {
+      groupSource = 'both';
+    } else if (cl.sourcesSet.has('rule')) {
+      groupSource = 'rule';
+    } else {
+      groupSource = 'ai';
+    }
+
     resultGroups.push({
       groupIdx: resultGroups.length,
-      proposedTopic: gData.proposedTopic,
+      proposedTopic: bestCanonical,
       items: items,
       checked: true,
-      collapsed: false // Open by default
+      collapsed: false,
+      source: groupSource,
+      reasons: cl.reasons
     });
   });
 
@@ -4059,23 +4687,52 @@ function renderSameItemsReviewGroups(groups) {
   if (!tbody) return;
   tbody.innerHTML = '';
 
+  // Update filter count badges
+  const countAll = groups.length;
+  const countAi = groups.filter(g => g.source === 'ai' || g.source === 'both').length;
+  const countRule = groups.filter(g => g.source === 'rule' || g.source === 'both').length;
+
+  const filterCountAll = document.getElementById('same-items-filter-count-all');
+  const filterCountAi = document.getElementById('same-items-filter-count-ai');
+  const filterCountRule = document.getElementById('same-items-filter-count-rule');
+  if (filterCountAll) filterCountAll.textContent = countAll;
+  if (filterCountAi) filterCountAi.textContent = countAi;
+  if (filterCountRule) filterCountRule.textContent = countRule;
+
   groups.forEach((g, gIdx) => {
     // 1. Group Header Row
     const headerTr = document.createElement('tr');
     headerTr.className = 'same-items-group-header-row';
+    headerTr.setAttribute('data-group-idx', gIdx);
+    headerTr.setAttribute('data-source', g.source);
     headerTr.style.background = '#1e293b';
     headerTr.style.borderTop = '2px solid var(--border-color)';
     headerTr.style.borderBottom = '1px solid var(--border-color)';
     headerTr.style.cursor = 'pointer';
 
+    const isVisible = isSameItemGroupVisible(g);
+    headerTr.style.display = isVisible ? 'table-row' : 'none';
+
+    // Source badge
+    let sourceBadgeHtml = '';
+    const tooltipReason = (g.reasons && g.reasons.length > 0) ? escapeHtml(g.reasons.join(' | ')) : '';
+    if (g.source === 'both') {
+      sourceBadgeHtml = `<span class="same-items-source-badge" title="${tooltipReason || 'Identified by both Gemini AI and Overlap Rules'}" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; background: rgba(20, 184, 166, 0.18); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.35); flex-shrink: 0;"><i data-lucide="sparkles" style="width: 12px; height: 12px;"></i> AI + Rule</span>`;
+    } else if (g.source === 'rule') {
+      sourceBadgeHtml = `<span class="same-items-source-badge" title="${tooltipReason || 'Identified by Overlap Rules'}" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); flex-shrink: 0;"><i data-lucide="zap" style="width: 12px; height: 12px;"></i> Rule</span>`;
+    } else {
+      sourceBadgeHtml = `<span class="same-items-source-badge" title="${tooltipReason || 'Evaluated and proposed by Gemini AI'}" style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; background: rgba(99, 102, 241, 0.18); color: #a5b4fc; border: 1px solid rgba(165, 180, 252, 0.35); flex-shrink: 0;"><i data-lucide="bot" style="width: 12px; height: 12px;"></i> AI</span>`;
+    }
+
     headerTr.innerHTML = `
       <td style="text-align: center; padding: 10px 8px; vertical-align: middle;">
-        <input type="checkbox" class="same-items-group-checkbox" data-group-idx="${gIdx}" ${g.checked ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer; accent-color: #14b8a6;">
+        <input type="checkbox" class="same-items-group-checkbox" data-group-idx="${gIdx}" ${g.checked ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer; accent-color: #14b8a6;" title="Select or deselect all items in this group">
       </td>
       <td colspan="4" style="padding: 8px 12px; vertical-align: middle;">
-        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap;">
           <i data-lucide="${g.collapsed ? 'chevron-right' : 'chevron-down'}" class="group-collapse-icon" style="width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0;"></i>
-          <input type="text" class="same-items-group-topic-input" data-group-idx="${gIdx}" value="${escapeHtml(g.proposedTopic)}" style="font-size: 0.92rem; font-weight: 700; color: #2dd4bf; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(45, 212, 191, 0.4); border-radius: 4px; padding: 4px 10px; width: 100%; max-width: 500px;" title="Click to edit the combined group name">
+          <input type="text" class="same-items-group-topic-input" data-group-idx="${gIdx}" value="${escapeHtml(g.proposedTopic)}" style="font-size: 0.92rem; font-weight: 700; color: #2dd4bf; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(45, 212, 191, 0.4); border-radius: 4px; padding: 4px 10px; width: 100%; max-width: 440px;" title="Click to edit the combined group name">
+          ${sourceBadgeHtml}
         </div>
       </td>
       <td style="text-align: right; padding: 10px 12px; vertical-align: middle;">
@@ -4085,26 +4742,41 @@ function renderSameItemsReviewGroups(groups) {
     tbody.appendChild(headerTr);
 
     // 2. Group Member Rows
-    g.items.forEach(it => {
+    const changeableCount = g.items.filter(it => !it.isAlreadyProposed).length;
+    const allowItemSelection = g.items.length > 2 && changeableCount >= 2;
+
+    g.items.forEach((it, itIdx) => {
       const itemTr = document.createElement('tr');
       itemTr.className = `same-items-group-member-row group-row-${gIdx}`;
+      itemTr.setAttribute('data-item-idx', itIdx);
       itemTr.style.background = 'rgba(15, 23, 42, 0.35)';
-      itemTr.style.display = g.collapsed ? 'none' : 'table-row';
+      itemTr.style.display = (isVisible && !g.collapsed) ? 'table-row' : 'none';
+      itemTr.style.opacity = (it.checked || it.isAlreadyProposed) ? '1' : '0.55';
+      itemTr.style.transition = 'opacity 0.15s ease';
+
+      let checkboxHtml = '';
+      if (allowItemSelection) {
+        checkboxHtml = it.isAlreadyProposed
+          ? `<span title="Base target entry (remains unchanged)" style="display: inline-block; font-size: 0.68rem; font-weight: 700; color: #94a3b8; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); transform: translateX(8px);">Base</span>`
+          : `<input type="checkbox" class="same-items-item-checkbox" data-group-idx="${gIdx}" data-item-idx="${itIdx}" ${it.checked ? 'checked' : ''} style="width: 13px; height: 13px; cursor: pointer; accent-color: #38bdf8; transform: translateX(8px);" title="Include or exclude this specific item from consolidation">`;
+      }
 
       itemTr.innerHTML = `
-        <td></td>
+        <td style="text-align: center; vertical-align: middle; padding: 6px 4px;">
+          ${checkboxHtml}
+        </td>
         <td style="font-size:0.78rem;"><span style="font-weight:600; color:${it.statusColor};">${it.statusLabel}</span></td>
         <td style="font-weight:${it.isAlreadyProposed ? '400' : '600'}; color:${it.isAlreadyProposed ? 'var(--text-muted)' : 'var(--text-primary)'};">${escapeHtml(it.originalTopic)}</td>
         <td style="color:var(--text-muted);">${escapeHtml(it.bookName)}</td>
         <td><code>${escapeHtml(it.pages)}</code></td>
-        <td style="color:#38bdf8; font-weight:600;"><code>${escapeHtml(it.resultingPages)}</code></td>
+        <td style="color:#38bdf8; font-weight:600;"><code class="resulting-pages-code">${escapeHtml(it.resultingPages)}</code></td>
       `;
       tbody.appendChild(itemTr);
     });
 
     // Header click to collapse/expand
     headerTr.addEventListener('click', (e) => {
-      if (e.target.classList.contains('same-items-group-checkbox') || e.target.classList.contains('same-items-group-topic-input')) return;
+      if (e.target.classList.contains('same-items-group-checkbox') || e.target.classList.contains('same-items-group-topic-input') || e.target.closest('.same-items-source-badge')) return;
       g.collapsed = !g.collapsed;
       const icon = headerTr.querySelector('.group-collapse-icon');
       if (icon) icon.setAttribute('data-lucide', g.collapsed ? 'chevron-right' : 'chevron-down');
@@ -4124,66 +4796,148 @@ function renderSameItemsReviewGroups(groups) {
     }
   });
 
-  if (elements.sameItemsHeaderCheckbox) {
-    elements.sameItemsHeaderCheckbox.checked = true;
-    elements.sameItemsHeaderCheckbox.onchange = () => {
-      const isChecked = elements.sameItemsHeaderCheckbox.checked;
-      sameItemsGroups.forEach(g => { g.checked = isChecked; });
-      tbody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = isChecked; });
-      updateSameItemsGroupStats();
-    };
-  }
-
+  // Attach change listener for group header checkboxes
   tbody.querySelectorAll('.same-items-group-checkbox').forEach(cb => {
     cb.addEventListener('change', (e) => {
       e.stopPropagation();
-      const idx = parseInt(e.target.getAttribute('data-group-idx'), 10);
-      if (sameItemsGroups[idx]) {
-        sameItemsGroups[idx].checked = e.target.checked;
-      }
+      const gIdx = parseInt(e.target.getAttribute('data-group-idx'), 10);
+      const g = sameItemsGroups[gIdx];
+      if (!g) return;
+
+      const isChecked = e.target.checked;
+      g.checked = isChecked;
+
+      // Toggle all member items that can be changed
+      g.items.forEach(it => {
+        if (!it.isAlreadyProposed) {
+          it.checked = isChecked;
+        }
+      });
+
+      // Update DOM checkboxes & row styles
+      tbody.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(itemCb => {
+        itemCb.checked = isChecked;
+      });
+
+      recalculateGroupPages(g);
+      g.items.forEach((it, itIdx) => {
+        const row = tbody.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+        if (row) {
+          row.style.opacity = (it.checked || it.isAlreadyProposed) ? '1' : '0.55';
+          const resCode = row.querySelector('.resulting-pages-code');
+          if (resCode) resCode.textContent = it.resultingPages;
+        }
+      });
+
       updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
+    });
+  });
+
+  // Attach change listener for individual item checkboxes
+  tbody.querySelectorAll('.same-items-item-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      e.stopPropagation();
+      const gIdx = parseInt(e.target.getAttribute('data-group-idx'), 10);
+      const itIdx = parseInt(e.target.getAttribute('data-item-idx'), 10);
+      const g = sameItemsGroups[gIdx];
+      if (!g || !g.items[itIdx]) return;
+
+      g.items[itIdx].checked = e.target.checked;
+
+      const row = tbody.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+      if (row) {
+        row.style.opacity = e.target.checked ? '1' : '0.55';
+      }
+
+      recalculateGroupPages(g);
+      g.items.forEach((it, idx) => {
+        const itemRow = tbody.querySelector(`.group-row-${gIdx}[data-item-idx="${idx}"]`);
+        if (itemRow) {
+          const resCode = itemRow.querySelector('.resulting-pages-code');
+          if (resCode) resCode.textContent = it.resultingPages;
+        }
+      });
+
+      updateGroupCheckboxState(g, gIdx);
+      updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
     });
   });
 
   lucide.createIcons();
   updateSameItemsGroupStats();
+  updateSameItemsHeaderCheckboxState();
   updateCollapseAllButtonText();
 }
 
 function updateCollapseAllButtonText() {
   if (!elements.sameItemsToggleCollapseBtn) return;
-  const anyOpen = sameItemsGroups.some(g => !g.collapsed);
+  const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+  const anyOpen = visibleGroups.some(g => !g.collapsed);
   elements.sameItemsToggleCollapseBtn.textContent = anyOpen ? 'Collapse All' : 'Expand All';
 }
 
 function updateSameItemsGroupStats() {
   const totalGroups = sameItemsGroups.length;
-  let totalItems = 0;
-  let selectedGroups = 0;
+  const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+  let totalChangeable = 0;
+  let selectedChangeable = 0;
+  let activeGroupsCount = 0;
+  let visibleActiveCount = 0;
 
   sameItemsGroups.forEach(g => {
-    totalItems += g.items.length;
-    if (g.checked) selectedGroups++;
+    const changeable = g.items.filter(it => !it.isAlreadyProposed);
+    totalChangeable += changeable.length;
+    const checked = changeable.filter(it => it.checked).length;
+    selectedChangeable += checked;
+    if (checked > 0) activeGroupsCount++;
   });
 
-  if (elements.sameItemsStatTotal) elements.sameItemsStatTotal.textContent = `${totalGroups} Groups`;
-  if (elements.sameItemsStatMerge) elements.sameItemsStatMerge.textContent = `${totalItems} Total Items`;
-  if (elements.sameItemsStatSelected) elements.sameItemsStatSelected.textContent = `${selectedGroups} Groups Selected`;
+  visibleGroups.forEach(g => {
+    const changeable = g.items.filter(it => !it.isAlreadyProposed);
+    const checked = changeable.filter(it => it.checked).length;
+    if (checked > 0) visibleActiveCount++;
+  });
+
+  if (elements.sameItemsStatTotal) {
+    if (sameItemsActiveFilter !== 'all') {
+      elements.sameItemsStatTotal.textContent = `${visibleGroups.length} of ${totalGroups} Groups Shown`;
+    } else {
+      elements.sameItemsStatTotal.textContent = `${totalGroups} Groups`;
+    }
+  }
+  if (elements.sameItemsStatMerge) {
+    elements.sameItemsStatMerge.textContent = `${totalChangeable} Items to Consolidate`;
+  }
+  if (elements.sameItemsStatSelected) {
+    if (sameItemsActiveFilter !== 'all') {
+      elements.sameItemsStatSelected.textContent = `${visibleActiveCount} of ${visibleGroups.length} Groups Active (${selectedChangeable} Items Selected)`;
+    } else {
+      elements.sameItemsStatSelected.textContent = `${activeGroupsCount} Groups Active (${selectedChangeable} Items Selected)`;
+    }
+  }
 }
 
 function handleAcceptSameItems() {
-  const selectedGroups = sameItemsGroups.filter(g => g.checked);
+  let totalSelectedItems = 0;
+  let activeGroupsCount = 0;
 
-  if (selectedGroups.length === 0) {
-    alert("Please select at least one group to combine.");
+  sameItemsGroups.forEach(g => {
+    const changeableChecked = g.items.filter(it => !it.isAlreadyProposed && it.checked);
+    if (changeableChecked.length > 0) {
+      activeGroupsCount++;
+      totalSelectedItems += changeableChecked.length;
+    }
+  });
+
+  if (totalSelectedItems === 0) {
+    alert("Please select at least one item to combine.");
     return;
   }
 
-  let totalSelectedItems = 0;
-  selectedGroups.forEach(g => { totalSelectedItems += g.items.length; });
-
   if (elements.sameItemsConfirmMsg) {
-    elements.sameItemsConfirmMsg.textContent = `Are you sure you want to permanently consolidate ${totalSelectedItems} items across the ${selectedGroups.length} selected group(s)? This action cannot be undone.`;
+    elements.sameItemsConfirmMsg.textContent = `Are you sure you want to permanently consolidate ${totalSelectedItems} items across ${activeGroupsCount} group(s)? This action cannot be undone.`;
   }
   if (elements.sameItemsConfirmDialog) {
     elements.sameItemsConfirmDialog.showModal();
@@ -4195,18 +4949,25 @@ function applySameItemsConsolidation() {
   if (elements.sameItemsReviewDialog) elements.sameItemsReviewDialog.close();
 
   let updatedCount = 0;
+  let affectedGroups = 0;
 
   sameItemsGroups.forEach(g => {
-    if (!g.checked) return;
     const proposed = g.proposedTopic;
+    let groupHadUpdates = false;
 
     g.items.forEach(it => {
-      const entry = state.entries.find(e => e.id === it.entryId);
-      if (entry && entry.topic !== proposed) {
-        entry.topic = proposed;
-        updatedCount++;
+      // Only execute for items that are checked and not already the proposed topic
+      if (it.checked && !it.isAlreadyProposed) {
+        const entry = state.entries.find(e => e.id === it.entryId);
+        if (entry && entry.topic !== proposed) {
+          entry.topic = proposed;
+          updatedCount++;
+          groupHadUpdates = true;
+        }
       }
     });
+
+    if (groupHadUpdates) affectedGroups++;
   });
 
   const deduplicated = [];
@@ -4233,10 +4994,11 @@ function applySameItemsConsolidation() {
   saveState();
   renderAll();
 
+  const msg = `Successfully consolidated ${updatedCount} index entries across ${affectedGroups} groups!`;
   if (typeof showToast === 'function') {
-    showToast(`Successfully consolidated ${updatedCount} index entries across ${sameItemsGroups.filter(g => g.checked).length} groups!`);
+    showToast(msg);
   } else {
-    alert(`Successfully consolidated ${updatedCount} index entries across ${sameItemsGroups.filter(g => g.checked).length} groups!`);
+    alert(msg);
   }
 }
 
@@ -4271,48 +5033,152 @@ function initPdfIndexImportBindings() {
   if (elements.combineSameItemsBtn) {
     elements.combineSameItemsBtn.addEventListener('click', openCombineSameItemsSetupDialog);
   }
+  if (elements.combineConcurrencySelect) {
+    elements.combineConcurrencySelect.addEventListener('change', () => {
+      localStorage.setItem('combine_concurrency', elements.combineConcurrencySelect.value);
+      updateWaveTimingDisplay();
+    });
+  }
   if (elements.startCombineAiBtn) {
     elements.startCombineAiBtn.addEventListener('click', startCombineSameItemsAI);
   }
   if (elements.sameItemsSelectAllBtn) {
     elements.sameItemsSelectAllBtn.addEventListener('click', () => {
-      sameItemsGroups.forEach(g => { g.checked = true; });
-      if (elements.sameItemsHeaderCheckbox) elements.sameItemsHeaderCheckbox.checked = true;
-      if (elements.sameItemsTableBody) {
-        elements.sameItemsTableBody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = true; });
-      }
+      sameItemsGroups.forEach((g, gIdx) => {
+        if (isSameItemGroupVisible(g)) {
+          g.checked = true;
+          g.items.forEach(it => { if (!it.isAlreadyProposed) it.checked = true; });
+          const groupCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+          if (groupCb) {
+            groupCb.checked = true;
+            groupCb.indeterminate = false;
+          }
+          elements.sameItemsTableBody?.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(cb => {
+            cb.checked = true;
+          });
+          recalculateGroupPages(g);
+          g.items.forEach((it, itIdx) => {
+            const row = elements.sameItemsTableBody?.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+            if (row) {
+              row.style.opacity = '1';
+              const resCode = row.querySelector('.resulting-pages-code');
+              if (resCode) resCode.textContent = it.resultingPages;
+            }
+          });
+        }
+      });
       updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
     });
   }
   if (elements.sameItemsDeselectAllBtn) {
     elements.sameItemsDeselectAllBtn.addEventListener('click', () => {
-      sameItemsGroups.forEach(g => { g.checked = false; });
-      if (elements.sameItemsHeaderCheckbox) elements.sameItemsHeaderCheckbox.checked = false;
-      if (elements.sameItemsTableBody) {
-        elements.sameItemsTableBody.querySelectorAll('.same-items-group-checkbox').forEach(cb => { cb.checked = false; });
-      }
+      sameItemsGroups.forEach((g, gIdx) => {
+        if (isSameItemGroupVisible(g)) {
+          g.checked = false;
+          g.items.forEach(it => { if (!it.isAlreadyProposed) it.checked = false; });
+          const groupCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+          if (groupCb) {
+            groupCb.checked = false;
+            groupCb.indeterminate = false;
+          }
+          elements.sameItemsTableBody?.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(cb => {
+            cb.checked = false;
+          });
+          recalculateGroupPages(g);
+          g.items.forEach((it, itIdx) => {
+            const row = elements.sameItemsTableBody?.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+            if (row) {
+              row.style.opacity = it.isAlreadyProposed ? '1' : '0.55';
+              const resCode = row.querySelector('.resulting-pages-code');
+              if (resCode) resCode.textContent = it.resultingPages;
+            }
+          });
+        }
+      });
       updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
+    });
+  }
+  if (elements.sameItemsHeaderCheckbox) {
+    elements.sameItemsHeaderCheckbox.addEventListener('change', () => {
+      const isChecked = elements.sameItemsHeaderCheckbox.checked;
+      sameItemsGroups.forEach((g, gIdx) => {
+        if (isSameItemGroupVisible(g)) {
+          g.checked = isChecked;
+          g.items.forEach(it => { if (!it.isAlreadyProposed) it.checked = isChecked; });
+          const groupCb = elements.sameItemsTableBody?.querySelector(`.same-items-group-checkbox[data-group-idx="${gIdx}"]`);
+          if (groupCb) {
+            groupCb.checked = isChecked;
+            groupCb.indeterminate = false;
+          }
+          elements.sameItemsTableBody?.querySelectorAll(`.same-items-item-checkbox[data-group-idx="${gIdx}"]`).forEach(cb => {
+            cb.checked = isChecked;
+          });
+          recalculateGroupPages(g);
+          g.items.forEach((it, itIdx) => {
+            const row = elements.sameItemsTableBody?.querySelector(`.group-row-${gIdx}[data-item-idx="${itIdx}"]`);
+            if (row) {
+              row.style.opacity = (isChecked || it.isAlreadyProposed) ? '1' : '0.55';
+              const resCode = row.querySelector('.resulting-pages-code');
+              if (resCode) resCode.textContent = it.resultingPages;
+            }
+          });
+        }
+      });
+      updateSameItemsGroupStats();
+      updateSameItemsHeaderCheckboxState();
     });
   }
   if (elements.sameItemsToggleCollapseBtn) {
     elements.sameItemsToggleCollapseBtn.addEventListener('click', () => {
-      const anyOpen = sameItemsGroups.some(g => !g.collapsed);
+      const visibleGroups = sameItemsGroups.filter(g => isSameItemGroupVisible(g));
+      const anyOpen = visibleGroups.some(g => !g.collapsed);
       const shouldCollapse = anyOpen;
-      sameItemsGroups.forEach(g => { g.collapsed = shouldCollapse; });
+      visibleGroups.forEach(g => { g.collapsed = shouldCollapse; });
       if (elements.sameItemsTableBody) {
         sameItemsGroups.forEach((g, gIdx) => {
-          elements.sameItemsTableBody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
-            r.style.display = shouldCollapse ? 'none' : 'table-row';
-          });
-        });
-        elements.sameItemsTableBody.querySelectorAll('.group-collapse-icon').forEach(icon => {
-          icon.setAttribute('data-lucide', shouldCollapse ? 'chevron-right' : 'chevron-down');
+          if (isSameItemGroupVisible(g)) {
+            elements.sameItemsTableBody.querySelectorAll(`.group-row-${gIdx}`).forEach(r => {
+              r.style.display = shouldCollapse ? 'none' : 'table-row';
+            });
+            const headerTr = elements.sameItemsTableBody.querySelector(`.same-items-group-header-row[data-group-idx="${gIdx}"]`);
+            const icon = headerTr?.querySelector('.group-collapse-icon');
+            if (icon) icon.setAttribute('data-lucide', shouldCollapse ? 'chevron-right' : 'chevron-down');
+          }
         });
       }
       lucide.createIcons();
       updateCollapseAllButtonText();
     });
   }
+
+  // Segmented Source Filter buttons
+  const filterBtns = document.querySelectorAll('.same-items-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const source = btn.getAttribute('data-source') || 'all';
+      sameItemsActiveFilter = source;
+      filterBtns.forEach(b => {
+        const isMatch = b.getAttribute('data-source') === source;
+        b.classList.toggle('active', isMatch);
+        b.style.background = isMatch ? 'var(--color-accent)' : 'transparent';
+        b.style.color = isMatch ? '#ffffff' : 'var(--text-muted)';
+        b.style.fontWeight = isMatch ? '600' : '500';
+      });
+      applySameItemsFilterVisibility();
+    });
+  });
+
+  // Combine Mode Radios
+  const modeRadios = document.querySelectorAll('input[name="combine-mode"]');
+  modeRadios.forEach(radio => {
+    radio.addEventListener('change', async () => {
+      const mode = radio.value;
+      updateCombineModeUI(mode);
+      await refreshCombineStats(mode);
+    });
+  });
   if (elements.sameItemsAcceptBtn) {
     elements.sameItemsAcceptBtn.addEventListener('click', handleAcceptSameItems);
   }
@@ -8972,8 +9838,7 @@ function renderAcronyms() {
   }
 
   // Update Stats
-  if (elements.statTotalAcronyms) elements.statTotalAcronyms.textContent = (state.acronyms || []).length;
-  if (elements.statAcronymsCourse) elements.statAcronymsCourse.textContent = courseAcronyms.length;
+  if (elements.statTotalAcronyms) elements.statTotalAcronyms.textContent = courseAcronyms.length;
   if (elements.statLastAcronym) {
     const last = courseAcronyms[courseAcronyms.length - 1];
     elements.statLastAcronym.textContent = last ? last.acronym : '-';
@@ -9161,25 +10026,33 @@ function performDeleteAcronyms(acronymIds) {
   renderAcronyms();
 }
 
+let pendingApplyAcronymProposals = [];
+
 function applyAcronymDefinitionsToIndex() {
-  const count = selectedAcronymIds.size;
-  if (count === 0) return;
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId && a.term && a.term.trim().length > 0);
 
-  const selectedAcronyms = state.acronyms.filter(a => a && selectedAcronymIds.has(a.id) && a.courseId === state.currentCourseId);
-  const acronymsWithTerms = selectedAcronyms.filter(a => a.term && a.term.trim().length > 0);
-
-  if (acronymsWithTerms.length === 0) {
-    alert("None of the selected acronyms have associated full terms/definitions to apply.");
+  if (courseAcronyms.length === 0) {
+    alert("No acronyms with associated full terms/definitions exist for this course.");
     return;
   }
 
-  // Create lookup map of normalized acronym code -> full term
+  // Create lookup map of normalized acronym code -> Array of { code, term }
   const acronymMap = new Map();
-  acronymsWithTerms.forEach(a => {
-    acronymMap.set(a.acronym.trim().toUpperCase(), { code: a.acronym.trim(), term: a.term.trim() });
+  courseAcronyms.forEach(a => {
+    if (a.acronym && a.acronym.trim()) {
+      const upper = a.acronym.trim().toUpperCase();
+      if (!acronymMap.has(upper)) {
+        acronymMap.set(upper, []);
+      }
+      const list = acronymMap.get(upper);
+      const cleanTerm = a.term.trim();
+      if (!list.some(item => item.term.toLowerCase() === cleanTerm.toLowerCase())) {
+        list.push({ code: a.acronym.trim(), term: cleanTerm });
+      }
+    }
   });
 
-  let updatedCount = 0;
+  pendingApplyAcronymProposals = [];
   const activeEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
 
   activeEntries.forEach(entry => {
@@ -9188,28 +10061,359 @@ function applyAcronymDefinitionsToIndex() {
     const upperTopic = cleanTopic.toUpperCase();
 
     if (acronymMap.has(upperTopic)) {
-      const match = acronymMap.get(upperTopic);
-      const newTopic = `${match.term} (${match.code})`;
-      if (entry.topic !== newTopic) {
-        entry.topic = newTopic;
-        updatedCount++;
+      const matches = acronymMap.get(upperTopic);
+      const options = matches.map(m => `${m.term} (${m.code})`);
+
+      // If entry already matches one of the full definitions, skip proposing a duplicate rename
+      if (options.some(opt => opt.toLowerCase() === cleanTopic.toLowerCase())) {
+        return;
+      }
+
+      const book = state.books.find(b => b && b.id === entry.bookId);
+      const bookName = book ? book.name : '';
+      const bookShort = bookName ? (bookName.includes(':') ? bookName.split(':')[0].trim() : bookName) : '';
+      const pageRef = entry.pages ? ` (p. ${entry.pages})` : '';
+      const bookRef = bookShort ? `${bookShort}${pageRef}` : (entry.pages ? `p. ${entry.pages}` : '');
+
+      pendingApplyAcronymProposals.push({
+        entryId: entry.id,
+        originalTopic: entry.topic,
+        newTopic: options[0],
+        options: options,
+        hasMultiple: options.length > 1,
+        bookRef: bookRef
+      });
+    }
+  });
+
+  if (pendingApplyAcronymProposals.length === 0) {
+    alert("No matching index topics found for the selected acronyms.");
+    return;
+  }
+
+  // Populate review table & open review dialog
+  renderApplyAcronymsReviewTable(pendingApplyAcronymProposals);
+
+  if (elements.applyAcronymsConfirmDialog) {
+    elements.applyAcronymsConfirmDialog.showModal();
+    if (window.lucide) {
+      lucide.createIcons({
+        attrs: { class: 'lucide-icon' },
+        nameAttr: 'data-lucide',
+        nodeList: elements.applyAcronymsConfirmDialog.querySelectorAll('[data-lucide]')
+      });
+    }
+  }
+}
+
+function renderApplyAcronymsReviewTable(proposals) {
+  if (!elements.applyAcronymsTableBody) return;
+  elements.applyAcronymsTableBody.innerHTML = '';
+
+  if (elements.applyAcronymsCount) {
+    elements.applyAcronymsCount.textContent = `${proposals.length} proposed rename(s) found`;
+  }
+  if (elements.applyAcronymsHeaderCheckbox) {
+    elements.applyAcronymsHeaderCheckbox.checked = true;
+  }
+
+  proposals.forEach((p, idx) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border-color)';
+
+    let topicCellHtml = '';
+    if (p.hasMultiple && p.options && p.options.length > 1) {
+      topicCellHtml = `
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.45); letter-spacing: 0.02em;">
+              <i data-lucide="layers" style="width: 12px; height: 12px;"></i>
+              <span>Multiple Definitions (${p.options.length})</span>
+            </span>
+          </div>
+          <div style="position: relative; width: 100%; display: flex; align-items: center;">
+            <select class="apply-acronym-option-select" data-index="${idx}" style="appearance: none; -webkit-appearance: none; -moz-appearance: none; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.5); color: #fbbf24; font-weight: 600; border-radius: 6px; padding: 6px 30px 6px 10px; font-size: 0.84rem; width: 100%; cursor: pointer; outline: none; transition: border-color 0.2s;">
+              ${p.options.map(opt => `<option value="${escapeHtml(opt)}" style="background: #0f172a; color: #f1f5f9;">${escapeHtml(opt)}</option>`).join('')}
+              <option value="__SKIP__" style="background: #0f172a; color: #94a3b8;">(Keep original topic - Do not rename)</option>
+            </select>
+            <i data-lucide="chevron-down" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: #fbbf24; pointer-events: none;"></i>
+          </div>
+        </div>
+      `;
+    } else {
+      topicCellHtml = `
+        <span style="font-size: 0.85rem; font-weight: 600; color: #2dd4bf;">
+          ${escapeHtml(p.newTopic)}
+        </span>
+      `;
+    }
+
+    tr.innerHTML = `
+      <td style="text-align: center; padding: 8px 12px; vertical-align: middle;">
+        <input type="checkbox" class="apply-acronym-row-checkbox" data-index="${idx}" checked>
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-mono, monospace);">
+        ${escapeHtml(p.originalTopic)}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle;">
+        ${topicCellHtml}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.8rem; color: var(--text-muted);">
+        ${escapeHtml(p.bookRef || '-')}
+      </td>
+    `;
+    elements.applyAcronymsTableBody.appendChild(tr);
+  });
+
+  // Attach change listeners for selects
+  elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-option-select').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.getAttribute('data-index'), 10);
+      const row = e.target.closest('tr');
+      const cb = row ? row.querySelector('.apply-acronym-row-checkbox') : null;
+      if (e.target.value === '__SKIP__') {
+        if (cb) cb.checked = false;
+      } else {
+        if (cb) cb.checked = true;
+        if (pendingApplyAcronymProposals[idx]) {
+          pendingApplyAcronymProposals[idx].newTopic = e.target.value;
+        }
+      }
+    });
+  });
+
+  if (window.lucide && elements.applyAcronymsTableBody) {
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.applyAcronymsTableBody.querySelectorAll('[data-lucide]')
+    });
+  }
+}
+
+function confirmApplyAcronymDefinitions() {
+  if (!elements.applyAcronymsTableBody) return;
+  const checkboxes = elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox');
+  let updatedCount = 0;
+
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = parseInt(cb.getAttribute('data-index'), 10);
+      const item = pendingApplyAcronymProposals[idx];
+      if (item) {
+        let chosenTopic = item.newTopic;
+        if (item.hasMultiple) {
+          const selectEl = elements.applyAcronymsTableBody.querySelector(`.apply-acronym-option-select[data-index="${idx}"]`);
+          if (selectEl) {
+            chosenTopic = selectEl.value;
+          }
+        }
+        if (chosenTopic && chosenTopic !== '__SKIP__') {
+          const entry = state.entries.find(e => e && e.id === item.entryId);
+          if (entry) {
+            entry.topic = chosenTopic;
+            updatedCount++;
+          }
+        }
       }
     }
   });
+
+  if (elements.applyAcronymsConfirmDialog) {
+    elements.applyAcronymsConfirmDialog.close();
+  }
 
   if (updatedCount > 0) {
     saveState();
     renderEntries();
     renderStats();
-    alert(`Successfully applied acronym definitions! Renamed ${updatedCount} index topic(s) to include full terms.`);
+    alert(`Successfully applied acronym definitions! Renamed ${updatedCount} index topic(s).`);
   } else {
-    alert("No matching index topics found for the selected acronyms.");
+    alert("No topics were selected to rename.");
+  }
+}
+
+// --------------------------------------------------------------------------
+// IMPORT ACRONYMS FROM CLASS
+// --------------------------------------------------------------------------
+let pendingImportClassAcronymsList = [];
+
+function openImportClassAcronymsModal() {
+  const otherCourses = (state.courses || []).filter(c => c && c.id !== state.currentCourseId);
+
+  if (otherCourses.length === 0) {
+    alert("No other classes/courses exist in your project to import acronyms from.");
+    return;
+  }
+
+  if (elements.importAcronymsSourceCourseSelect) {
+    elements.importAcronymsSourceCourseSelect.innerHTML = otherCourses.map(c => 
+      `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name || 'Untitled Class')}</option>`
+    ).join('');
+  }
+
+  if (elements.importAcronymsSkipDuplicates) {
+    elements.importAcronymsSkipDuplicates.checked = true;
+  }
+
+  renderImportClassAcronymsReviewTable();
+
+  if (elements.importClassAcronymsDialog) {
+    elements.importClassAcronymsDialog.showModal();
+    if (window.lucide) {
+      lucide.createIcons({
+        attrs: { class: 'lucide-icon' },
+        nameAttr: 'data-lucide',
+        nodeList: elements.importClassAcronymsDialog.querySelectorAll('[data-lucide]')
+      });
+    }
+  }
+}
+
+function renderImportClassAcronymsReviewTable() {
+  if (!elements.importClassAcronymsTableBody) return;
+  elements.importClassAcronymsTableBody.innerHTML = '';
+
+  const sourceCourseId = elements.importAcronymsSourceCourseSelect ? elements.importAcronymsSourceCourseSelect.value : null;
+  if (!sourceCourseId) {
+    elements.importClassAcronymsTableBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          No source class selected.
+        </td>
+      </tr>
+    `;
+    if (elements.importClassAcronymsCount) elements.importClassAcronymsCount.textContent = '0 acronyms available';
+    return;
+  }
+
+  const sourceAcronyms = (state.acronyms || []).filter(a => a && a.courseId === sourceCourseId && a.acronym);
+  const targetExistingAcronymPairs = new Set(
+    (state.acronyms || [])
+      .filter(a => a && a.courseId === state.currentCourseId && a.acronym)
+      .map(a => `${a.acronym.trim().toUpperCase()}:::${normalizeAcronymTerm(a.term)}`)
+  );
+
+  pendingImportClassAcronymsList = sourceAcronyms;
+
+  if (elements.importClassAcronymsCount) {
+    elements.importClassAcronymsCount.textContent = `${sourceAcronyms.length} acronym(s) available in selected class`;
+  }
+  if (elements.importClassAcronymsHeaderCheckbox) {
+    elements.importClassAcronymsHeaderCheckbox.checked = true;
+  }
+
+  if (sourceAcronyms.length === 0) {
+    elements.importClassAcronymsTableBody.innerHTML = `
+      <tr>
+        <td colspan="4" style="text-align: center; padding: 24px; color: var(--text-muted);">
+          The selected class does not contain any acronym entries.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  const skipDuplicates = elements.importAcronymsSkipDuplicates ? elements.importAcronymsSkipDuplicates.checked : true;
+
+  sourceAcronyms.forEach((ac, idx) => {
+    const codeUpper = (ac.acronym || '').trim().toUpperCase();
+    const pairKey = `${codeUpper}:::${normalizeAcronymTerm(ac.term)}`;
+    const isDuplicate = targetExistingAcronymPairs.has(pairKey);
+    const shouldCheck = skipDuplicates ? !isDuplicate : true;
+
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border-color)';
+    if (isDuplicate) {
+      tr.style.opacity = '0.75';
+    }
+
+    tr.innerHTML = `
+      <td style="text-align: center; padding: 8px 12px; vertical-align: middle;">
+        <input type="checkbox" class="import-class-acronym-row-checkbox" data-index="${idx}" ${shouldCheck ? 'checked' : ''}>
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; font-weight: 700; color: var(--text-primary);">
+        ${escapeHtml(ac.acronym)}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.85rem; color: var(--text-secondary);">
+        ${escapeHtml(ac.term || '-')}
+      </td>
+      <td style="padding: 8px 12px; vertical-align: middle; font-size: 0.78rem;">
+        ${isDuplicate 
+          ? '<span style="display: inline-block; padding: 2px 8px; background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 4px; font-weight: 600;">Already in class</span>'
+          : '<span style="display: inline-block; padding: 2px 8px; background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 4px; font-weight: 600;">New</span>'
+        }
+      </td>
+    `;
+    elements.importClassAcronymsTableBody.appendChild(tr);
+  });
+}
+
+function confirmImportClassAcronyms() {
+  if (!elements.importClassAcronymsTableBody) return;
+  const checkboxes = elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox');
+  const skipDuplicates = elements.importAcronymsSkipDuplicates ? elements.importAcronymsSkipDuplicates.checked : true;
+
+  const targetExistingAcronymPairs = new Set(
+    (state.acronyms || [])
+      .filter(a => a && a.courseId === state.currentCourseId && a.acronym)
+      .map(a => `${a.acronym.trim().toUpperCase()}:::${normalizeAcronymTerm(a.term)}`)
+  );
+
+  let addedCount = 0;
+  let skippedDuplicateCount = 0;
+
+  checkboxes.forEach(cb => {
+    if (cb.checked) {
+      const idx = parseInt(cb.getAttribute('data-index'), 10);
+      const item = pendingImportClassAcronymsList[idx];
+      if (item && item.acronym) {
+        const codeUpper = item.acronym.trim().toUpperCase();
+        const pairKey = `${codeUpper}:::${normalizeAcronymTerm(item.term)}`;
+        if (skipDuplicates && targetExistingAcronymPairs.has(pairKey)) {
+          skippedDuplicateCount++;
+        } else {
+          state.acronyms.push({
+            id: `acronym-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            courseId: state.currentCourseId,
+            acronym: item.acronym,
+            term: item.term || '',
+            createdAt: new Date().toISOString()
+          });
+          targetExistingAcronymPairs.add(pairKey);
+          addedCount++;
+        }
+      }
+    }
+  });
+
+  if (elements.importClassAcronymsDialog) {
+    elements.importClassAcronymsDialog.close();
+  }
+
+  if (addedCount > 0) {
+    saveState();
+    renderAcronyms();
+    let msg = `Successfully imported ${addedCount} acronym(s) into current class!`;
+    if (skippedDuplicateCount > 0) {
+      msg += ` (${skippedDuplicateCount} duplicate(s) skipped)`;
+    }
+    showToast(msg);
+  } else if (skippedDuplicateCount > 0) {
+    alert(`No new acronyms were imported because all selected items (${skippedDuplicateCount}) already exist in your current class.`);
+  } else {
+    alert("No acronyms were selected to import.");
   }
 }
 
 // --------------------------------------------------------------------------
 // AUTOMATED INDEX ACRONYM PARSER
 // --------------------------------------------------------------------------
+function normalizeAcronymTerm(term) {
+  if (!term) return '';
+  return term.trim().toLowerCase().replace(/[\s\-_.,;:]+/g, ' ');
+}
+
 function parseIndexForAcronyms() {
   const activeEntries = state.entries.filter(e => e && e.courseId === state.currentCourseId);
   if (activeEntries.length === 0) {
@@ -9217,13 +10421,28 @@ function parseIndexForAcronyms() {
     return;
   }
 
-  const existingAcronyms = new Set(
-    (state.acronyms || [])
-      .filter(a => a && a.courseId === state.currentCourseId)
-      .map(a => a.acronym.trim().toUpperCase())
-  );
+  const courseAcronyms = (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId);
+  const existingCodesSet = new Set();
+  const existingPairsMap = new Map(); // upperCode -> Set of normalizedTerms
+  const existingTermsListMap = new Map(); // upperCode -> Array of original term strings
 
-  const candidateMap = new Map(); // acronym Upper -> { acronym, term, sourceTopic }
+  courseAcronyms.forEach(a => {
+    if (a.acronym && a.acronym.trim()) {
+      const upper = a.acronym.trim().toUpperCase();
+      existingCodesSet.add(upper);
+      if (!existingPairsMap.has(upper)) {
+        existingPairsMap.set(upper, new Set());
+        existingTermsListMap.set(upper, []);
+      }
+      const norm = normalizeAcronymTerm(a.term);
+      if (norm) {
+        existingPairsMap.get(upper).add(norm);
+        existingTermsListMap.get(upper).push(a.term.trim());
+      }
+    }
+  });
+
+  const candidateMap = new Map(); // key (${upperCode}:::${normTerm}) -> candidate object
 
   activeEntries.forEach(entry => {
     if (!entry.topic) return;
@@ -9238,39 +10457,73 @@ function parseIndexForAcronyms() {
     const pMatch1 = topic.match(/^(.+?)\s*\(([^)]+)\)$/);
     const pMatch2 = topic.match(/^\(([^)]+)\)\s*(.+)$/);
 
+    let foundAcronym = null;
+    let foundTerm = null;
+
     if (pMatch1) {
       const part1 = pMatch1[1].trim();
       const part2 = pMatch1[2].trim();
 
       // If part2 is uppercase acronym 2-6 chars
       if (/^[A-Z0-9]{2,6}$/.test(part2)) {
-        const ac = part2.toUpperCase();
-        if (!existingAcronyms.has(ac)) {
-          candidateMap.set(ac, { acronym: part2, term: part1, sourceTopic: fullSourceEntry });
-        }
+        foundAcronym = part2;
+        foundTerm = part1;
       }
       // If part1 is uppercase acronym 2-6 chars
       else if (/^[A-Z0-9]{2,6}$/.test(part1)) {
-        const ac = part1.toUpperCase();
-        if (!existingAcronyms.has(ac)) {
-          candidateMap.set(ac, { acronym: part1, term: part2, sourceTopic: fullSourceEntry });
-        }
+        foundAcronym = part1;
+        foundTerm = part2;
       }
     } else if (pMatch2) {
       const part1 = pMatch2[1].trim();
       const part2 = pMatch2[2].trim();
       if (/^[A-Z0-9]{2,6}$/.test(part1)) {
-        const ac = part1.toUpperCase();
-        if (!existingAcronyms.has(ac)) {
-          candidateMap.set(ac, { acronym: part1, term: part2, sourceTopic: fullSourceEntry });
-        }
+        foundAcronym = part1;
+        foundTerm = part2;
+      }
+    }
+
+    if (foundAcronym && foundTerm) {
+      const upper = foundAcronym.toUpperCase();
+      const normTerm = normalizeAcronymTerm(foundTerm);
+
+      // Rule 1: Exact (Acronym + Definition) deduplication - skip if this exact definition already exists in the course list
+      if (existingPairsMap.has(upper) && existingPairsMap.get(upper).has(normTerm)) {
+        return;
+      }
+
+      // Rule 3: Flag if this is a new / alternative definition for an acronym already known in the list
+      const isAlternative = existingCodesSet.has(upper);
+      const existingDefs = existingTermsListMap.get(upper) || [];
+
+      const candKey = `${upper}:::${normTerm}`;
+      if (!candidateMap.has(candKey)) {
+        candidateMap.set(candKey, {
+          acronym: foundAcronym,
+          term: foundTerm,
+          sourceTopic: fullSourceEntry,
+          isAlternativeDefinition: isAlternative,
+          existingDefinitions: existingDefs
+        });
       }
     } else {
       // 2. Standalone Uppercase Acronym Check (e.g. "ADFS", "CSRF", "SMB")
       if (/^[A-Z0-9]{2,6}$/.test(topic)) {
-        const ac = topic.toUpperCase();
-        if (!existingAcronyms.has(ac) && !candidateMap.has(ac)) {
-          candidateMap.set(ac, { acronym: topic, term: '', sourceTopic: fullSourceEntry });
+        const upper = topic.toUpperCase();
+        // Rule 2: Standalone bare acronyms with NO definition in topic are SKIPPED if the letters already exist in the list
+        if (existingCodesSet.has(upper)) {
+          return;
+        }
+
+        const candKey = `${upper}:::`;
+        if (!candidateMap.has(candKey)) {
+          candidateMap.set(candKey, {
+            acronym: topic,
+            term: '',
+            sourceTopic: fullSourceEntry,
+            isAlternativeDefinition: false,
+            existingDefinitions: []
+          });
         }
       }
     }
@@ -9299,23 +10552,41 @@ function renderAcronymReviewModal() {
 
   elements.acronymReviewTableBody.innerHTML = pendingAcronymCandidates.map((cand, idx) => {
     const isChecked = cand.term && cand.term.trim().length > 0 ? 'checked' : '';
+    const altBadge = cand.isAlternativeDefinition ? `
+      <div style="margin-top: 4px;">
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);" title="Existing definition(s) in list: ${escapeHtml(cand.existingDefinitions.join(', '))}">
+          <i data-lucide="alert-triangle" style="width: 11px; height: 11px;"></i>
+          <span>New definition (In list: ${escapeHtml(cand.existingDefinitions.join(', '))})</span>
+        </span>
+      </div>
+    ` : '';
+
     return `
       <tr>
         <td style="text-align: center; width: 5%;">
           <input type="checkbox" class="acronym-review-row-checkbox" data-idx="${idx}" ${isChecked}>
         </td>
-        <td style="width: 18%;">
+        <td style="width: 22%;">
           <input type="text" class="acronym-review-code-input" data-idx="${idx}" value="${escapeHtml(cand.acronym)}" style="width: 100%; font-weight: 700; padding: 4px 8px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px;">
+          ${altBadge}
         </td>
-        <td style="width: 45%;">
+        <td style="width: 43%;">
           <input type="text" class="acronym-review-term-input" data-idx="${idx}" value="${escapeHtml(cand.term)}" placeholder="(Leave blank to skip auto-import)" style="width: 100%; padding: 4px 8px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px;">
         </td>
-        <td style="width: 32%; font-size: 0.8rem; color: var(--text-secondary); vertical-align: middle; word-break: break-word;">
+        <td style="width: 30%; font-size: 0.8rem; color: var(--text-secondary); vertical-align: middle; word-break: break-word;">
           ${escapeHtml(cand.sourceTopic || '')}
         </td>
       </tr>
     `;
   }).join('');
+
+  if (window.lucide && elements.acronymReviewDialog) {
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.acronymReviewDialog.querySelectorAll('[data-lucide]')
+    });
+  }
 }
 
 function confirmAcronymReview() {
@@ -9558,6 +10829,71 @@ if (elements.acronymReviewHeaderCheckbox) {
       elements.acronymReviewTableBody.querySelectorAll('.acronym-review-row-checkbox').forEach(cb => cb.checked = elements.acronymReviewHeaderCheckbox.checked);
     }
   });
+}
+
+// Apply Acronym Definitions Review Dialog listeners
+if (elements.applyAcronymsSelectAllBtn) {
+  elements.applyAcronymsSelectAllBtn.addEventListener('click', () => {
+    if (elements.applyAcronymsTableBody) {
+      elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox').forEach(cb => cb.checked = true);
+    }
+    if (elements.applyAcronymsHeaderCheckbox) elements.applyAcronymsHeaderCheckbox.checked = true;
+  });
+}
+if (elements.applyAcronymsDeselectAllBtn) {
+  elements.applyAcronymsDeselectAllBtn.addEventListener('click', () => {
+    if (elements.applyAcronymsTableBody) {
+      elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox').forEach(cb => cb.checked = false);
+    }
+    if (elements.applyAcronymsHeaderCheckbox) elements.applyAcronymsHeaderCheckbox.checked = false;
+  });
+}
+if (elements.applyAcronymsHeaderCheckbox) {
+  elements.applyAcronymsHeaderCheckbox.addEventListener('change', () => {
+    if (elements.applyAcronymsTableBody) {
+      elements.applyAcronymsTableBody.querySelectorAll('.apply-acronym-row-checkbox').forEach(cb => cb.checked = elements.applyAcronymsHeaderCheckbox.checked);
+    }
+  });
+}
+if (elements.confirmApplyAcronymsBtn) {
+  elements.confirmApplyAcronymsBtn.addEventListener('click', confirmApplyAcronymDefinitions);
+}
+
+// Import Acronyms from Class Dialog listeners
+if (elements.importClassAcronymsBtn) {
+  elements.importClassAcronymsBtn.addEventListener('click', openImportClassAcronymsModal);
+}
+if (elements.importAcronymsSourceCourseSelect) {
+  elements.importAcronymsSourceCourseSelect.addEventListener('change', renderImportClassAcronymsReviewTable);
+}
+if (elements.importAcronymsSkipDuplicates) {
+  elements.importAcronymsSkipDuplicates.addEventListener('change', renderImportClassAcronymsReviewTable);
+}
+if (elements.importClassAcronymsSelectAllBtn) {
+  elements.importClassAcronymsSelectAllBtn.addEventListener('click', () => {
+    if (elements.importClassAcronymsTableBody) {
+      elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox').forEach(cb => cb.checked = true);
+    }
+    if (elements.importClassAcronymsHeaderCheckbox) elements.importClassAcronymsHeaderCheckbox.checked = true;
+  });
+}
+if (elements.importClassAcronymsDeselectAllBtn) {
+  elements.importClassAcronymsDeselectAllBtn.addEventListener('click', () => {
+    if (elements.importClassAcronymsTableBody) {
+      elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox').forEach(cb => cb.checked = false);
+    }
+    if (elements.importClassAcronymsHeaderCheckbox) elements.importClassAcronymsHeaderCheckbox.checked = false;
+  });
+}
+if (elements.importClassAcronymsHeaderCheckbox) {
+  elements.importClassAcronymsHeaderCheckbox.addEventListener('change', () => {
+    if (elements.importClassAcronymsTableBody) {
+      elements.importClassAcronymsTableBody.querySelectorAll('.import-class-acronym-row-checkbox').forEach(cb => cb.checked = elements.importClassAcronymsHeaderCheckbox.checked);
+    }
+  });
+}
+if (elements.confirmImportClassAcronymsBtn) {
+  elements.confirmImportClassAcronymsBtn.addEventListener('click', confirmImportClassAcronyms);
 }
 
 // Sort acronym headers

@@ -301,10 +301,10 @@
             <input type="text" id="table-search-input" placeholder="Search by topic, notes, or pages...">
           </div>
 
-          <!-- Middle-positioned Teal AI Combine Button -->
-          <button type="button" id="combine-same-items-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Use AI to find and combine identical topics across your index">
+          <!-- Middle-positioned Teal Combine Button -->
+          <button type="button" id="combine-same-items-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Find and combine identical topics across your index">
             <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
-            <span>Combine same items using AI</span>
+            <span>Combine same items</span>
           </button>
 
           <div class="filters-wrapper">
@@ -452,6 +452,18 @@
               <span>Parse Index for Acronyms</span>
             </button>
 
+            <!-- Apply Acronym Definitions Button -->
+            <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Search course index topics matching all course acronym definitions (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')">
+              <i data-lucide="book-open" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+              <span>Apply Acronym Definitions To Index</span>
+            </button>
+
+            <!-- Import Acronyms from Class Button -->
+            <button type="button" id="import-class-acronyms-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Import acronyms from another existing course or class">
+              <i data-lucide="folder-input" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+              <span>Import Acronyms from Class</span>
+            </button>
+
             <div class="filters-wrapper">
               <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;" title="Require confirmation before deleting an acronym">
                 <input type="checkbox" id="acronyms-confirm-delete" checked>
@@ -468,10 +480,6 @@
                 <span id="acronyms-multi-delete-count-text">0 items selected</span>
               </div>
               <div style="display: flex; gap: 8px;">
-                <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" title="Search course index topics matching selected acronyms (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')" style="background-color: #2dd4bf; color: #0f172a; padding: 4px 10px; font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                  <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
-                  <span>Apply Acronym Definitions To Index</span>
-                </button>
                 <button type="button" id="acronyms-cancel-selection-btn" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.78rem;">Clear Selection</button>
                 <button type="button" id="acronyms-delete-selected-btn" class="btn btn-sm" style="background-color: var(--danger); color: white; padding: 4px 10px; font-size: 0.78rem; font-weight: 600;">Delete Selected Items</button>
               </div>
@@ -1977,20 +1985,48 @@
     <div class="dialog-content">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
         <i data-lucide="sparkles" style="width: 22px; height: 22px; color: var(--color-accent);"></i>
-        <h3 style="margin: 0; font-size: 1.15rem;">Combine Same Items Using AI</h3>
+        <h3 style="margin: 0; font-size: 1.15rem;">Combine Same Items</h3>
       </div>
       
       <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
-        <p style="margin: 0 0 10px 0;">This tool analyzes your project's index entries using Gemini AI to identify terms that represent the <strong>exact same concept or tool</strong> (e.g. <code>Active Directory</code> & <code>AD</code>, or <code>Resource-Based Constrained Delegation (RBCD)</code> & <code>RBCD</code>) and standardizes them.</p>
+        <p style="margin: 0 0 10px 0;">This tool analyzes your project's index entries to identify terms that represent the <strong>exact same concept or tool</strong> (e.g. <code>Active Directory</code> & <code>AD</code>, or <code>file_filter</code> & <code>filter_file</code>) and standardizes them into clean, unified entries.</p>
         <ul style="margin: 0 0 12px 18px; padding: 0; display: flex; flex-direction: column; gap: 4px;">
-          <li>Standardizes names into long-form format with parenthetical acronyms: <code>Long-Form Title (ACRONYM)</code>.</li>
+          <li>Standardizes names into clean canonical formats with parenthetical acronyms.</li>
           <li>Merges page references for entries in the same book.</li>
-          <li>Standardizes topic names across different books so term names remain 100% consistent.</li>
+          <li>Standardizes topic names across different books so term names remain consistent.</li>
         </ul>
       </div>
 
-      <div style="padding: 10px 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 0.78rem; color: #fbbf24; margin-bottom: 16px; line-height: 1.45;">
-        <strong>⚠️ Usage & Quota Notice:</strong> This analysis uses your personal Gemini API key. You will be able to review, check, or uncheck all proposed combinations before any permanent changes are saved.
+      <!-- Consolidation Mode Selection -->
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; display: block;">Consolidation Method:</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <label class="radio-card" style="flex: 1; min-width: 140px; display: flex; align-items: flex-start; gap: 8px; padding: 10px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+            <input type="radio" name="combine-mode" value="both" checked style="margin-top: 2px;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">Both (AI + Rules)</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.3;">Recommended: Full AI evaluation with rule bypass</div>
+            </div>
+          </label>
+          <label class="radio-card" style="flex: 1; min-width: 140px; display: flex; align-items: flex-start; gap: 8px; padding: 10px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+            <input type="radio" name="combine-mode" value="rule-only" style="margin-top: 2px;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">⚡ Rule-Based Only</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.3;">Instant: Word & page overlap rules (No API key needed)</div>
+            </div>
+          </label>
+          <label class="radio-card" style="flex: 1; min-width: 140px; display: flex; align-items: flex-start; gap: 8px; padding: 10px; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+            <input type="radio" name="combine-mode" value="ai-only" style="margin-top: 2px;">
+            <div>
+              <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-primary);">🤖 Gemini AI Only</div>
+              <div style="font-size: 0.74rem; color: var(--text-muted); line-height: 1.3;">Evaluate candidate pairs exclusively with Gemini</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div id="combine-warning-box" style="padding: 10px 12px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 0.78rem; color: #fbbf24; margin-bottom: 16px; line-height: 1.45;">
+        <strong>⚠️ Usage & Quota Notice:</strong> AI analysis uses your personal Gemini API key. You will be able to review, check, or uncheck all proposed combinations before any permanent changes are saved.
       </div>
 
       <div id="combine-ai-key-row" class="form-group" style="display: none; margin-bottom: 16px;">
@@ -1999,11 +2035,43 @@
         <div style="font-size: 0.77rem; color: var(--text-muted); margin-top: 4px;">A free Gemini key is required to run AI consolidation. <a href="https://aistudio.google.com/app/apikey" style="color: #38bdf8;" target="_blank">Get a key</a></div>
       </div>
 
+      <!-- Candidate Pairs & Batch Concurrency Selector -->
+      <div id="combine-concurrency-container" style="background: rgba(15, 23, 42, 0.45); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 0.82rem;">
+          <span style="color: var(--text-muted); font-weight: 500;">Index Candidate Analysis:</span>
+          <span id="combine-stats-summary" style="font-weight: 600; color: #38bdf8;">Scanning candidate pairs...</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="combine-concurrency-select" style="font-size: 0.82rem; font-weight: 600; margin-bottom: 6px; display: block;">Concurrent Batches to Send at Once:</label>
+          <div style="position: relative; width: 100%;">
+            <select id="combine-concurrency-select" class="form-control" style="width: 100%; font-size: 0.83rem; padding: 8px 36px 8px 12px; border-radius: 6px; background-color: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url(&quot;data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E&quot;); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;">
+              <option value="4">4 Batches at once (Recommended for Free Tier - safe from 15 RPM cap)</option>
+            </select>
+            <i data-lucide="chevron-down" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #94a3b8; pointer-events: none;"></i>
+          </div>
+        </div>
+
+        <!-- Wave Formula and Estimated Timing Card -->
+        <div id="combine-wave-timing-card" style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 10px 12px; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+          <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: #38bdf8; font-weight: 600;">
+            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+            <span>Waves & Estimated Analysis Time</span>
+          </div>
+          <div id="combine-wave-calc-text" style="margin-bottom: 4px; font-family: monospace; font-size: 0.76rem; color: var(--text-primary);">
+            Waves = ⌈Total Batches ÷ Batches at once⌉
+          </div>
+          <div id="combine-wave-estimate-text">
+            Each wave takes ~35–45 seconds for Gemini to evaluate.
+          </div>
+        </div>
+      </div>
+
       <div class="dialog-actions">
         <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
         <button type="button" id="start-combine-ai-btn" class="btn btn-accent">
           <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
-          <span>Start AI Analysis</span>
+          <span id="start-combine-btn-text">Start Consolidation</span>
         </button>
       </div>
     </div>
@@ -2025,10 +2093,22 @@
         </div>
       </div>
 
-      <div style="margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; align-items: center;">
-        <span id="same-items-stat-total" style="padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.12); color: #ffffff; font-weight: 600;">0 Groups</span>
-        <span id="same-items-stat-merge" style="padding: 3px 10px; border-radius: 12px; background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 600;">0 Total Items</span>
-        <span id="same-items-stat-selected" style="padding: 3px 10px; border-radius: 12px; background: rgba(20,184,166,0.15); color: #2dd4bf; font-weight: 600;">0 Groups Selected</span>
+      <div style="margin-bottom: 12px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; align-items: center;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+          <span id="same-items-stat-total" style="padding: 3px 10px; border-radius: 12px; background: rgba(255,255,255,0.12); color: #ffffff; font-weight: 600;">0 Groups</span>
+          <span id="same-items-stat-merge" style="padding: 3px 10px; border-radius: 12px; background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 600;">0 Total Items</span>
+          <span id="same-items-stat-selected" style="padding: 3px 10px; border-radius: 12px; background: rgba(20,184,166,0.15); color: #2dd4bf; font-weight: 600;">0 Groups Selected</span>
+        </div>
+
+        <!-- Filter by Source Segmented Control -->
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <span style="font-size: 0.76rem; color: var(--text-muted); font-weight: 500;">Filter:</span>
+          <div id="same-items-source-filters" style="display: inline-flex; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 6px; padding: 2px;">
+            <button type="button" class="btn btn-xs same-items-filter-btn active" data-source="all" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; border: none; cursor: pointer; background: var(--color-accent); color: #ffffff; font-weight: 600;">All (<span id="same-items-filter-count-all">0</span>)</button>
+            <button type="button" class="btn btn-xs same-items-filter-btn" data-source="ai" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; border: none; cursor: pointer; background: transparent; color: var(--text-muted); font-weight: 500;">🤖 Gemini AI (<span id="same-items-filter-count-ai">0</span>)</button>
+            <button type="button" class="btn btn-xs same-items-filter-btn" data-source="rule" style="font-size: 0.74rem; padding: 3px 10px; border-radius: 4px; border: none; cursor: pointer; background: transparent; color: var(--text-muted); font-weight: 500;">⚡ Rule-Based (<span id="same-items-filter-count-rule">0</span>)</button>
+          </div>
+        </div>
       </div>
 
       <div class="pdf-review-table-wrapper" style="flex: 1; overflow-y: auto; min-height: 0; max-height: 60vh; border: 1px solid var(--border-color); border-radius: 6px;">
@@ -2259,9 +2339,17 @@
       <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: #38bdf8; line-height: 1.4;">
         Parsing PDF Index with Gemini AI...
       </h3>
-      <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 8px 0 0 0; line-height: 1.45; max-width: 400px;">
-        Extracting topics, book numbers, and page references across all books. This can take a few minutes.
-      </p>
+      <div id="pdf-index-candidate-info" style="margin-top: 10px; display: none;"></div>
+      <!-- Live Progress Bar & Status -->
+      <div id="pdf-index-progress-container" style="width: 100%; margin-top: 14px; text-align: left;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
+          <span id="pdf-index-progress-status" style="font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px;">Initializing AI Parser...</span>
+          <span id="pdf-index-progress-percent" style="font-weight: 600; color: #38bdf8;">0%</span>
+        </div>
+        <div style="width: 100%; height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden;">
+          <div id="pdf-index-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #38bdf8, #818cf8); transition: width 0.3s ease;"></div>
+        </div>
+      </div>
 
       <!-- Fun Facts Display during loading -->
       <div style="margin-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 16px; width: 100%; text-align: center;">
@@ -2758,6 +2846,141 @@
         <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted); text-align: center;">
           Please do not close the application.
         </p>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Apply Acronym Definitions Review Dialog -->
+  <dialog id="apply-acronyms-confirm-dialog" class="custom-dialog" style="max-width: 820px; width: 90vw;">
+    <div class="dialog-content" style="display: flex; flex-direction: column; max-height: 75vh;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #2dd4bf; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="book-open"></i>
+          <span>Review Acronym Index Renames</span>
+        </h3>
+        <button type="button" class="close-dialog-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">&times;</button>
+      </div>
+
+      <p style="margin: 0 0 14px 0; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45;">
+        The following course index topics match your selected acronym definitions. Review the proposed topic renames and select or deselect items before applying them to your index.
+      </p>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 6px 12px; background: rgba(30, 41, 59, 0.5); border-radius: var(--radius-sm);">
+        <span id="apply-acronyms-count" style="font-size: 0.8rem; color: var(--text-primary); font-weight: 500;">0 proposed renames found</span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="apply-acronyms-select-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Select All</button>
+          <button type="button" id="apply-acronyms-deselect-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Deselect All</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Review Table -->
+      <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 16px; max-height: 380px;">
+        <table class="index-table" style="width: 100%; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; background: var(--bg-sidebar); z-index: 10;">
+            <tr>
+              <th style="width: 5%; text-align: center;"><input type="checkbox" id="apply-acronyms-header-checkbox" checked></th>
+              <th style="width: 25%;">Original Topic</th>
+              <th style="width: 45%;">Proposed New Topic</th>
+              <th style="width: 25%;">Book & Pages</th>
+            </tr>
+          </thead>
+          <tbody id="apply-acronyms-table-body">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="confirm-apply-acronyms-btn" class="btn btn-accent">
+          <span>Apply Selected Renames</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Import Acronyms from Class Dialog -->
+  <dialog id="import-class-acronyms-dialog" class="custom-dialog" style="max-width: 820px; width: 90vw;">
+    <div class="dialog-content" style="display: flex; flex-direction: column; max-height: 75vh;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #2dd4bf; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="folder-input"></i>
+          <span>Import Acronyms from Class</span>
+        </h3>
+        <button type="button" class="close-dialog-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">&times;</button>
+      </div>
+
+      <p style="margin: 0 0 14px 0; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.45;">
+        Select a source class to view and import its acronyms into your current active class.
+      </p>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 14px; padding: 10px 14px; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+        <div style="flex: 1; min-width: 200px;">
+          <label for="import-acronyms-source-course-select" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Source Class / Course:</label>
+          <select id="import-acronyms-source-course-select" style="width: 100%; padding: 6px 10px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-size: 0.85rem;">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 6px; margin-top: 18px;">
+          <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-secondary); cursor: pointer; user-select: none;" title="Automatically skip acronyms that already exist in your current active class">
+            <input type="checkbox" id="import-acronyms-skip-duplicates" checked>
+            <span>Skip Duplicate Acronyms</span>
+          </label>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 6px 12px; background: rgba(30, 41, 59, 0.5); border-radius: var(--radius-sm);">
+        <span id="import-class-acronyms-count" style="font-size: 0.8rem; color: var(--text-primary); font-weight: 500;">0 acronyms available</span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="import-class-acronyms-select-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Select All</button>
+          <button type="button" id="import-class-acronyms-deselect-all-btn" class="btn btn-xs btn-secondary" style="padding: 2px 8px; font-size: 0.75rem;">Deselect All</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Review Table -->
+      <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 16px; max-height: 380px;">
+        <table class="index-table" style="width: 100%; border-collapse: collapse;">
+          <thead style="position: sticky; top: 0; background: var(--bg-sidebar); z-index: 10;">
+            <tr>
+              <th style="width: 5%; text-align: center;"><input type="checkbox" id="import-class-acronyms-header-checkbox" checked></th>
+              <th style="width: 25%;">Acronym</th>
+              <th style="width: 55%;">Full Term / Definition</th>
+              <th style="width: 15%;">Status</th>
+            </tr>
+          </thead>
+          <tbody id="import-class-acronyms-table-body">
+            <!-- Populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
+        <button type="button" id="confirm-import-class-acronyms-btn" class="btn btn-accent">
+          <span>Import Selected Acronyms</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Global In-App Alert Dialog (Replaces native window.alert to prevent Windows Electron focus drops) -->
+  <dialog id="app-alert-dialog" class="custom-dialog" style="max-width: 440px;">
+    <div class="dialog-content" style="padding: 22px 24px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div id="app-alert-icon-container" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(59, 130, 246, 0.15); color: #60a5fa; flex-shrink: 0;">
+          <i data-lucide="info" id="app-alert-icon" style="width: 22px; height: 22px;"></i>
+        </div>
+        <h3 id="app-alert-title" style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">Notice</h3>
+      </div>
+      
+      <div id="app-alert-message" style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 22px; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow-y: auto;">
+      </div>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 0;">
+        <button type="button" id="app-alert-ok-btn" class="btn btn-accent" style="min-width: 90px;">
+          <span>OK</span>
+        </button>
       </div>
     </div>
   </dialog>
