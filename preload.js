@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   loadData: () => ipcRenderer.invoke('load-data'),
-  saveData: (data) => ipcRenderer.invoke('save-data', data),
+  saveData: (data, options) => ipcRenderer.invoke('save-data', data, options),
   getBackupsList: (courseId) => ipcRenderer.invoke('get-backups-list', courseId),
   getBackupDetails: (filename, courseId) => ipcRenderer.invoke('get-backup-details', filename, courseId),
   revertToBackup: (args) => ipcRenderer.invoke('revert-to-backup', args),
@@ -26,16 +26,11 @@ contextBridge.exposeInMainWorld('api', {
   onDepInstallLog: (callback) => {
     ipcRenderer.on('dep-install-log', (event, log) => callback(log));
   },
-  checkLocalModelStatus: (modelKey) => ipcRenderer.invoke('check-local-model-status', modelKey),
-  downloadLocalModel: (modelKey) => ipcRenderer.invoke('download-local-model', modelKey),
   parsePdfIndex: (args) => ipcRenderer.invoke('parse-pdf-index', args),
   getCombineCandidateStats: (args) => ipcRenderer.invoke('get-combine-candidate-stats', args),
   combineSameItems: (args) => ipcRenderer.invoke('combine-same-items', args),
   onPdfImportProgress: (callback) => {
     ipcRenderer.on('pdf-import-progress', (event, progress) => callback(progress));
-  },
-  onModelDownloadProgress: (callback) => {
-    ipcRenderer.on('model-download-progress', (event, data) => callback(data));
   },
   onAutoIndexProgress: (callback) => {
     ipcRenderer.on('auto-index-progress', (event, progress) => callback(progress));

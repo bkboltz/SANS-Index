@@ -3,8 +3,5 @@
   "description": "Mandatory system output instructions automatically appended to user prompts to guarantee valid JSON output for the SANS Study Indexer.",
   "gemini": {
     "appendedInstruction": "MANDATORY OUTPUT FORMAT (SYSTEM OVERRIDE): Regardless of any formatting preferences above (such as markdown, plain text, or tables), you MUST return ONLY a valid, raw JSON array of objects matching the exact input structure: [{\"topic\": \"...\", \"pages\": \"...\", \"notes\": \"\", \"source\": \"auto\"}]. Do NOT include markdown code fences (```), preambles, or commentary."
-  },
-  "localSlm": {
-    "appendedInstruction": "MANDATORY OUTPUT FORMAT (SYSTEM OVERRIDE): Regardless of any formatting preferences above, output ONLY a valid, raw JSON array of strings containing the kept terms (e.g., [\"Term 1\", \"Term 2\"]). Do NOT include any markdown code fences (```), preambles, or conversational commentary."
   }
 }

@@ -49,6 +49,23 @@
         </div>
       </div>
 
+      <!-- Book Manager Segment (Expanded by Default) -->
+      <div id="books-sidebar-section" class="sidebar-section">
+        <div class="section-title collapsible-header" id="books-toggle-btn">
+          <div class="title-left">
+            <i data-lucide="chevron-down" class="collapse-icon"></i>
+            <span>Course Books</span>
+            <span id="books-count-badge" class="todo-badge">0</span>
+          </div>
+          <button id="add-book-btn" class="icon-btn-small" title="Add Book">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+        <div id="books-list" class="books-list">
+          <!-- Populated by JavaScript, Draggable -->
+        </div>
+      </div>
+
       <!-- Review Later / To-Do Segment -->
       <div id="todo-sidebar-section" class="sidebar-section">
         <div class="section-title collapsible-header" id="todo-toggle-btn">
@@ -75,22 +92,6 @@
               <!-- Populated by JavaScript -->
             </ul>
           </div>
-        </div>
-      </div>
-
-      <!-- Book Manager Segment (Defaulted to Collapsed) -->
-      <div id="books-sidebar-section" class="sidebar-section collapsed">
-        <div class="section-title collapsible-header" id="books-toggle-btn">
-          <div class="title-left">
-            <i data-lucide="chevron-down" class="collapse-icon"></i>
-            <span>Course Books</span>
-          </div>
-          <button id="add-book-btn" class="icon-btn-small" title="Add Book">
-            <i data-lucide="plus"></i>
-          </button>
-        </div>
-        <div id="books-list" class="books-list">
-          <!-- Populated by JavaScript, Draggable -->
         </div>
       </div>
 
@@ -132,7 +133,7 @@
         <div class="keyboard-tip">
           <div class="tip-title">Keyboard Shortcuts:</div>
           <div class="shortcut-item"><kbd>Enter</kbd> <span>Save Entry (from form)</span></div>
-          <div class="shortcut-item"><kbd>Alt + N</kbd> <span>Focus Topic</span></div>
+          <div class="shortcut-item"><kbd>Ctrl+N / Alt+N</kbd> <span>Focus Topic</span></div>
           <div class="shortcut-item"><kbd>Esc</kbd> <span>Clear input / Edit</span></div>
         </div>
       </div>
@@ -141,32 +142,13 @@
     <!-- Main Workspace Content -->
     <main id="main-workspace" class="main-content">
       
-      <!-- Exam Date Alert Banners -->
-      <div id="exam-notification-banner" class="exam-notification-banner hidden no-print">
-        <div class="banner-content">
-          <i data-lucide="calendar" class="banner-icon"></i>
-          <span class="banner-text">No exam date configured for this course. Click to set your countdown!</span>
-          <button type="button" class="btn btn-accent btn-sm set-exam-date-banner-btn">Set Date</button>
-          <button type="button" class="btn btn-secondary btn-sm dismiss-forever-banner-btn" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 4px 10px; font-size: 0.8rem; border-radius: var(--radius-sm); font-weight: bold; cursor: pointer; transition: background 0.15s;">Dismiss Forever</button>
-        </div>
-        <button type="button" class="close-banner-btn">&times;</button>
-      </div>
-
-      <div id="exam-caution-banner" class="exam-caution-banner hidden no-print" style="justify-content: space-between;">
-        <div class="caution-content">
-          <i data-lucide="alert-triangle" class="caution-icon"></i>
-          <span>No exam date set. <a href="#" class="set-exam-date-link">Configure now</a> to enable study countdown.</span>
-        </div>
-        <a href="#" class="dismiss-forever-caution-link" style="color: var(--text-muted); font-size: 0.8rem; text-decoration: underline; margin-left: 12px;">Dismiss Forever</a>
-      </div>
-      
       <!-- Collapsible Sidebar Toggle Button -->
       <button id="sidebar-toggle-btn" class="sidebar-toggle-btn no-print" title="Toggle Sidebar">
         <i data-lucide="chevron-left"></i>
       </button>
       
-      <!-- Top Stats & Print Actions (Hidden in Quiz mode) -->
-      <header class="main-header no-print no-print-in-quiz">
+      <!-- Top Stats & Print Actions -->
+      <header class="main-header no-print">
         <div class="header-intro">
           <h1 id="current-course-title">SEC504: Hacker Tools & Techniques</h1>
           <p class="summary-text">Index your course topics for rapid lookups during your open-book exam.</p>
@@ -184,7 +166,7 @@
       </header>
 
       <!-- Workspace Navigation Tabs -->
-      <div class="workspace-tabs no-print no-print-in-quiz">
+      <div class="workspace-tabs no-print">
         <button class="tab-btn active" data-view-tab="manual-index">
           <i data-lucide="edit-3"></i>
           <span>My Index</span>
@@ -206,8 +188,8 @@
       <!-- Manual Indexing Workspace View -->
       <div id="manual-index-view" class="workspace-view">
 
-      <!-- Stats Bar (Hidden in Quiz mode) -->
-      <section class="stats-bar no-print no-print-in-quiz">
+      <!-- Stats Bar -->
+      <section class="stats-bar no-print">
         <div class="stat-card">
           <div class="stat-value" id="stat-total-entries">0</div>
           <div class="stat-label">Total Index Entries</div>
@@ -219,6 +201,10 @@
         <div class="stat-card">
           <div class="stat-value" id="stat-last-added">-</div>
           <div class="stat-label">Last Added Topic</div>
+        </div>
+        <div class="stat-card" id="stat-card-exam" title="Click to set or edit your projected exam date" style="cursor: pointer;">
+          <div class="stat-value" id="stat-exam-countdown" style="font-size: 1.15rem;">Set Exam Date</div>
+          <div class="stat-label" id="stat-exam-label">Exam Countdown</div>
         </div>
       </section>
 
@@ -301,25 +287,15 @@
             <input type="text" id="table-search-input" placeholder="Search by topic, notes, or pages...">
           </div>
 
-          <!-- Middle-positioned Teal Combine Button -->
-          <button type="button" id="combine-same-items-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Find and combine identical topics across your index">
-            <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
-            <span>Combine same items</span>
-          </button>
-
           <div class="filters-wrapper">
             <select id="filter-book-select">
               <option value="all">All Books</option>
               <!-- Populated dynamically -->
             </select>
-            <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;">
-              <input type="checkbox" id="settings-show-ai-badges" checked>
-              <span>Show Source Badges</span>
-            </label>
-            <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;" title="Require confirmation before deleting an index entry">
-              <input type="checkbox" id="settings-confirm-delete" checked>
-              <span>Confirm Deletion</span>
-            </label>
+            <button type="button" id="combine-same-items-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; font-size: 0.8rem; font-weight: 600; padding: 0 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: var(--radius-sm); white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Find and combine similar or duplicate topics across your index">
+              <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+              <span>Combine Like Items</span>
+            </button>
           </div>
         </section>
 
@@ -371,7 +347,7 @@
       <div id="my-acronyms-view" class="workspace-view hidden no-print">
 
         <!-- Stats Bar for Acronyms -->
-        <section class="stats-bar no-print no-print-in-quiz">
+        <section class="stats-bar no-print">
           <div class="stat-card">
             <div class="stat-value" id="stat-total-acronyms">0</div>
             <div class="stat-label">Total Acronym Entries</div>
@@ -383,6 +359,10 @@
           <div class="stat-card">
             <div class="stat-value" id="stat-last-acronym">-</div>
             <div class="stat-label">Last Added Acronym</div>
+          </div>
+          <div class="stat-card" id="stat-card-acronym-exam-countdown" title="Click to set or edit your projected exam date" style="cursor: pointer;">
+            <div class="stat-value" id="stat-acronym-exam-countdown" style="font-size: 1.15rem;">Set Exam Date</div>
+            <div class="stat-label" id="stat-acronym-exam-label">Exam Countdown</div>
           </div>
         </section>
 
@@ -446,29 +426,24 @@
               <input type="text" id="acronym-search-input" placeholder="Search by acronym or term...">
             </div>
 
-            <!-- Parse Index for Acronyms Teal Button -->
-            <button type="button" id="parse-index-acronyms-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Extract acronyms automatically from your course index topics">
-              <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
-              <span>Parse Index for Acronyms</span>
-            </button>
+            <div class="filters-wrapper" style="gap: 10px; flex-wrap: wrap;">
+              <!-- Parse Index for Acronyms Teal Button -->
+              <button type="button" id="parse-index-acronyms-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; font-size: 0.78rem; font-weight: 600; padding: 0 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: var(--radius-sm); white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Extract acronyms automatically from your course index topics">
+                <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+                <span>Parse Index for Acronyms</span>
+              </button>
 
-            <!-- Apply Acronym Definitions Button -->
-            <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Search course index topics matching all course acronym definitions (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')">
-              <i data-lucide="book-open" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
-              <span>Apply Acronym Definitions To Index</span>
-            </button>
+              <!-- Apply Acronym Definitions Button -->
+              <button type="button" id="acronyms-apply-definitions-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; font-size: 0.78rem; font-weight: 600; padding: 0 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: var(--radius-sm); white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Search course index topics matching all course acronym definitions (e.g. 'AD') and rename them to 'Full Term (Acronym)' (e.g. 'Active Directory (AD)')">
+                <i data-lucide="book-open" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+                <span>Apply Acronym Definitions To Index</span>
+              </button>
 
-            <!-- Import Acronyms from Class Button -->
-            <button type="button" id="import-class-acronyms-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; padding: 6px 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: 6px; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Import acronyms from another existing course or class">
-              <i data-lucide="folder-input" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
-              <span>Import Acronyms from Class</span>
-            </button>
-
-            <div class="filters-wrapper">
-              <label class="checkbox-label" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; user-select: none; margin-left: 10px;" title="Require confirmation before deleting an acronym">
-                <input type="checkbox" id="acronyms-confirm-delete" checked>
-                <span>Confirm Deletion</span>
-              </label>
+              <!-- Import Acronyms from Class Button -->
+              <button type="button" id="import-class-acronyms-btn" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; font-size: 0.78rem; font-weight: 600; padding: 0 14px; background: rgba(20, 184, 166, 0.15); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.4); border-radius: var(--radius-sm); white-space: nowrap; cursor: pointer; transition: all 0.2s ease;" title="Import acronyms from another existing course or class">
+                <i data-lucide="folder-input" style="width: 14px; height: 14px; color: #2dd4bf;"></i>
+                <span>Import Acronyms from Class</span>
+              </button>
             </div>
           </section>
 
@@ -814,161 +789,8 @@
 
                 <!-- Options Container (hidden when AI Curation toggle is off) -->
                 <div id="ai-curation-options-container">
-                  <!-- Hidden select for backward compatibility -->
-                  <select id="auto-index-curation-engine" class="hidden">
-                    <option value="gemini" selected>Gemini Cloud API</option>
-                    <option value="local-slm">Local 0.5B SLM Engine</option>
-                  </select>
-
-                  <!-- Selectable AI Engine Card -->
-                  <div style="margin-bottom: 8px;">
-                    <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary);">Select AI Engine</label>
-                  </div>
-
-                  <!-- Google Gemini (Cloud AI) - Recommended Default Card -->
-                  <div class="curation-engine-card active" id="curation-card-gemini" data-engine="gemini" style="margin-bottom: 12px;">
-                    <div>
-                      <div class="curation-card-header">
-                        <div class="curation-card-icon-title">
-                          <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #4285F4, #9B51E0); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                            <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
-                          </div>
-                          <div>
-                            <div class="curation-card-title">Google Gemini (Cloud AI)</div>
-                            <span style="font-size: 0.72rem; color: var(--text-muted);">High-speed Google cloud models</span>
-                          </div>
-                        </div>
-                        <span class="badge" style="background: rgba(20, 184, 166, 0.2); color: var(--color-accent); border: 1px solid rgba(20, 184, 166, 0.45); font-size: 0.7rem; font-weight: 700; padding: 2px 8px; display: inline-flex; align-items: center; gap: 4px;">
-                          <i data-lucide="sparkles" style="width: 11px; height: 11px;"></i>Recommended
-                        </span>
-                      </div>
-                      <div class="curation-card-description" style="margin-bottom: 12px;">
-                        Highest quality curation using Google Gemini cloud models. Fast execution, uses 0% local PC resources (ideal for lightweight laptops), and supports all Gemini 2.x/3.x models.
-                      </div>
-                    </div>
-                    <div class="curation-card-features" style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 16px; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 10px;">
-                      <div class="curation-card-feature-item">
-                        <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                        <span><strong>Download Size:</strong> 0 MB (Cloud)</span>
-                      </div>
-                      <div class="curation-card-feature-item">
-                        <i data-lucide="check-circle-2" style="width: 13px; height: 13px; color: #2dd4bf; flex-shrink: 0; margin-top: 1px;"></i>
-                        <span><strong>Hardware Demand:</strong> 0% PC RAM/CPU</span>
-                      </div>
-                      <div class="curation-card-feature-item" style="color: #eab308;">
-                        <i data-lucide="star" style="width: 13px; height: 13px; color: #eab308; flex-shrink: 0; margin-top: 1px;"></i>
-                        <span><strong>Curation Quality:</strong> ★★★★★ (Top)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Collapsed Local Offline SLM Models -->
-                  <div style="margin-bottom: 16px;">
-                    <div id="local-slm-toggle" class="collapsible-header" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(30, 41, 59, 0.25); border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; user-select: none;">
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="cpu" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
-                        <span style="font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);">Offline Local SLM Models (Optional / Advanced)</span>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <span id="local-slm-toggle-status" style="font-size: 0.7rem; color: var(--text-muted);">Collapsed</span>
-                        <i data-lucide="chevron-right" class="collapse-icon" id="local-slm-toggle-icon" style="transition: transform 0.2s ease;"></i>
-                      </div>
-                    </div>
-
-                    <div id="local-slm-container" class="hidden" style="margin-top: 10px; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: rgba(15, 23, 42, 0.25);">
-                      <p style="font-size: 0.76rem; color: var(--text-muted); margin: 0 0 12px 0; line-height: 1.45;">
-                        Small language models run 100% offline without API keys, but require downloading multi-gigabyte files and utilize significant local CPU/RAM.
-                      </p>
-                      <div class="curation-card-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 0; margin-bottom: 0;">
-                        <!-- Local Qwen 1.5B -->
-                        <div class="curation-engine-card" id="curation-card-local-1.5b" data-engine="local-slm" data-model="1.5b">
-                          <div>
-                            <div class="curation-card-header">
-                              <div class="curation-card-icon-title">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                                  <i data-lucide="zap" style="width: 18px; height: 18px;"></i>
-                                </div>
-                                <div class="curation-card-title">Qwen 1.5B (Fast & Smart)</div>
-                              </div>
-                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-1.5b">1.5B Local</span>
-                            </div>
-                            <div class="curation-card-description">
-                              Fast execution with technical English vocabulary. Runs 100% offline without API keys.
-                            </div>
-                          </div>
-                          <div class="curation-card-features">
-                            <div class="curation-card-feature-item">
-                              <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                              <span><strong>Download:</strong> ~1.1 GB</span>
-                            </div>
-                            <div class="curation-card-feature-item">
-                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                              <span><strong>Demand:</strong> ~1.5 GB RAM</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Local Qwen 3B (Near Cloud Quality) -->
-                        <div class="curation-engine-card" id="curation-card-local-3b" data-engine="local-slm" data-model="3b">
-                          <div>
-                            <div class="curation-card-header">
-                              <div class="curation-card-icon-title">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                                  <i data-lucide="brain-circuit" style="width: 18px; height: 18px;"></i>
-                                </div>
-                                <div class="curation-card-title">Qwen 3B (Near-Cloud)</div>
-                              </div>
-                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-3b">3B Local</span>
-                            </div>
-                            <div class="curation-card-description">
-                              High reasoning capacity for complex technical terms and protocol names completely offline.
-                            </div>
-                          </div>
-                          <div class="curation-card-features">
-                            <div class="curation-card-feature-item">
-                              <i data-lucide="download" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                              <span><strong>Download:</strong> ~2.0 GB</span>
-                            </div>
-                            <div class="curation-card-feature-item">
-                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #a78bfa; flex-shrink: 0; margin-top: 1px;"></i>
-                              <span><strong>Demand:</strong> ~2.8 GB RAM</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Local Qwen 0.5B (Ultra-Lightweight) -->
-                        <div class="curation-engine-card" id="curation-card-local-0.5b" data-engine="local-slm" data-model="0.5b">
-                          <div>
-                            <div class="curation-card-header">
-                              <div class="curation-card-icon-title">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #0ea5e9, #38bdf8); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-                                  <i data-lucide="feather" style="width: 18px; height: 18px;"></i>
-                                </div>
-                                <div class="curation-card-title">Qwen 0.5B (Ultra-Light)</div>
-                              </div>
-                              <span class="badge badge-info model-status-badge" style="font-size: 0.68rem;" id="badge-model-0.5b">0.5B Micro</span>
-                            </div>
-                            <div class="curation-card-description">
-                              Smallest, lightweight model for basic offline filtering. Lowest resource demand.
-                            </div>
-                          </div>
-                          <div class="curation-card-features">
-                            <div class="curation-card-feature-item">
-                              <i data-lucide="download" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                              <span><strong>Download:</strong> ~398 MB</span>
-                            </div>
-                            <div class="curation-card-feature-item">
-                              <i data-lucide="cpu" style="width: 13px; height: 13px; color: #38bdf8; flex-shrink: 0; margin-top: 1px;"></i>
-                              <span><strong>Demand:</strong> ~800 MB RAM</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Conditional Container: Gemini Settings -->
-                  <div id="gemini-settings-container" style="margin-top: 16px;">
+                  <!-- Gemini Settings -->
+                  <div id="gemini-settings-container" style="margin-top: 8px;">
                     <!-- Gemini API Key -->
                     <div class="form-group" id="auto-index-gemini-key-group" style="position: relative; margin-bottom: 16px;">
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -1074,47 +896,6 @@
 
                         <div style="display: flex; justify-content: flex-end;">
                           <button type="button" id="reset-gemini-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
-                            <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
-                            <span>Reset to Default Prompt</span>
-                          </button>
-                        </div>
-                      </div>
-                    </details>
-                  </div>
-
-                  <!-- Conditional Container: Local SLM Info & Custom Prompt -->
-                  <div id="local-slm-info-container" class="hidden" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
-                    <div style="padding: 14px 18px; border: 1px solid rgba(56, 189, 248, 0.2); border-radius: var(--radius-md); background: rgba(56, 189, 248, 0.05); display: flex; align-items: center; gap: 12px;">
-                      <i data-lucide="shield-check" style="width: 24px; height: 24px; color: #38bdf8; flex-shrink: 0;"></i>
-                      <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;">
-                        <strong style="color: #38bdf8;">100% Offline Ready:</strong> Curation will run locally using your PC's CPU/RAM. No API key or internet connection required.
-                      </div>
-                    </div>
-
-                    <!-- Collapsible Advanced Prompt Editor -->
-                    <details style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 14px; font-size: 0.82rem;">
-                      <summary style="cursor: pointer; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between; user-select: none;">
-                        <span style="display: inline-flex; align-items: center; gap: 6px;">
-                          <i data-lucide="sliders" style="width: 14px; height: 14px; color: #38bdf8;"></i>
-                          Advanced Options: Customize Local System Prompt
-                        </span>
-                        <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: normal;">(Click to expand)</span>
-                      </summary>
-
-                      <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
-                          Customize system instructions sent to your local model. You can fine-tune inclusion/exclusion rules or add specific terms relevant to your course.
-                        </div>
-
-                        <textarea id="local-slm-custom-prompt" class="prompt-editor-textarea" rows="10" placeholder="Customize system instructions sent to your local model..." style="width: 100%; height: 220px; min-height: 180px; background: #090d16; border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-mono, monospace); font-size: 0.82rem; padding: 12px 14px; line-height: 1.5; resize: vertical; overflow-y: auto; outline: none; box-sizing: border-box;"></textarea>
-
-                        <div style="font-size: 0.72rem; color: var(--text-muted); background: rgba(15, 23, 42, 0.6); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: var(--radius-sm); padding: 8px 10px; line-height: 1.45;">
-                          <strong style="color: #38bdf8;">*Note (Auto-Appended by System):</strong> To ensure the program can read the AI's response, the following output instruction from <code>engine/ai_output_manifest.json</code> is always appended to your prompt:<br>
-                          <code id="local-slm-appended-manifest-preview" style="display: block; margin-top: 4px; color: var(--text-secondary); font-family: var(--font-mono, monospace); font-size: 0.7rem; white-space: pre-wrap;">MANDATORY OUTPUT FORMAT (SYSTEM OVERRIDE): Regardless of any formatting preferences above, output ONLY a valid, raw JSON array of strings containing the kept terms (e.g., ["Term 1", "Term 2"]). Do NOT include any markdown code fences (```), preambles, or conversational commentary.</code>
-                        </div>
-
-                        <div style="display: flex; justify-content: flex-end;">
-                          <button type="button" id="reset-local-prompt-btn" class="btn btn-secondary" style="font-size: 0.72rem; padding: 4px 12px; height: auto;">
                             <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
                             <span>Reset to Default Prompt</span>
                           </button>
@@ -1357,18 +1138,6 @@
             </div>
           </div>
 
-          <!-- Quiz Generation Error alert box -->
-          <div id="quiz-generation-error-alert" class="hidden" style="display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; margin: 16px 0; background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; border-radius: 4px; font-size: 0.8rem; color: var(--text-primary); line-height: 1.45;">
-            <i data-lucide="alert-circle" style="width: 16px; height: 16px; color: #ef4444; flex-shrink: 0; margin-top: 1px;"></i>
-            <div style="flex: 1;">
-              <strong style="color: #f87171;">Practice Quiz Generation Failed:</strong> 
-              <span id="quiz-generation-error-text" style="color: var(--text-secondary);">Google's free tier rate limit was exceeded. Try again later.</span>
-              <p style="color: var(--text-muted); margin: 6px 0 0 0; font-size: 0.75rem;">
-                Your index terms were successfully extracted and curated. However, the AI quiz generator encountered an error (likely due to TPM/RPM rate limits or daily API quotas). You can still import your index below, and try generating a quiz next time you index or when your API limit resets tomorrow.
-              </p>
-            </div>
-          </div>
-
           <div class="table-controls-container" style="border: none; padding: 15px 0 10px 0; background: transparent;">
             <div class="search-wrapper">
               <i data-lucide="search" class="search-icon"></i>
@@ -1396,63 +1165,6 @@
             </table>
           </div>
         </section>
-      </div>
-
-      <!-- SANS Practice Quiz Workspace View -->
-      <div id="quiz-practice-view" class="workspace-view hidden no-print" style="max-width: 800px; margin: 0 auto; padding: 24px;">
-        <div class="panel-container" style="padding: 30px; position: relative;">
-          <!-- Top bar: progress & score -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-              <span id="quiz-progress-text" style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Question 1 of 10</span>
-              <div style="width: 200px; height: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden;">
-                <div id="quiz-progress-fill" style="width: 10%; height: 100%; background: var(--color-accent); transition: width 0.3s;"></div>
-              </div>
-            </div>
-            
-            <div id="quiz-live-score-container" class="hidden" style="text-align: right;">
-              <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Current Score</span>
-              <strong id="quiz-live-score" style="font-size: 1.1rem; color: #10b981;">0/0</strong>
-            </div>
-            
-            <button id="quiz-exit-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;">
-              <i data-lucide="log-out" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i>
-              <span>Exit Quiz</span>
-            </button>
-          </div>
-          
-          <!-- Question Display -->
-          <div id="quiz-question-container" style="margin-bottom: 24px;">
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
-              <span id="quiz-question-book-badge" class="badge" style="background: rgba(20, 184, 166, 0.1); color: var(--color-accent); font-size: 0.72rem; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(20, 184, 166, 0.2);">Book 1</span>
-              <span id="quiz-question-diff-badge" class="badge" style="background: rgba(124, 58, 237, 0.1); color: #a78bfa; font-size: 0.72rem; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(124, 58, 237, 0.2);">Conceptual</span>
-            </div>
-            <h3 id="quiz-question-text" style="font-size: 1.25rem; font-weight: 600; line-height: 1.5; color: var(--text-primary); margin: 0 0 20px 0;">Which utility is used to capture network packets?</h3>
-            
-            <div id="quiz-options-container" class="quiz-option-list">
-              <!-- Option buttons are dynamically injected here -->
-            </div>
-          </div>
-          
-          <!-- Explanation / Feedback Panel (Hidden by default) -->
-          <div id="quiz-feedback-panel" class="hidden" style="margin-bottom: 24px; padding: 20px; background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color); border-radius: var(--radius-md); animation: slideUp 0.3s ease;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-              <span id="quiz-feedback-indicator" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.95rem;">
-                <i id="quiz-feedback-icon" data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i>
-                <span id="quiz-feedback-title">Correct!</span>
-              </span>
-            </div>
-            <p id="quiz-explanation-text" style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);">Explanation text goes here...</p>
-          </div>
-          
-          <!-- Next / Submit navigation -->
-          <div style="display: flex; justify-content: flex-end;">
-            <button id="quiz-next-question-btn" class="btn btn-accent" style="padding: 10px 24px;">
-              <span>Next Question</span>
-              <i data-lucide="chevron-right" style="width: 16px; height: 16px; margin-left: 4px;"></i>
-            </button>
-          </div>
-        </div>
       </div>
 
       <!-- Notes Text Editor Workspace View -->
@@ -1690,41 +1402,6 @@
 
         </div>
       </div>
-      
-      <!-- SANS Practice Quiz Scorecard View -->
-      <div id="quiz-scorecard-view" class="workspace-view hidden no-print" style="max-width: 600px; margin: 0 auto; padding: 24px;">
-        <div class="panel-container" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 24px;">
-          <div style="background: rgba(20, 184, 166, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--color-accent); border: 2px solid rgba(20, 184, 166, 0.2);">
-            <i data-lucide="trophy" style="width: 40px; height: 40px;"></i>
-          </div>
-          
-          <div>
-            <h2 style="margin: 0 0 8px 0; font-size: 1.75rem; font-weight: 700; color: var(--text-primary);">Quiz Completed!</h2>
-            <p style="margin: 0; font-size: 0.95rem; color: var(--text-muted);">Here is your performance breakdown.</p>
-          </div>
-          
-          <div style="display: flex; justify-content: center; gap: 40px; margin: 10px 0; width: 100%; max-width: 400px;">
-            <div style="background: rgba(30, 41, 59, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; flex: 1; text-align: center;">
-              <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Score</span>
-              <strong id="scorecard-ratio" style="font-size: 1.8rem; color: var(--color-accent);">8/10</strong>
-            </div>
-            <div style="background: rgba(30, 41, 59, 0.2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; flex: 1; text-align: center;">
-              <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Accuracy</span>
-              <strong id="scorecard-percent" style="font-size: 1.8rem; color: #10b981;">80%</strong>
-            </div>
-          </div>
-          
-          <!-- Detailed questions breakdown -->
-          <div id="scorecard-review-container" style="text-align: left; width: 100%; max-height: 300px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.3); padding: 16px; display: flex; flex-direction: column; gap: 16px;">
-            <!-- Review items injected here -->
-          </div>
-          
-          <div style="display: flex; gap: 16px; width: 100%; justify-content: center;">
-            <button id="scorecard-retry-btn" class="btn btn-accent" style="padding: 10px 24px; flex: 1; max-width: 180px;">Try Again</button>
-            <button id="scorecard-close-btn" class="btn btn-secondary" style="padding: 10px 24px; flex: 1; max-width: 180px;">Back to Hub</button>
-          </div>
-        </div>
-      </div>
 
     </main>
 
@@ -1742,6 +1419,10 @@
           <label for="dialog-course-name">Course Code & Name</label>
           <input type="text" id="dialog-course-name" placeholder="Search SANS code or type name (e.g. SEC565, FOR508)" required>
           <div id="course-autocomplete-list" class="autocomplete-items hidden"></div>
+        </div>
+        <div class="form-group" id="dialog-course-books-group">
+          <label for="dialog-course-book-count">Default Number of Books (if not in catalog)</label>
+          <input type="number" id="dialog-course-book-count" value="6" min="1" max="15" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-family: inherit;">
         </div>
         <div class="form-group">
           <label for="dialog-course-date">Projected Exam Date (Optional)</label>
@@ -1990,12 +1671,12 @@
     </div>
   </dialog>
 
-  <!-- Combine Same Items Setup / Warning Dialog -->
+  <!-- Combine Like Items Setup / Warning Dialog -->
   <dialog id="combine-same-items-setup-dialog" class="custom-dialog" style="max-width: 560px;">
     <div class="dialog-content">
       <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
         <i data-lucide="sparkles" style="width: 22px; height: 22px; color: var(--color-accent);"></i>
-        <h3 style="margin: 0; font-size: 1.15rem;">Combine Same Items</h3>
+        <h3 style="margin: 0; font-size: 1.15rem;">Combine Like Items</h3>
       </div>
       
       <div style="font-size: 0.84rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
@@ -2092,7 +1773,7 @@
     <div class="dialog-content" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
         <div>
-          <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">✨ Same Items Consolidation Review</h3>
+          <h3 style="margin: 0 0 4px 0; font-size: 1.1rem;">✨ Like Items Consolidation Review</h3>
           <span id="same-items-review-summary-text" style="font-size: 0.82rem; color: var(--text-muted);">Review proposed term consolidations</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center;">
@@ -2507,51 +2188,6 @@
     </div>
   </dialog>
 
-  <!-- Local SLM Model Download Confirmation Modal -->
-  <dialog id="model-download-confirm-modal" class="custom-dialog" style="max-width: 520px;">
-    <div class="dialog-content">
-      <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; color: var(--text-primary); border-bottom: none; padding-bottom: 0;">
-          <div style="width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;">
-            <i data-lucide="download" style="width: 16px; height: 16px;"></i>
-          </div>
-          <span id="dl-modal-title">Download Local Model</span>
-        </h3>
-        <button type="button" id="dl-modal-close-x" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;">
-          <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-        </button>
-      </div>
-
-      <div style="margin-bottom: 20px;">
-        <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.2); padding: 14px 16px; border-radius: var(--radius-sm); margin-bottom: 16px;">
-          <div style="font-weight: 600; color: #38bdf8; font-size: 0.92rem; margin-bottom: 4px;" id="dl-modal-model-name">Qwen 1.5B Instruct</div>
-          <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.45;" id="dl-modal-model-desc">
-            File Size: <strong>~1.1 GB</strong> | RAM Demand: <strong>~1.5 GB RAM</strong> | Quality: <strong>Good (Recommended)</strong>
-          </div>
-        </div>
-
-        <p style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin: 0 0 12px 0;">
-          This model has not been downloaded yet. Would you like to download and cache it now? This is a <strong>one-time download</strong>; future indexings will run 100% offline instantly.
-        </p>
-
-        <!-- Progress Status Box (hidden until download starts) -->
-        <div id="dl-modal-progress-container" class="hidden" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-top: 12px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--text-primary); margin-bottom: 6px;">
-            <span id="dl-modal-status-text" style="font-weight: 600; color: #38bdf8;">Downloading model weights...</span>
-          </div>
-          <div style="font-size: 0.7rem; color: var(--text-muted); font-family: monospace; max-height: 90px; overflow-y: auto; white-space: pre-wrap; background: #090d16; padding: 8px; border-radius: 4px;" id="dl-modal-logs">
-            [+] Connecting to Hugging Face Hub...
-          </div>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--border-color); padding-top: 14px;">
-        <button type="button" id="dl-modal-cancel-btn" class="btn btn-secondary">Cancel</button>
-        <button type="button" id="dl-modal-start-btn" class="btn btn-accent">Confirm & Download Model</button>
-      </div>
-    </div>
-  </dialog>
-
   <!-- Gemini API Key Guide Modal -->
   <dialog id="api-key-guide-modal" class="custom-dialog" style="max-width: 520px; width: 90vw;">
     <div class="dialog-content">
@@ -2648,98 +2284,10 @@
           <p style="margin: 0; font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);">This action cannot be undone. The index entry will be permanently removed.</p>
         </div>
       </div>
-      <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; user-select: none; margin-bottom: 20px;">
-        <input type="checkbox" id="delete-confirm-dont-show-again">
-        <span>Don't show this warning again</span>
-      </label>
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="delete-confirm-cancel-btn" class="btn btn-secondary">Cancel</button>
         <button id="delete-confirm-ok-btn" class="btn" style="background-color: var(--danger); color: #fff; font-weight: 600;">Delete</button>
       </div>
-    </div>
-  </dialog>
-
-  <!-- Practice Quiz Dialog/Modal -->
-  <dialog id="quiz-config-dialog" class="custom-dialog" style="max-width: 500px;">
-    <div class="dialog-content">
-      <h3 style="margin: 0 0 16px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="brain" style="width: 20px; height: 20px; color: var(--color-accent);"></i>
-        <span>SANS Practice Quiz Hub</span>
-      </h3>
-      
-      <form id="quiz-config-form">
-        <!-- Select Books checklist -->
-        <div class="form-group" style="margin-bottom: 16px;">
-          <label style="display: block; margin-bottom: 8px;">Select Books (Mix Subjects)</label>
-          <div id="quiz-config-books-checklist" style="max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-app);">
-            <!-- Populated dynamically with checkboxes -->
-          </div>
-        </div>
-        
-        <!-- Question Count -->
-        <div class="form-group" style="margin-bottom: 16px;">
-          <label for="quiz-config-count">Question Count</label>
-          <select id="quiz-config-count" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
-            <option value="5">5 Questions</option>
-            <option value="10" selected>10 Questions</option>
-            <option value="20">20 Questions</option>
-            <option value="50">50 Questions</option>
-          </select>
-        </div>
-        
-        <!-- Difficulty -->
-        <div class="form-group" style="margin-bottom: 16px;">
-          <label for="quiz-config-difficulty">Difficulty Level</label>
-          <select id="quiz-config-difficulty" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
-            <option value="Conceptual" selected>Conceptual</option>
-            <option value="Practical">Practical</option>
-            <option value="Advanced">Advanced</option>
-          </select>
-        </div>
-        
-        <!-- Feedback Mode -->
-        <div class="form-group" style="margin-bottom: 24px;">
-          <label for="quiz-config-feedback">Feedback Mode</label>
-          <select id="quiz-config-feedback" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
-            <option value="immediate" selected>Immediate Feedback (Shows answer & explanation immediately)</option>
-            <option value="graded">Graded at the End (Shows scorecard & review at the end)</option>
-          </select>
-        </div>
-        
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-          <button type="button" class="btn btn-secondary close-dialog-btn" id="quiz-config-close-btn">Cancel</button>
-          <button type="submit" class="btn btn-accent" id="quiz-config-start-btn">Start Practice Quiz</button>
-        </div>
-      </form>
-    </div>
-  </dialog>
-
-  <!-- Add / Edit Acronym Modal -->
-  <dialog id="add-acronym-dialog" class="custom-dialog" style="max-width: 480px;">
-    <div class="dialog-content">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-        <h3 id="add-acronym-modal-title" style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">Add New Acronym</h3>
-        <button type="button" class="close-dialog-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">&times;</button>
-      </div>
-
-      <form id="acronym-form" autocomplete="off">
-        <input type="hidden" id="acronym-id-input">
-        
-        <div class="form-group" style="margin-bottom: 16px;">
-          <label for="acronym-code-input" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-secondary);">Acronym</label>
-          <input type="text" id="acronym-code-input" placeholder="e.g. ADFS, CSRF, SMB" required style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-size: 0.9rem;">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 24px;">
-          <label for="acronym-term-input" style="display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--text-secondary);">Full Term / Definition</label>
-          <input type="text" id="acronym-term-input" placeholder="e.g. Active Directory Federation Services" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-size: 0.9rem;">
-        </div>
-
-        <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
-          <button type="button" class="btn btn-secondary close-dialog-btn">Cancel</button>
-          <button type="submit" id="save-acronym-btn" class="btn btn-accent">Save Acronym</button>
-        </div>
-      </form>
     </div>
   </dialog>
 
@@ -2990,6 +2538,30 @@
       <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 0;">
         <button type="button" id="app-alert-ok-btn" class="btn btn-accent" style="min-width: 90px;">
           <span>OK</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Global In-App Confirm Dialog (Replaces native window.confirm to prevent Windows Electron focus drops) -->
+  <dialog id="app-confirm-dialog" class="custom-dialog" style="max-width: 440px;">
+    <div class="dialog-content" style="padding: 22px 24px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div id="app-confirm-icon-container" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(234, 179, 8, 0.15); color: #facc15; flex-shrink: 0;">
+          <i data-lucide="help-circle" id="app-confirm-icon" style="width: 22px; height: 22px;"></i>
+        </div>
+        <h3 id="app-confirm-title" style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">Confirm Action</h3>
+      </div>
+
+      <div id="app-confirm-message" style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 22px; white-space: pre-wrap; word-break: break-word; max-height: 50vh; overflow-y: auto;">
+      </div>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 0;">
+        <button type="button" id="app-confirm-cancel-btn" class="btn btn-secondary" style="min-width: 90px;">
+          <span>Cancel</span>
+        </button>
+        <button type="button" id="app-confirm-ok-btn" class="btn btn-accent" style="min-width: 90px;">
+          <span id="app-confirm-ok-text">Confirm</span>
         </button>
       </div>
     </div>

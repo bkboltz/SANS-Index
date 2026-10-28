@@ -42,14 +42,16 @@ A high-density, professional study indexing and exam preparation tool designed s
 * **Page Range Matching:** Enter pages as ranges (`55-88`) or lists (`12, 14-17`). Searching page `57` accurately surfaces and highlights entries spanning `55-88`.
 * **Starred Topics:** Highlight high-priority entries with a golden badge for instant visual recognition in both software and print.
 * **Live Markdown Notes:** Full markdown formatting on the fly (`==highlight==`, `**bold**`, `__underline__`, `*italic*`).
-* **Keyboard Shortcuts:** `Ctrl + F` (Search), `Alt + N` (New Entry), `Esc` (Clear / Close).
+* **Keyboard Shortcuts:** `Ctrl + N` / `Alt + N` (New Entry), `Ctrl + P` (Print Preview), `Ctrl + B` (Toggle Sidebar), `Ctrl + 1-4` (Switch Views), `Esc` (Clear / Close).
 * **Native Spellchecking:** Context menu integration with Windows spellcheck and quick edit actions.
 
-### 📚 Study & Exam Tools
-* **Interactive Study Quiz:** Dynamic flashcard and quiz testing mode to practice recall against your indexed terms.
-* **Acronym Dictionary:** Dedicated acronym manager and fast lookup tab.
-* **Integrated Notes Editor:** Built-in workspace editor for drafting long-form study notes and cheat sheets.
-* **Data Import/Export:** Direct CSV and JSON import/export with automatic course and book creation.
+### 📚 Study & Exam Workspaces
+* **My Index (Ctrl + 1):** Fast master index table with page-range searching (`55-88` matches `57`), multi-delete, column sorting, starred topics, and inline rich markdown notes.
+* **Auto Index (Ctrl + 2):** Fast PDF ingestion with lightweight Python text extraction and Gemini AI noise-filtering.
+* **Acronym Manager (Ctrl + 3):** Dedicated acronym dictionary with an automated index parser, definition applicator, and cross-course acronym sharing.
+* **Per-Course Notes Editor (Ctrl + 4):** Full-featured document editor saved per-course directly into your database with custom formatting, tables, and page breaks.
+* **Combine Like Items:** Consolidate duplicate or casing-variant topics across books with intelligent page-range merging.
+* **Full Data Portability:** Comprehensive JSON export/import and CSV export preserving entries, notes, starred flags, books, acronyms, and course notes.
 
 ---
 

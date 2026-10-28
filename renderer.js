@@ -14,6 +14,7 @@ const elements = {
   addBookBtn: document.getElementById('add-book-btn'),
   booksSidebarSection: document.getElementById('books-sidebar-section'),
   booksToggleBtn: document.getElementById('books-toggle-btn'),
+  booksCountBadge: document.getElementById('books-count-badge'),
   
   exportCsvBtn: document.getElementById('export-csv-btn'),
   exportJsonBtn: document.getElementById('export-json-btn'),
@@ -60,6 +61,9 @@ const elements = {
   statTotalEntries: document.getElementById('stat-total-entries'),
   statBookCount: document.getElementById('stat-book-count'),
   statLastAdded: document.getElementById('stat-last-added'),
+  statCardExam: document.getElementById('stat-card-exam'),
+  statExamCountdown: document.getElementById('stat-exam-countdown'),
+  statExamLabel: document.getElementById('stat-exam-label'),
   
   // Entry Form
   entryForm: document.getElementById('entry-form'),
@@ -88,6 +92,8 @@ const elements = {
   courseDialogForm: document.getElementById('course-dialog-form'),
   dialogCourseId: document.getElementById('dialog-course-id'),
   dialogCourseName: document.getElementById('dialog-course-name'),
+  dialogCourseBooksGroup: document.getElementById('dialog-course-books-group'),
+  dialogCourseBookCount: document.getElementById('dialog-course-book-count'),
   dialogCourseDate: document.getElementById('dialog-course-date'),
   courseAutocompleteList: document.getElementById('course-autocomplete-list'),
   
@@ -132,7 +138,6 @@ const elements = {
   deleteConfirmDialog: document.getElementById('delete-confirm-dialog'),
   deleteConfirmOkBtn: document.getElementById('delete-confirm-ok-btn'),
   deleteConfirmCancelBtn: document.getElementById('delete-confirm-cancel-btn'),
-  deleteConfirmDontShowAgain: document.getElementById('delete-confirm-dont-show-again'),
   // Multi-delete controls
   selectAllEntriesCheckbox: document.getElementById('select-all-entries-checkbox'),
   multiDeleteBar: document.getElementById('multi-delete-bar'),
@@ -146,10 +151,11 @@ const elements = {
   statTotalAcronyms: document.getElementById('stat-total-acronyms'),
   statAcronymBookCount: document.getElementById('stat-acronym-book-count'),
   statLastAcronym: document.getElementById('stat-last-acronym'),
+  statCardAcronymExamCountdown: document.getElementById('stat-card-acronym-exam-countdown'),
+  statAcronymExamCountdown: document.getElementById('stat-acronym-exam-countdown'),
+  statAcronymExamLabel: document.getElementById('stat-acronym-exam-label'),
   acronymSearchInput: document.getElementById('acronym-search-input'),
   parseIndexAcronymsBtn: document.getElementById('parse-index-acronyms-btn'),
-  openAddAcronymModalBtn: document.getElementById('open-add-acronym-modal-btn'),
-  acronymsConfirmDelete: document.getElementById('acronyms-confirm-delete'),
   acronymsMultiDeleteBar: document.getElementById('acronyms-multi-delete-bar'),
   acronymsMultiDeleteCountText: document.getElementById('acronyms-multi-delete-count-text'),
   acronymsApplyDefinitionsBtn: document.getElementById('acronyms-apply-definitions-btn'),
@@ -157,8 +163,6 @@ const elements = {
   acronymsDeleteSelectedBtn: document.getElementById('acronyms-delete-selected-btn'),
   selectAllAcronymsCheckbox: document.getElementById('select-all-acronyms-checkbox'),
   acronymsTableBody: document.getElementById('acronyms-table-body'),
-  addAcronymDialog: document.getElementById('add-acronym-dialog'),
-  addAcronymModalTitle: document.getElementById('add-acronym-modal-title'),
   acronymForm: document.getElementById('acronym-form'),
   acronymIdInput: document.getElementById('acronym-id-input'),
   acronymCodeInput: document.getElementById('acronym-code-input'),
@@ -204,15 +208,11 @@ const elements = {
   todoToggleBtn: document.getElementById('todo-toggle-btn'),
   todoPendingBadge: document.getElementById('todo-pending-badge'),
 
-  // Exam Date Alert Banners & Modal
-  examNotificationBanner: document.getElementById('exam-notification-banner'),
-  examCautionBanner: document.getElementById('exam-caution-banner'),
+  // Exam Date Modal
   testDateDialog: document.getElementById('test-date-dialog'),
   testDateDialogForm: document.getElementById('test-date-dialog-form'),
   dialogTestDate: document.getElementById('dialog-test-date'),
   clearTestDateBtn: document.getElementById('clear-test-date-btn'),
-  dismissForeverBannerBtn: document.querySelector('.dismiss-forever-banner-btn'),
-  dismissForeverCautionLink: document.querySelector('.dismiss-forever-caution-link'),
   
   // Workspace Views & Tabs
   manualIndexView: document.getElementById('manual-index-view'),
@@ -240,30 +240,8 @@ const elements = {
   autoIndexFileName: document.getElementById('auto-index-file-name'),
   autoIndexPassword: document.getElementById('auto-index-password'),
   autoIndexGeminiKey: document.getElementById('auto-index-gemini-key'),
-  autoIndexCurationEngine: document.getElementById('auto-index-curation-engine'),
-  curationEngineBadge: document.getElementById('curation-engine-badge'),
-  curationCardGemini: document.getElementById('curation-card-gemini'),
-  curationCardLocal05b: document.getElementById('curation-card-local-0.5b'),
-  curationCardLocal15b: document.getElementById('curation-card-local-1.5b'),
-  curationCardLocal3b: document.getElementById('curation-card-local-3b'),
-  localSlmToggle: document.getElementById('local-slm-toggle'),
-  localSlmContainer: document.getElementById('local-slm-container'),
-  localSlmToggleStatus: document.getElementById('local-slm-toggle-status'),
-  localSlmToggleIcon: document.getElementById('local-slm-toggle-icon'),
   geminiSettingsContainer: document.getElementById('gemini-settings-container'),
-  localSlmInfoContainer: document.getElementById('local-slm-info-container'),
   aiCurationOptionsContainer: document.getElementById('ai-curation-options-container'),
-  modelDownloadConfirmModal: document.getElementById('model-download-confirm-modal'),
-  dlModalModelName: document.getElementById('dl-modal-model-name'),
-  dlModalModelDesc: document.getElementById('dl-modal-model-desc'),
-  dlModalProgressContainer: document.getElementById('dl-modal-progress-container'),
-  dlModalStatusText: document.getElementById('dl-modal-status-text'),
-  dlModalLogs: document.getElementById('dl-modal-logs'),
-  dlModalStartBtn: document.getElementById('dl-modal-start-btn'),
-  dlModalCancelBtn: document.getElementById('dl-modal-cancel-btn'),
-  dlModalCloseX: document.getElementById('dl-modal-close-x'),
-  localSlmCustomPrompt: document.getElementById('local-slm-custom-prompt'),
-  resetLocalPromptBtn: document.getElementById('reset-local-prompt-btn'),
   geminiCustomPrompt: document.getElementById('gemini-custom-prompt'),
   resetGeminiPromptBtn: document.getElementById('reset-gemini-prompt-btn'),
   autoIndexModelSelect: document.getElementById('auto-index-model-select'),
@@ -310,8 +288,6 @@ const elements = {
   autoIndexMinFreq: document.getElementById('auto-index-min-freq'),
   autoIndexMaxFreq: document.getElementById('auto-index-max-freq'),
   autoIndexUseOcr: document.getElementById('auto-index-use-ocr'),
-  settingsShowAiBadges: document.getElementById('settings-show-ai-badges'),
-  settingsConfirmDelete: document.getElementById('settings-confirm-delete'),
   startIndexingBtn: document.getElementById('start-indexing-btn'),
 
   // Progress
@@ -329,7 +305,6 @@ const elements = {
   previewSelectNone: document.getElementById('preview-select-none'),
   previewTableBody: document.getElementById('preview-table-body'),
   previewHeaderCheckbox: document.getElementById('preview-header-checkbox'),
-  quizNewQuestionsToast: document.getElementById('quiz-new-questions-toast'),
 
   // PDF Index Import
   pdfIndexBrowseBtn: document.getElementById('pdf-index-browse-btn'),
@@ -400,46 +375,6 @@ const elements = {
   importConfirmOkBtn: document.getElementById('import-confirm-ok-btn'),
   importConfirmCancelBtn: document.getElementById('import-confirm-cancel-btn'),
 
-  // Practice Quiz Hub & Setup elements
-  practiceQuizBtn: document.getElementById('practice-quiz-btn'),
-  quizConfigDialog: document.getElementById('quiz-config-dialog'),
-  quizConfigForm: document.getElementById('quiz-config-form'),
-  quizConfigBooksChecklist: document.getElementById('quiz-config-books-checklist'),
-  quizConfigCount: document.getElementById('quiz-config-count'),
-  quizConfigDifficulty: document.getElementById('quiz-config-difficulty'),
-  quizConfigFeedback: document.getElementById('quiz-config-feedback'),
-  quizConfigCloseBtn: document.getElementById('quiz-config-close-btn'),
-  
-  quizPracticeView: document.getElementById('quiz-practice-view'),
-  quizProgressText: document.getElementById('quiz-progress-text'),
-  quizProgressFill: document.getElementById('quiz-progress-fill'),
-  quizLiveScoreContainer: document.getElementById('quiz-live-score-container'),
-  quizLiveScore: document.getElementById('quiz-live-score'),
-  quizExitBtn: document.getElementById('quiz-exit-btn'),
-  
-  quizQuestionContainer: document.getElementById('quiz-question-container'),
-  quizQuestionBookBadge: document.getElementById('quiz-question-book-badge'),
-  quizQuestionDiffBadge: document.getElementById('quiz-question-diff-badge'),
-  quizQuestionText: document.getElementById('quiz-question-text'),
-  quizOptionsContainer: document.getElementById('quiz-options-container'),
-  
-  quizFeedbackPanel: document.getElementById('quiz-feedback-panel'),
-  quizFeedbackIndicator: document.getElementById('quiz-feedback-indicator'),
-  quizFeedbackIcon: document.getElementById('quiz-feedback-icon'),
-  quizFeedbackTitle: document.getElementById('quiz-feedback-title'),
-  quizExplanationText: document.getElementById('quiz-explanation-text'),
-  quizNextQuestionBtn: document.getElementById('quiz-next-question-btn'),
-  
-  quizScorecardView: document.getElementById('quiz-scorecard-view'),
-  scorecardRatio: document.getElementById('scorecard-ratio'),
-  scorecardPercent: document.getElementById('scorecard-percent'),
-  scorecardReviewContainer: document.getElementById('scorecard-review-container'),
-  scorecardRetryBtn: document.getElementById('scorecard-retry-btn'),
-  scorecardCloseBtn: document.getElementById('scorecard-close-btn'),
-
-  quizGenerationErrorAlert: document.getElementById('quiz-generation-error-alert'),
-  quizGenerationErrorText: document.getElementById('quiz-generation-error-text'),
-
   // Wizard step buttons & progress
   wizardPrevBtn: document.getElementById('wizard-prev-btn'),
   wizardNextBtn: document.getElementById('wizard-next-btn'),
@@ -461,13 +396,22 @@ const elements = {
   updateProgressBar: document.getElementById('update-progress-bar'),
   updateBellBtn: document.getElementById('update-bell-btn'),
 
-  // Global In-App Alert Dialog
+  // Global In-App Alert & Confirm Dialogs
   appAlertDialog: document.getElementById('app-alert-dialog'),
   appAlertTitle: document.getElementById('app-alert-title'),
   appAlertMessage: document.getElementById('app-alert-message'),
   appAlertOkBtn: document.getElementById('app-alert-ok-btn'),
   appAlertIconContainer: document.getElementById('app-alert-icon-container'),
-  appAlertIcon: document.getElementById('app-alert-icon')
+  appAlertIcon: document.getElementById('app-alert-icon'),
+
+  appConfirmDialog: document.getElementById('app-confirm-dialog'),
+  appConfirmTitle: document.getElementById('app-confirm-title'),
+  appConfirmMessage: document.getElementById('app-confirm-message'),
+  appConfirmOkBtn: document.getElementById('app-confirm-ok-btn'),
+  appConfirmOkText: document.getElementById('app-confirm-ok-text'),
+  appConfirmCancelBtn: document.getElementById('app-confirm-cancel-btn'),
+  appConfirmIconContainer: document.getElementById('app-confirm-icon-container'),
+  appConfirmIcon: document.getElementById('app-confirm-icon')
 };
 
 // ==========================================================================
@@ -605,6 +549,88 @@ window.alert = function(message) {
   showInAppAlert(message);
 };
 
+// In-App DOM Confirm Modal (Replaces native window.confirm to prevent Windows focus loss)
+function showInAppConfirm(message, customTitle = 'Confirm Action', confirmText = 'Confirm', isDanger = false) {
+  return new Promise((resolve) => {
+    const dialog = elements.appConfirmDialog || document.getElementById('app-confirm-dialog');
+    if (!dialog) {
+      resolve(window.confirm(message));
+      return;
+    }
+
+    const titleEl = elements.appConfirmTitle || document.getElementById('app-confirm-title');
+    const msgEl = elements.appConfirmMessage || document.getElementById('app-confirm-message');
+    const okBtn = elements.appConfirmOkBtn || document.getElementById('app-confirm-ok-btn');
+    const okTextEl = elements.appConfirmOkText || document.getElementById('app-confirm-ok-text');
+    const cancelBtn = elements.appConfirmCancelBtn || document.getElementById('app-confirm-cancel-btn');
+    const iconContainer = elements.appConfirmIconContainer || document.getElementById('app-confirm-icon-container');
+    const iconEl = elements.appConfirmIcon || document.getElementById('app-confirm-icon');
+
+    if (titleEl) titleEl.textContent = customTitle || 'Confirm Action';
+    if (msgEl) msgEl.textContent = (message !== undefined && message !== null) ? String(message) : '';
+    if (okTextEl) okTextEl.textContent = confirmText || 'Confirm';
+
+    if (okBtn) {
+      okBtn.className = isDanger ? 'btn btn-danger' : 'btn btn-primary';
+    }
+
+    if (iconContainer && iconEl) {
+      if (isDanger) {
+        iconContainer.style.background = 'rgba(239, 68, 68, 0.15)';
+        iconContainer.style.color = '#f87171';
+        iconEl.setAttribute('data-lucide', 'alert-triangle');
+      } else {
+        iconContainer.style.background = 'rgba(245, 158, 11, 0.15)';
+        iconContainer.style.color = '#fbbf24';
+        iconEl.setAttribute('data-lucide', 'help-circle');
+      }
+
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons({
+          attrs: { class: 'lucide-icon' },
+          nameAttr: 'data-lucide',
+          nodeList: [iconEl]
+        });
+      }
+    }
+
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (okBtn) okBtn.removeEventListener('click', onOk);
+      if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+      dialog.removeEventListener('close', onClose);
+      if (dialog.open) dialog.close();
+      resolve(result);
+    };
+
+    const onOk = (e) => {
+      e.preventDefault();
+      finish(true);
+    };
+    const onCancel = (e) => {
+      e.preventDefault();
+      finish(false);
+    };
+    const onClose = () => {
+      finish(false);
+    };
+
+    if (okBtn) okBtn.addEventListener('click', onOk);
+    if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+    dialog.addEventListener('close', onClose);
+
+    try {
+      dialog.showModal();
+      if (okBtn) okBtn.focus();
+    } catch (err) {
+      console.error('[InAppConfirm] Error showing modal:', err);
+      finish(window.confirm(message));
+    }
+  });
+}
+
 // Application State Store
 let state = {
   courses: [],
@@ -622,8 +648,6 @@ let sortField = 'default'; // Default: custom book order -> topic -> page
 let sortAsc = true;
 let activeAutocompleteIndex = -1;
 let courseAutocompleteIndex = -1;
-let bannerTimeoutId = null;
-let promptedCourses = new Set();
 let pendingDeleteEntryId = null;
 let selectedEntryIds = new Set();
 let pendingDeleteEntryIds = null;
@@ -638,9 +662,7 @@ let pendingDeleteAcronymId = null;
 let pendingDeleteAcronymIds = null;
 let pendingAcronymCandidates = [];
 
-// Global temporary variables for generated quizzes
-let lastGeneratedQuiz = null;
-let lastQuizError = null;
+// Global temporary variables for failed curation chunks
 let lastFailedChunks = [];
 
 // ==========================================================================
@@ -721,15 +743,15 @@ function handleMenuAction(action, ...args) {
     case 'shortcuts':
       alert(
         "SANS Study Indexer - Keyboard Shortcuts:\n\n" +
-        "• Ctrl+N : Focus & Add New Entry\n" +
-        "• Ctrl+P : Print Index Preview\n" +
-        "• Ctrl+B : Toggle Sidebar\n" +
-        "• Ctrl+1 : Switch to My Index\n" +
-        "• Ctrl+2 : Switch to Auto Index\n" +
-        "• Ctrl+3 : Switch to My Acronyms\n" +
-        "• Ctrl+4 : Switch to Notes\n" +
-        "• F11    : Toggle Full Screen\n" +
-        "• Esc    : Clear Form / Cancel Edit"
+        "• Ctrl+N / Alt+N : Focus & Add New Entry\n" +
+        "• Ctrl+P         : Print Index Preview\n" +
+        "• Ctrl+B         : Toggle Sidebar\n" +
+        "• Ctrl+1         : Switch to My Index\n" +
+        "• Ctrl+2         : Switch to Auto Index\n" +
+        "• Ctrl+3         : Switch to My Acronyms\n" +
+        "• Ctrl+4         : Switch to Notes\n" +
+        "• F11            : Toggle Full Screen\n" +
+        "• Esc            : Clear Form / Cancel Edit"
       );
       break;
 
@@ -737,7 +759,8 @@ function handleMenuAction(action, ...args) {
       if (window.api && window.api.checkForUpdates) {
         window.api.checkForUpdates(false).then(res => {
           if (res && res.updateAvailable) {
-            alert(`Update Available!\n\nVersion ${res.latestVersion} is ready to install.`);
+            updateChanges = res.recentChanges || [];
+            showUpdateDialog();
           } else {
             alert("You are running the latest version of SANS Study Indexer.");
           }
@@ -830,7 +853,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initial Render
   renderAll();
-  checkExamDateAlerts();
 
   // Initialize Auto-Update functionality
   initUpdateEvents();
@@ -838,8 +860,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Save state to disk
-async function saveState() {
-  const result = await window.api.saveData(state);
+async function saveState(forceBackup = false) {
+  const result = await window.api.saveData(state, { forceBackup });
   if (result && result.success) {
     const now = new Date();
     elements.lastSaveTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1050,6 +1072,9 @@ function renderAll() {
   renderStats();
   renderTodos();
   loadCourseGeminiPrompt();
+  if (typeof loadCourseNotes === 'function') {
+    loadCourseNotes();
+  }
 }
 
 function renderCourses() {
@@ -1088,6 +1113,12 @@ function renderBooks() {
   // Filter books for active course
   const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
   elements.statBookCount.textContent = activeBooks.length;
+  if (elements.statAcronymBookCount) {
+    elements.statAcronymBookCount.textContent = activeBooks.length;
+  }
+  if (elements.booksCountBadge) {
+    elements.booksCountBadge.textContent = activeBooks.length;
+  }
   
   activeBooks.forEach(book => {
     // 1. Sidebar Book Item (Draggable)
@@ -1630,26 +1661,6 @@ function renderEntries() {
       
       const starClass = entry.starred ? 'star-active' : 'star-inactive';
       
-      if (entry.source === 'auto' || entry.source === 'auto-ai') {
-        tr.classList.add('auto-row');
-      }
-      
-      const showAiBadges = localStorage.getItem('show_ai_badges') !== 'false';
-      let autoBadgeHtml = '';
-      if (showAiBadges) {
-        if (entry.source === 'auto-ai') {
-          autoBadgeHtml = `
-            <span class="auto-badge no-print" style="background: rgba(20, 184, 166, 0.12); border: 1px solid rgba(20, 184, 166, 0.3); color: #2dd4bf; display: inline-flex; align-items: center; gap: 4px; padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; margin-left: 6px; font-weight: 500;" title="Curated by Gemini AI">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 10px; height: 10px; color: #2dd4bf;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-              <span>AI</span>
-            </span>
-            <span class="auto-badge-print">[AI]</span>
-          `;
-        } else if (entry.source === 'auto') {
-          autoBadgeHtml = `<span class="auto-badge no-print">Auto</span><span class="auto-badge-print">[Auto]</span>`;
-        }
-      }
-      
       tr.innerHTML = `
         <td class="col-select no-print" style="text-align: center;">
           <input type="checkbox" class="select-entry-checkbox" data-id="${entry.id}" ${selectedEntryIds.has(entry.id) ? 'checked' : ''}>
@@ -1666,7 +1677,7 @@ function renderEntries() {
           </div>
         </td>
         <td class="col-pages">${renderPageBadgesHtml(entry.pages, bookColor)}</td>
-        <td class="col-topic">${highlightText(entry.topic, query)}${autoBadgeHtml}</td>
+        <td class="col-topic">${highlightText(entry.topic, query)}</td>
         <td class="col-notes">${entry.notes ? highlightText(formatNoteMarkup(entry.notes), query) : ''}</td>
         <td class="col-actions no-print">
           <div class="action-buttons-wrapper">
@@ -1932,48 +1943,52 @@ function renderStats() {
     elements.statLastAdded.title = "";
   }
 
-  // Update Countdown vs. Indexed Books stats cards
+  // Keep Indexed Books stat cards strictly dedicated to book count
+  const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
+  if (elements.statBookCount) elements.statBookCount.textContent = activeBooks.length;
+  if (elements.statAcronymBookCount) elements.statAcronymBookCount.textContent = activeBooks.length;
+
+  // Update dedicated 4th Exam Countdown stat cards
   const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
-  const statCardIndex = elements.statBookCount ? elements.statBookCount.closest('.stat-card') : null;
-  const statCardAcronym = elements.statAcronymBookCount ? elements.statAcronymBookCount.closest('.stat-card') : null;
-  const statCards = [statCardIndex, statCardAcronym].filter(Boolean);
-  
+  const examCards = [
+    {
+      card: elements.statCardExam,
+      val: elements.statExamCountdown,
+      label: elements.statExamLabel
+    },
+    {
+      card: elements.statCardAcronymExamCountdown,
+      val: elements.statAcronymExamCountdown,
+      label: elements.statAcronymExamLabel
+    }
+  ];
+
   if (activeCourse && activeCourse.testDate) {
     const examDate = new Date(activeCourse.testDate + 'T00:00:00');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const diffTime = examDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    statCards.forEach(statCard => {
-      const valEl = statCard.querySelector('.stat-value');
-      const statLabel = statCard.querySelector('.stat-label');
+
+    examCards.forEach(({ card, val, label }) => {
+      if (!card || !val || !label) return;
       if (diffDays < 0) {
-        valEl.textContent = "Passed";
-        statLabel.innerHTML = `Exam Date (${activeCourse.testDate}) <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
+        val.textContent = "Passed";
+        label.innerHTML = `Exam (${activeCourse.testDate}) <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
       } else {
-        valEl.textContent = diffDays;
-        statLabel.innerHTML = `${diffDays === 1 ? "Day Until Exam" : "Days Until Exam"} <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
+        val.textContent = diffDays;
+        label.innerHTML = `${diffDays === 1 ? "Day Until Exam" : "Days Until Exam"} <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
       }
-      statCard.style.cursor = 'pointer';
-      statCard.title = `Projected exam date: ${activeCourse.testDate}. Click to modify or remove.`;
+      card.style.cursor = 'pointer';
+      card.title = `Projected exam date: ${activeCourse.testDate}. Click to modify or remove.`;
     });
   } else {
-    // Default back to Indexed Books
-    const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
-    statCards.forEach(statCard => {
-      const valEl = statCard.querySelector('.stat-value');
-      const statLabel = statCard.querySelector('.stat-label');
-      valEl.textContent = activeBooks.length;
-      if (activeCourse && activeCourse.dismissExamAlert) {
-        statLabel.textContent = "Indexed Books";
-        statCard.style.cursor = "default";
-        statCard.title = "";
-      } else {
-        statLabel.innerHTML = `Indexed Books <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Configure Date</span>`;
-        statCard.style.cursor = 'pointer';
-        statCard.title = "No exam date configured. Click to set countdown date!";
-      }
+    examCards.forEach(({ card, val, label }) => {
+      if (!card || !val || !label) return;
+      val.textContent = "—";
+      label.innerHTML = `Exam Countdown <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Set Exam Date</span>`;
+      card.style.cursor = 'pointer';
+      card.title = "Click to set your projected GIAC exam date.";
     });
   }
 }
@@ -2328,6 +2343,17 @@ function sortData(entries) {
 // ==========================================================================
 // COURSE MANAGEMENT ACTIONS
 // ==========================================================================
+const DEFAULT_BOOK_COLORS = [
+  '#0d9488',
+  '#2563eb',
+  '#7c3aed',
+  '#db2777',
+  '#ea580c',
+  '#16a34a',
+  '#ca8a04',
+  '#4b5563'
+];
+
 function openCourseDialog(courseId = null) {
   closeCourseAutocomplete();
   if (courseId) {
@@ -2337,11 +2363,20 @@ function openCourseDialog(courseId = null) {
     elements.dialogCourseId.value = course.id;
     elements.dialogCourseName.value = course.name;
     elements.dialogCourseDate.value = course.testDate || "";
+    if (elements.dialogCourseBooksGroup) {
+      elements.dialogCourseBooksGroup.classList.add('hidden');
+    }
   } else {
     elements.courseDialogTitle.textContent = "Create New Course";
     elements.dialogCourseId.value = "";
     elements.dialogCourseName.value = "";
     elements.dialogCourseDate.value = "";
+    if (elements.dialogCourseBooksGroup) {
+      elements.dialogCourseBooksGroup.classList.remove('hidden');
+    }
+    if (elements.dialogCourseBookCount) {
+      elements.dialogCourseBookCount.value = "6";
+    }
   }
   elements.courseDialog.showModal();
   elements.dialogCourseName.focus();
@@ -2357,16 +2392,11 @@ function handleCourseDialogSubmit(e) {
     // Edit Mode
     const course = state.courses.find(c => c.id === id);
     if (course) {
-      const oldDate = course.testDate;
       course.name = name;
       if (selectedDate) {
         course.testDate = selectedDate;
       } else {
         delete course.testDate;
-      }
-      // If date changed, reset dismiss alert state
-      if (oldDate !== selectedDate) {
-        delete course.dismissExamAlert;
       }
     }
   } else {
@@ -2374,7 +2404,7 @@ function handleCourseDialogSubmit(e) {
     let newId = 'course-' + Date.now();
     
     // Check if name matches a SANS Catalog code prefix (e.g. "SEC565: ...")
-    const matchedCatalog = SANS_CATALOG.find(c => name.startsWith(c.code));
+    const matchedCatalog = SANS_CATALOG.find(c => name.toUpperCase().startsWith(c.code.toUpperCase()));
     if (matchedCatalog) {
       newId = matchedCatalog.id;
     }
@@ -2391,8 +2421,12 @@ function handleCourseDialogSubmit(e) {
     }
     state.courses.push(newCourse);
     
-    // Auto-populate default books if catalog matched
-    if (matchedCatalog && matchedCatalog.books) {
+    const requestedBooks = elements.dialogCourseBookCount
+      ? Math.min(15, Math.max(1, parseInt(elements.dialogCourseBookCount.value, 10) || 6))
+      : 6;
+
+    // Auto-populate default books from catalog if matched (or use custom count if modified)
+    if (matchedCatalog && matchedCatalog.books && requestedBooks === matchedCatalog.books.length) {
       matchedCatalog.books.forEach((b, index) => {
         state.books.push({
           id: `book-${newId}-${index + 1}-${Date.now()}`,
@@ -2401,29 +2435,40 @@ function handleCourseDialogSubmit(e) {
           color: b.color
         });
       });
+    } else {
+      for (let i = 0; i < requestedBooks; i++) {
+        const catalogBook = (matchedCatalog && matchedCatalog.books && matchedCatalog.books[i]) ? matchedCatalog.books[i] : null;
+        state.books.push({
+          id: `book-${newId}-${i + 1}-${Date.now() + i}`,
+          courseId: newId,
+          name: catalogBook ? catalogBook.name : `Book ${i + 1}`,
+          color: catalogBook ? catalogBook.color : DEFAULT_BOOK_COLORS[i % DEFAULT_BOOK_COLORS.length]
+        });
+      }
     }
 
     state.currentCourseId = newId; // Auto-select new course
   }
   
-  saveState();
+  saveState(true);
   renderAll();
-  checkExamDateAlerts();
   elements.courseDialog.close();
 }
 
-function deleteCourse() {
+async function deleteCourse() {
   if (state.courses.length === 0) return;
   const course = state.courses.find(c => c.id === state.currentCourseId);
   if (!course) return;
   
-  const confirmMsg = `Are you absolutely sure you want to delete "${course.name}"?\nThis will permanently delete all books and index entries associated with this course.`;
-  if (confirm(confirmMsg)) {
-    // 1. Delete entries
+  const confirmMsg = `Are you absolutely sure you want to delete "${course.name}"?\nThis will permanently delete all books, index entries, acronyms, and to-do items associated with this course.`;
+  const confirmed = await showInAppConfirm(confirmMsg, 'Delete Course?', 'Delete Course', true);
+  if (confirmed) {
+    // 1. Delete entries, books, acronyms, todos
     state.entries = state.entries.filter(e => e && e.courseId !== course.id);
-    // 2. Delete books
     state.books = state.books.filter(b => b && b.courseId !== course.id);
-    // 3. Delete course
+    state.acronyms = (state.acronyms || []).filter(a => a && a.courseId !== course.id);
+    state.todos = (state.todos || []).filter(t => t && t.courseId !== course.id);
+    // 2. Delete course
     state.courses = state.courses.filter(c => c && c.id !== course.id);
     
     // Select another course if available
@@ -2434,68 +2479,15 @@ function deleteCourse() {
     }
     
     selectedEntryIds.clear();
-    saveState();
+    selectedAcronymIds.clear();
+    await saveState(true);
     renderAll();
-    checkExamDateAlerts();
   }
 }
 
 // ==========================================================================
 // EXAM COUNTDOWN MANAGEMENT
 // ==========================================================================
-function checkExamDateAlerts() {
-  if (bannerTimeoutId) {
-    clearTimeout(bannerTimeoutId);
-    bannerTimeoutId = null;
-  }
-
-  // Hide banners by default
-  elements.examNotificationBanner.classList.add('hidden');
-  elements.examCautionBanner.classList.add('hidden');
-
-  if (!state.currentCourseId) return;
-
-  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
-  if (!activeCourse) return;
-
-  if (activeCourse.testDate || activeCourse.dismissExamAlert) {
-    // Exam date is set or user dismissed alerts: no banners needed
-    return;
-  }
-
-  // Exam date is missing
-  if (!promptedCourses.has(state.currentCourseId)) {
-    elements.examNotificationBanner.classList.remove('hidden');
-    promptedCourses.add(state.currentCourseId);
-    
-    // Auto fade-out after 15 seconds
-    bannerTimeoutId = setTimeout(() => {
-      elements.examNotificationBanner.classList.add('hidden');
-      elements.examCautionBanner.classList.remove('hidden');
-    }, 15000);
-  } else {
-    // Already prompted in this session, show caution banner directly
-    elements.examCautionBanner.classList.remove('hidden');
-  }
-}
-
-function dismissExamAlertsForever() {
-  const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
-  if (activeCourse) {
-    activeCourse.dismissExamAlert = true;
-    saveState();
-    
-    if (bannerTimeoutId) {
-      clearTimeout(bannerTimeoutId);
-      bannerTimeoutId = null;
-    }
-    elements.examNotificationBanner.classList.add('hidden');
-    elements.examCautionBanner.classList.add('hidden');
-    
-    renderStats();
-  }
-}
-
 function openTestDateDialog() {
   if (!state.currentCourseId) {
     alert("Please select or create a course first!");
@@ -2523,15 +2515,6 @@ function handleTestDateDialogSubmit(e) {
     activeCourse.testDate = elements.dialogTestDate.value;
     saveState();
     elements.testDateDialog.close();
-    
-    // Clear and hide active banners
-    if (bannerTimeoutId) {
-      clearTimeout(bannerTimeoutId);
-      bannerTimeoutId = null;
-    }
-    elements.examNotificationBanner.classList.add('hidden');
-    elements.examCautionBanner.classList.add('hidden');
-    
     renderAll();
   }
 }
@@ -2688,6 +2671,9 @@ function showCourseAutocomplete(val) {
     item.textContent = match.name;
     item.addEventListener('click', () => {
       elements.dialogCourseName.value = match.name;
+      if (elements.dialogCourseBookCount && match.books) {
+        elements.dialogCourseBookCount.value = String(match.books.length);
+      }
       closeCourseAutocomplete();
     });
     elements.courseAutocompleteList.appendChild(item);
@@ -2799,23 +2785,24 @@ function handleBookDialogSubmit(e) {
   elements.bookDialog.close();
 }
 
-function deleteBook(bookId) {
+async function deleteBook(bookId) {
   const book = state.books.find(b => b.id === bookId);
   if (!book) return;
   
   const entriesCount = state.entries.filter(e => e && e.bookId === bookId).length;
   let confirmMsg = `Are you sure you want to delete "${book.name}"?`;
   if (entriesCount > 0) {
-    confirmMsg += `\nWARNING: There are ${entriesCount} index entries associated with this book. They will also be deleted!`;
+    confirmMsg += `\n\nWARNING: There are ${entriesCount} index entries associated with this book. They will also be deleted!`;
   }
   
-  if (confirm(confirmMsg)) {
+  const confirmed = await showInAppConfirm(confirmMsg, 'Delete Book?', 'Delete Book', true);
+  if (confirmed) {
     // Delete linked entries
     state.entries = state.entries.filter(e => e && e.bookId !== bookId);
     // Delete book
     state.books = state.books.filter(b => b && b.id !== bookId);
     
-    saveState();
+    await saveState(true);
     renderAll();
   }
 }
@@ -3185,36 +3172,23 @@ function endEditEntry() {
 
 
 function deleteEntry(entryId) {
-  const confirmDelete = elements.settingsConfirmDelete ? elements.settingsConfirmDelete.checked : true;
-  if (!confirmDelete) {
-    performDeleteEntry(entryId);
-  } else {
-    // Show confirmation dialog
-    pendingDeleteEntryId = entryId;
-    pendingDeleteEntryIds = null;
+  pendingDeleteEntryId = entryId;
+  pendingDeleteEntryIds = null;
+  pendingDeleteAcronymId = null;
+  pendingDeleteAcronymIds = null;
+  
+  if (elements.deleteConfirmDialog) {
+    const dialogTitle = elements.deleteConfirmDialog.querySelector('h3');
+    const dialogText = elements.deleteConfirmDialog.querySelector('p');
+    if (dialogTitle) dialogTitle.textContent = 'Delete Entry?';
+    if (dialogText) dialogText.textContent = 'This action cannot be undone. The index entry will be permanently removed.';
     
-    // Reset Dialog UI to Single Delete Mode
-    if (elements.deleteConfirmDialog) {
-      const dialogTitle = elements.deleteConfirmDialog.querySelector('h3');
-      const dialogText = elements.deleteConfirmDialog.querySelector('p');
-      if (dialogTitle) dialogTitle.textContent = 'Delete Entry?';
-      if (dialogText) dialogText.textContent = 'This action cannot be undone. The index entry will be permanently removed.';
-      
-      const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
-      if (checkboxWrapper) {
-        checkboxWrapper.style.display = 'flex';
-      }
-      if (elements.deleteConfirmDontShowAgain) {
-        elements.deleteConfirmDontShowAgain.checked = false;
-      }
-      
-      lucide.createIcons({
-        attrs: { class: 'lucide-icon' },
-        nameAttr: 'data-lucide',
-        nodeList: elements.deleteConfirmDialog.querySelectorAll('[data-lucide]')
-      });
-      elements.deleteConfirmDialog.showModal();
-    }
+    lucide.createIcons({
+      attrs: { class: 'lucide-icon' },
+      nameAttr: 'data-lucide',
+      nodeList: elements.deleteConfirmDialog.querySelectorAll('[data-lucide]')
+    });
+    elements.deleteConfirmDialog.showModal();
   }
 }
 
@@ -3240,6 +3214,8 @@ function deleteSelectedEntries() {
   
   pendingDeleteEntryId = null;
   pendingDeleteEntryIds = Array.from(selectedEntryIds);
+  pendingDeleteAcronymId = null;
+  pendingDeleteAcronymIds = null;
   
   // Set Dialog UI to Multi Delete Mode
   if (elements.deleteConfirmDialog) {
@@ -3247,14 +3223,6 @@ function deleteSelectedEntries() {
     const dialogText = elements.deleteConfirmDialog.querySelector('p');
     if (dialogTitle) dialogTitle.textContent = `Delete ${count} Entries?`;
     if (dialogText) dialogText.textContent = `Are you sure you want to delete these ${count} selected index entries? This action cannot be undone.`;
-    
-    const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
-    if (checkboxWrapper) {
-      checkboxWrapper.style.display = 'none';
-    }
-    if (elements.deleteConfirmDontShowAgain) {
-      elements.deleteConfirmDontShowAgain.checked = false;
-    }
     
     lucide.createIcons({
       attrs: { class: 'lucide-icon' },
@@ -3363,7 +3331,9 @@ function exportToJSON() {
   const backupPayload = {
     course: activeCourse,
     books: state.books.filter(b => b && b.courseId === state.currentCourseId),
-    entries: state.entries.filter(e => e && e.courseId === state.currentCourseId)
+    entries: state.entries.filter(e => e && e.courseId === state.currentCourseId),
+    acronyms: (state.acronyms || []).filter(a => a && a.courseId === state.currentCourseId),
+    todos: (state.todos || []).filter(t => t && t.courseId === state.currentCourseId)
   };
   
   const blob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: 'application/json' });
@@ -3414,8 +3384,11 @@ function exportToCSV() {
   URL.revokeObjectURL(url);
 }
 
+let pendingImportBackupExtras = null;
+
 function processImport() {
   const activeTab = document.querySelector('.import-tab-btn.active').getAttribute('data-tab');
+  pendingImportBackupExtras = null;
 
   if (activeTab === 'tab-json') {
     const file = elements.importJsonFile.files[0];
@@ -3425,15 +3398,21 @@ function processImport() {
     }
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
       try {
         const data = JSON.parse(e.target.result);
 
         // Case A: Full App Database Backup ({ courses, books, entries })
         if (data.courses && data.books && data.entries) {
-          if (confirm("This is a full app backup. Do you want to OVERWRITE your current application database?")) {
+          const confirmed = await showInAppConfirm(
+            "This is a full application database backup. Do you want to OVERWRITE your current application database?",
+            "Restore Full Database?",
+            "Overwrite Database",
+            true
+          );
+          if (confirmed) {
             state = data;
-            saveState();
+            await saveState(true);
             renderAll();
             elements.importDialog.close();
             showToast("Full database backup restored successfully.");
@@ -3441,9 +3420,56 @@ function processImport() {
           return;
         }
 
-        // Case B: Single Course Export or Entries Array / Object
+        // Case B: Single Course Backup ({ course, books, entries, acronyms, todos }) or Entries Array
         let rawEntries = [];
         const activeBooks = state.books.filter(b => b && b.courseId === state.currentCourseId);
+        const exportedBooks = Array.isArray(data.books) ? data.books : [];
+        const resolvedBooksMap = new Map();
+        let nextColorIdx = activeBooks.length;
+
+        function resolveImportedBook(bookRef, fallbackColor = null) {
+          const cleanName = (typeof bookRef === 'string' && bookRef.trim()) ? bookRef.trim() : `Book ${typeof bookRef === 'number' ? bookRef : 1}`;
+          const lookupKey = cleanName.toLowerCase();
+
+          if (resolvedBooksMap.has(lookupKey)) {
+            return resolvedBooksMap.get(lookupKey);
+          }
+
+          // 1. Exact name match in active course
+          let existing = activeBooks.find(b => b && b.name && b.name.trim().toLowerCase() === lookupKey);
+
+          // 2. Match by book number if both have a number and names are generic "Book N"
+          if (!existing) {
+            const m = cleanName.match(/^book\s*(\d+)$/i);
+            if (m) {
+              const num = parseInt(m[1], 10);
+              existing = activeBooks.find(b => {
+                if (!b || !b.name) return false;
+                const bm = b.name.match(/(\d+)/);
+                return bm && parseInt(bm[1], 10) === num;
+              });
+            }
+          }
+
+          if (existing) {
+            const info = { id: existing.id, name: existing.name, isPending: false, bookObj: existing };
+            resolvedBooksMap.set(lookupKey, info);
+            return info;
+          }
+
+          const newId = `book-${state.currentCourseId}-${Date.now()}-${resolvedBooksMap.size + 1}`;
+          const assignedColor = fallbackColor || DEFAULT_BOOK_COLORS[nextColorIdx % DEFAULT_BOOK_COLORS.length];
+          nextColorIdx++;
+          const newBookObj = {
+            id: newId,
+            courseId: state.currentCourseId,
+            name: cleanName,
+            color: assignedColor
+          };
+          const info = { id: newId, name: cleanName, isPending: true, bookObj: newBookObj };
+          resolvedBooksMap.set(lookupKey, info);
+          return info;
+        }
 
         if (Array.isArray(data)) {
           rawEntries = data;
@@ -3451,33 +3477,56 @@ function processImport() {
           rawEntries = data.entries;
         }
 
-        if (rawEntries.length === 0) {
+        // Preserve course-level extras (acronyms, todos, notes) from single-course backup
+        if (data.course || Array.isArray(data.acronyms) || Array.isArray(data.todos)) {
+          pendingImportBackupExtras = {
+            course: data.course || null,
+            acronyms: Array.isArray(data.acronyms) ? data.acronyms : [],
+            todos: Array.isArray(data.todos) ? data.todos : []
+          };
+        }
+
+        if (rawEntries.length === 0 && (!pendingImportBackupExtras || (pendingImportBackupExtras.acronyms.length === 0 && pendingImportBackupExtras.todos.length === 0))) {
           alert("No index entries found in JSON file.");
           return;
         }
 
-        // Standardize entries to { topic, book: bookNum, pages }
+        // Standardize entries while preserving custom books, notes, and starred state
         const parsedEntries = [];
         rawEntries.forEach(item => {
           if (!item || !item.topic || !item.pages) return;
-          let bookNum = 1;
-          if (typeof item.book === 'number') {
-            bookNum = item.book;
-          } else if (typeof item.book === 'string') {
-            const m = item.book.match(/(\d+)/);
-            if (m) bookNum = parseInt(m[1], 10);
-          } else if (item.bookId) {
-            const b = activeBooks.find(bk => bk.id === item.bookId);
-            if (b) {
-              const m = b.name.match(/(\d+)/);
-              if (m) bookNum = parseInt(m[1], 10);
+
+          let bookNameOrNum = item.book || 1;
+          let bookColor = null;
+
+          if (item.bookId) {
+            const exportedBook = exportedBooks.find(bk => bk && bk.id === item.bookId);
+            if (exportedBook) {
+              bookNameOrNum = exportedBook.name;
+              bookColor = exportedBook.color || null;
+            } else {
+              const localBook = activeBooks.find(bk => bk && bk.id === item.bookId);
+              if (localBook) {
+                bookNameOrNum = localBook.name;
+                bookColor = localBook.color || null;
+              }
             }
           }
 
+          const bookInfo = resolveImportedBook(bookNameOrNum, bookColor);
+          const validation = parseAndValidatePages(String(item.pages));
+          const finalPages = validation.isValid ? validation.formatted : String(item.pages).trim();
+
           parsedEntries.push({
-            topic: item.topic.trim(),
-            book: bookNum,
-            pages: item.pages.trim()
+            topic: String(item.topic).trim(),
+            book: bookInfo.name,
+            bookName: bookInfo.name,
+            bookId: bookInfo.id,
+            pendingBook: bookInfo.isPending ? bookInfo.bookObj : null,
+            pages: finalPages,
+            notes: item.notes ? String(item.notes) : '',
+            starred: Boolean(item.starred),
+            source: item.source || 'json-import'
           });
         });
 
@@ -3838,6 +3887,7 @@ function buildPdfReviewData(rawEntries, bypassCap = false) {
       bookId,
       pendingBook: entry.pendingBook || null,
       notes: entry.notes || '',
+      starred: Boolean(entry.starred),
       source: entry.source || 'pdf-index-import',
       existingEntry,
       mergedPages,
@@ -3973,20 +4023,51 @@ async function commitImportSelectedEntries() {
         topic,
         pages: compressPageList(pages),
         notes: entry.notes || '',
+        starred: Boolean(entry.starred),
         source: entry.source || 'pdf-index-import',
         createdAt: new Date().toISOString()
       });
       countNew++;
     } else if (action === 'MERGE' && existingEntry && mergedPages) {
       existingEntry.pages = mergedPages;
+      if (entry.notes && entry.notes.trim()) {
+        const incomingNote = entry.notes.trim();
+        if (!existingEntry.notes || !existingEntry.notes.trim()) {
+          existingEntry.notes = incomingNote;
+        } else if (!existingEntry.notes.toLowerCase().includes(incomingNote.toLowerCase())) {
+          existingEntry.notes = `${existingEntry.notes}\n${incomingNote}`;
+        }
+      }
+      if (entry.starred) existingEntry.starred = true;
       countMerge++;
     } else if (action === 'CAPPED' || action === 'DUPLICATE') {
       if (existingEntry) {
         const result = pdfIndexBypassCap
           ? mergePageStrings(existingEntry.pages, pages)
           : mergePageStringsWithCap(existingEntry.pages, pages, 8);
-        if (result.wasChanged) { existingEntry.pages = result.merged; countMerge++; }
-        else countSkipped++;
+        let noteMerged = false;
+        if (entry.notes && entry.notes.trim()) {
+          const incomingNote = entry.notes.trim();
+          if (!existingEntry.notes || !existingEntry.notes.trim()) {
+            existingEntry.notes = incomingNote;
+            noteMerged = true;
+          } else if (!existingEntry.notes.toLowerCase().includes(incomingNote.toLowerCase())) {
+            existingEntry.notes = `${existingEntry.notes}\n${incomingNote}`;
+            noteMerged = true;
+          }
+        }
+        if (entry.starred && !existingEntry.starred) {
+          existingEntry.starred = true;
+          noteMerged = true;
+        }
+        if (result.wasChanged) {
+          existingEntry.pages = result.merged;
+          countMerge++;
+        } else if (noteMerged) {
+          countMerge++;
+        } else {
+          countSkipped++;
+        }
       } else {
         countSkipped++;
       }
@@ -3995,17 +4076,84 @@ async function commitImportSelectedEntries() {
     }
   });
 
-  if (countNew + countMerge === 0 && countBooksCreated === 0) {
+  // Restore any acronyms, todos, or course notes included in a single-course JSON backup
+  let extrasRestored = 0;
+  if (pendingImportBackupExtras) {
+    const { course, acronyms, todos } = pendingImportBackupExtras;
+    if (Array.isArray(acronyms) && acronyms.length > 0) {
+      if (!Array.isArray(state.acronyms)) state.acronyms = [];
+      const existingCodes = new Set(
+        state.acronyms
+          .filter(a => a && a.courseId === state.currentCourseId && a.acronym)
+          .map(a => a.acronym.trim().toUpperCase())
+      );
+      acronyms.forEach((acr, i) => {
+        if (!acr || !acr.acronym) return;
+        const code = String(acr.acronym).trim().toUpperCase();
+        if (!existingCodes.has(code)) {
+          existingCodes.add(code);
+          state.acronyms.push({
+            id: `acr-${Date.now()}-imp-${i}`,
+            courseId: state.currentCourseId,
+            acronym: String(acr.acronym).trim(),
+            definition: acr.definition ? String(acr.definition).trim() : '',
+            createdAt: acr.createdAt || new Date().toISOString()
+          });
+          extrasRestored++;
+        }
+      });
+    }
+    if (Array.isArray(todos) && todos.length > 0) {
+      if (!Array.isArray(state.todos)) state.todos = [];
+      const existingTodoTexts = new Set(
+        state.todos
+          .filter(t => t && t.courseId === state.currentCourseId && t.text)
+          .map(t => t.text.trim().toLowerCase())
+      );
+      todos.forEach((td, i) => {
+        if (!td || !td.text) return;
+        const txtKey = String(td.text).trim().toLowerCase();
+        if (!existingTodoTexts.has(txtKey)) {
+          existingTodoTexts.add(txtKey);
+          state.todos.push({
+            id: `todo-${Date.now()}-imp-${i}`,
+            courseId: state.currentCourseId,
+            text: String(td.text).trim(),
+            completed: Boolean(td.completed),
+            subtasks: Array.isArray(td.subtasks) ? td.subtasks : []
+          });
+          extrasRestored++;
+        }
+      });
+    }
+    if (course) {
+      const activeCourse = state.courses.find(c => c && c.id === state.currentCourseId);
+      if (activeCourse) {
+        if (course.noteContent && (!activeCourse.noteContent || !activeCourse.noteContent.trim())) {
+          activeCourse.noteTitle = course.noteTitle || activeCourse.noteTitle || 'Untitled Document';
+          activeCourse.noteContent = course.noteContent;
+          extrasRestored++;
+        }
+        if (course.testDate && !activeCourse.testDate) {
+          activeCourse.testDate = course.testDate;
+        }
+      }
+    }
+    pendingImportBackupExtras = null;
+  }
+
+  if (countNew + countMerge === 0 && countBooksCreated === 0 && extrasRestored === 0) {
     showToast('No changes made.');
     closePdfIndexReviewDialog();
     return;
   }
 
-  await saveState();
+  await saveState(true);
   renderAll();
   closePdfIndexReviewDialog();
   const bookMsg = countBooksCreated > 0 ? `, ${countBooksCreated} book${countBooksCreated > 1 ? 's' : ''} created` : '';
-  showToast(`Import complete: ${countNew} new, ${countMerge} merged${bookMsg}, ${countSkipped} skipped.`, 3000);
+  const extraMsg = extrasRestored > 0 ? `, ${extrasRestored} extra item${extrasRestored > 1 ? 's' : ''} restored` : '';
+  showToast(`Import complete: ${countNew} new, ${countMerge} merged${bookMsg}${extraMsg}, ${countSkipped} skipped.`, 3000);
 }
 
 // ==========================================================================
@@ -4984,6 +5132,17 @@ function applySameItemsConsolidation() {
       const existing = map.get(key);
       const merged = mergePageStrings(existing.pages, entry.pages);
       existing.pages = merged.merged;
+      if (entry.notes && entry.notes.trim()) {
+        const incomingNote = entry.notes.trim();
+        if (!existing.notes || !existing.notes.trim()) {
+          existing.notes = incomingNote;
+        } else if (!existing.notes.toLowerCase().includes(incomingNote.toLowerCase())) {
+          existing.notes = `${existing.notes}\n${incomingNote}`;
+        }
+      }
+      if (entry.starred) {
+        existing.starred = true;
+      }
     } else {
       map.set(key, entry);
       deduplicated.push(entry);
@@ -4991,7 +5150,7 @@ function applySameItemsConsolidation() {
   });
 
   state.entries = deduplicated;
-  saveState();
+  saveState(true);
   renderAll();
 
   const msg = `Successfully consolidated ${updatedCount} index entries across ${affectedGroups} groups!`;
@@ -5458,9 +5617,9 @@ function initEventBindings() {
     localStorage.setItem('last_active_course_id', state.currentCourseId);
     saveState();
     selectedEntryIds.clear();
+    selectedAcronymIds.clear();
     endEditEntry();
     renderAll();
-    checkExamDateAlerts();
   });
 
   // Master selection checkbox
@@ -5682,14 +5841,6 @@ function initEventBindings() {
     renderEntries();
   });
 
-  if (elements.settingsShowAiBadges) {
-    elements.settingsShowAiBadges.checked = localStorage.getItem('show_ai_badges') !== 'false';
-    elements.settingsShowAiBadges.addEventListener('change', () => {
-      localStorage.setItem('show_ai_badges', elements.settingsShowAiBadges.checked);
-      renderEntries();
-    });
-  }
-
   // Sort Table Headers
   elements.tableHeaders.forEach(th => {
     th.addEventListener('click', (e) => {
@@ -5903,14 +6054,6 @@ function initEventBindings() {
     });
   }
 
-  // Confirm Deletion checkbox — persist state in localStorage
-  if (elements.settingsConfirmDelete) {
-    elements.settingsConfirmDelete.checked = localStorage.getItem('confirm_delete') !== 'false';
-    elements.settingsConfirmDelete.addEventListener('change', () => {
-      localStorage.setItem('confirm_delete', elements.settingsConfirmDelete.checked);
-    });
-  }
-
   // Delete Confirmation Dialog — wiring
   if (elements.deleteConfirmDialog) {
     // Cancel button closes the dialog without deleting
@@ -5919,22 +6062,11 @@ function initEventBindings() {
       pendingDeleteEntryIds = null;
       pendingDeleteAcronymId = null;
       pendingDeleteAcronymIds = null;
-      elements.deleteConfirmDontShowAgain.checked = false;
       elements.deleteConfirmDialog.close();
     });
 
     // Confirm button performs the actual deletion
     elements.deleteConfirmOkBtn.addEventListener('click', () => {
-      // Only set skip warning if it was a single item deletion
-      if (!pendingDeleteEntryIds && !pendingDeleteAcronymIds && elements.deleteConfirmDontShowAgain.checked) {
-        if (elements.settingsConfirmDelete) {
-          elements.settingsConfirmDelete.checked = false;
-        }
-        if (elements.acronymsConfirmDelete) {
-          elements.acronymsConfirmDelete.checked = false;
-        }
-        localStorage.setItem('confirm_delete', 'false');
-      }
       elements.deleteConfirmDialog.close();
       if (pendingDeleteEntryId) {
         performDeleteEntry(pendingDeleteEntryId);
@@ -5949,66 +6081,14 @@ function initEventBindings() {
         performDeleteAcronyms(pendingDeleteAcronymIds);
         pendingDeleteAcronymIds = null;
       }
-      elements.deleteConfirmDontShowAgain.checked = false;
     });
   }
-  // Close button on floating exam date notification banner
-  const closeBannerBtn = elements.examNotificationBanner.querySelector('.close-banner-btn');
-  if (closeBannerBtn) {
-    closeBannerBtn.addEventListener('click', () => {
-      if (bannerTimeoutId) {
-        clearTimeout(bannerTimeoutId);
-        bannerTimeoutId = null;
-      }
-      elements.examNotificationBanner.classList.add('hidden');
-      elements.examCautionBanner.classList.remove('hidden');
-    });
+  // Click Exam Countdown stats card to set/change exam date
+  if (elements.statCardExam) {
+    elements.statCardExam.addEventListener('click', openTestDateDialog);
   }
-
-  // Click banner / "Set Date" buttons to open dialog
-  const setExamDateBtn = elements.examNotificationBanner.querySelector('.set-exam-date-banner-btn');
-  if (setExamDateBtn) {
-    setExamDateBtn.addEventListener('click', openTestDateDialog);
-  }
-  const setExamDateLink = elements.examCautionBanner.querySelector('.set-exam-date-link');
-  if (setExamDateLink) {
-    setExamDateLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      openTestDateDialog();
-    });
-  }
-
-  // Bind Dismiss Forever actions
-  if (elements.dismissForeverBannerBtn) {
-    elements.dismissForeverBannerBtn.addEventListener('click', dismissExamAlertsForever);
-  }
-  if (elements.dismissForeverCautionLink) {
-    elements.dismissForeverCautionLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      dismissExamAlertsForever();
-    });
-  }
-
-  // Click stats card to set/change exam date
-  const statCardBookCount = elements.statBookCount.closest('.stat-card');
-  if (statCardBookCount) {
-    statCardBookCount.addEventListener('click', () => {
-      const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
-      if (activeCourse && activeCourse.dismissExamAlert && !activeCourse.testDate) {
-        return;
-      }
-      openTestDateDialog();
-    });
-  }
-  const statCardAcronymExam = document.getElementById('stat-card-acronym-exam');
-  if (statCardAcronymExam) {
-    statCardAcronymExam.addEventListener('click', () => {
-      const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
-      if (activeCourse && activeCourse.dismissExamAlert && !activeCourse.testDate) {
-        return;
-      }
-      openTestDateDialog();
-    });
+  if (elements.statCardAcronymExamCountdown) {
+    elements.statCardAcronymExamCountdown.addEventListener('click', openTestDateDialog);
   }
 
   // Exam Date Dialog bindings
@@ -6028,14 +6108,6 @@ function initEventBindings() {
         delete activeCourse.testDate;
         saveState();
         elements.testDateDialog.close();
-        
-        if (bannerTimeoutId) {
-          clearTimeout(bannerTimeoutId);
-          bannerTimeoutId = null;
-        }
-        elements.examNotificationBanner.classList.add('hidden');
-        elements.examCautionBanner.classList.remove('hidden');
-        
         renderAll();
       }
     });
@@ -7307,6 +7379,18 @@ function initAutoIndexingBindings() {
       }
     };
 
+    const syncGeminiKeyInputs = (val) => {
+      if (elements.autoIndexGeminiKey && elements.autoIndexGeminiKey.value !== val) {
+        elements.autoIndexGeminiKey.value = val;
+      }
+      if (elements.pdfIndexGeminiKey && elements.pdfIndexGeminiKey.value !== val) {
+        elements.pdfIndexGeminiKey.value = val;
+      }
+      if (elements.combineAiGeminiKey && elements.combineAiGeminiKey.value !== val) {
+        elements.combineAiGeminiKey.value = val;
+      }
+    };
+
     if (elements.apiKeyLockBtn) {
       elements.apiKeyLockBtn.addEventListener('click', () => {
         const keyVal = elements.autoIndexGeminiKey.value.trim();
@@ -7315,6 +7399,7 @@ function initAutoIndexingBindings() {
           return;
         }
         localStorage.setItem('gemini_api_key', keyVal);
+        syncGeminiKeyInputs(keyVal);
         isKeyLocked = !isKeyLocked;
         updateLockUi();
         if (isKeyLocked && keyVal && typeof refreshGeminiModels === 'function') {
@@ -7348,6 +7433,9 @@ function initAutoIndexingBindings() {
           elements.aiCurationOptionsContainer.classList.add('hidden');
         }
       }
+      if (elements.geminiSettingsContainer) {
+        elements.geminiSettingsContainer.classList.remove('hidden');
+      }
     };
 
     const validateGeminiKey = () => {
@@ -7359,48 +7447,6 @@ function initAutoIndexingBindings() {
       }
       updateAiOptionsVisibility();
     };
-
-    const LOCAL_SLM_METADATA = {
-      '0.5b': { name: 'Qwen 0.5B Instruct (Micro)', size: '~398 MB', ram: '~800 MB RAM', quality: 'Basic', badgeId: 'badge-model-0.5b' },
-      '1.5b': { name: 'Qwen 1.5B Instruct (Recommended)', size: '~1.1 GB', ram: '~1.5 GB RAM', quality: 'Good / High', badgeId: 'badge-model-1.5b' },
-      '3b': { name: 'Qwen 3B Instruct (Near-Cloud)', size: '~2.0 GB', ram: '~2.8 GB RAM', quality: 'Near-Cloud Quality', badgeId: 'badge-model-3b' }
-    };
-
-    const DEFAULT_LOCAL_SLM_PROMPT = `You are a strict SANS Cybersecurity Course Index Curator.
-Your sole task is to filter candidate index terms extracted from course materials and KEEP ONLY genuine technical cybersecurity concepts.
-
-### INCLUSION CRITERIA (KEEP):
-- Cybersecurity tools, utilities, and software (e.g., Nmap, Wireshark, Mimikatz, Metasploit, Volatility, Sysmon, Snort, Tcpdump, Certify.exe, Rubeus.exe, SharpHound)
-- Protocols, network standards, and acronyms (e.g., Kerberos, BGP, IPsec, TLS 1.3, DNSSEC, SNMPv3, ARP, SMBv3)
-- Operating system commands, parameters, and flags (e.g., chmod 755, netstat -an, reg add, vssadmin, ps -ef, ls -la)
-- System artifacts, registry keys, and file paths (e.g., HKLM\\Software, MFT, NTFS, SAM database, Event ID 4624, Prefetch)
-- Attack vectors, vulnerability classes, and malware terms (e.g., Pass-the-Hash, SQL Injection, XSS, Golden Ticket, Buffer Overflow)
-- Security frameworks, standards, and laws (e.g., NIST SP 800-53, ISO 27001, MITRE ATT&CK, CIS Controls, HIPAA)
-
-### EXCLUSION CRITERIA (REJECT / DROP):
-- Generic textbook headings, section titles, and page markers (e.g., Overview, Introduction, Summary, Discussion, Chapter 1, Figure 2.3, Table of Contents)
-- Action verbs, phrasal verbs, or prepositions (e.g., 'turned off', 'setting up', 'getting started', 'looking for', 'used by', 'refer to', 'based on')
-- Non-technical English words or generic meta-phrases (e.g., Following Steps, Basic Concept, Main Features, System Configuration, Important Note, Additional Information, Key Takeaway, Best Practices, Module Summary)
-- Standalone generic English words unless part of a technical phrase (e.g., reject 'system', 'process', 'method', 'data', 'user' alone; keep 'Access Control List' or 'System Call')
-
-### FEW-SHOT EXAMPLES:
-Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Turned Off", "Mimikatz", "Following Steps", "Event ID 4624", "Setting Up"]
-Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]`;
-
-    if (elements.localSlmCustomPrompt) {
-      const savedPrompt = localStorage.getItem('local_slm_prompt');
-      elements.localSlmCustomPrompt.value = savedPrompt !== null ? savedPrompt : DEFAULT_LOCAL_SLM_PROMPT;
-      elements.localSlmCustomPrompt.addEventListener('input', () => {
-        localStorage.setItem('local_slm_prompt', elements.localSlmCustomPrompt.value);
-      });
-    }
-
-    if (elements.resetLocalPromptBtn && elements.localSlmCustomPrompt) {
-      elements.resetLocalPromptBtn.addEventListener('click', () => {
-        elements.localSlmCustomPrompt.value = DEFAULT_LOCAL_SLM_PROMPT;
-        localStorage.removeItem('local_slm_prompt');
-      });
-    }
 
     if (elements.geminiCustomPrompt) {
       loadCourseGeminiPrompt();
@@ -7415,194 +7461,8 @@ Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]`;
       });
     }
 
-    const checkModelStatusAndBadge = async (modelKey) => {
-      const meta = LOCAL_SLM_METADATA[modelKey];
-      if (!meta) return;
-      const badgeEl = document.getElementById(meta.badgeId);
-      if (window.api && window.api.checkLocalModelStatus) {
-        const status = await window.api.checkLocalModelStatus(modelKey);
-        if (badgeEl && status.downloaded) {
-          badgeEl.textContent = 'Installed (Offline)';
-          badgeEl.className = 'badge badge-success model-status-badge';
-        }
-      }
-    };
-
-    ['0.5b', '1.5b', '3b'].forEach(m => checkModelStatusAndBadge(m));
-
-    let pendingDownloadModelKey = null;
-
-    const promptModelDownloadIfNeeded = async (modelKey) => {
-      selectedLocalModel = modelKey;
-      localStorage.setItem('local_slm_model', modelKey);
-
-      if (window.api && window.api.checkLocalModelStatus) {
-        const status = await window.api.checkLocalModelStatus(modelKey);
-        if (!status.downloaded) {
-          pendingDownloadModelKey = modelKey;
-          const meta = LOCAL_SLM_METADATA[modelKey];
-          if (elements.dlModalModelName) elements.dlModalModelName.textContent = meta.name;
-          if (elements.dlModalModelDesc) {
-            elements.dlModalModelDesc.innerHTML = `File Size: <strong>${meta.size}</strong> | RAM Demand: <strong>${meta.ram}</strong> | Quality: <strong>${meta.quality}</strong>`;
-          }
-          if (elements.dlModalProgressContainer) elements.dlModalProgressContainer.classList.add('hidden');
-          if (elements.dlModalLogs) elements.dlModalLogs.textContent = '[+] Ready to download model weights...';
-          if (elements.dlModalStartBtn) {
-            elements.dlModalStartBtn.disabled = false;
-            elements.dlModalStartBtn.textContent = 'Confirm & Download Model';
-          }
-          if (elements.modelDownloadConfirmModal) elements.modelDownloadConfirmModal.showModal();
-        }
-      }
-    };
-
-    if (elements.dlModalCancelBtn && elements.modelDownloadConfirmModal) {
-      elements.dlModalCancelBtn.addEventListener('click', () => elements.modelDownloadConfirmModal.close());
-    }
-    if (elements.dlModalCloseX && elements.modelDownloadConfirmModal) {
-      elements.dlModalCloseX.addEventListener('click', () => elements.modelDownloadConfirmModal.close());
-    }
-
-    if (elements.dlModalStartBtn && elements.modelDownloadConfirmModal) {
-      elements.dlModalStartBtn.addEventListener('click', async () => {
-        if (!pendingDownloadModelKey) return;
-        elements.dlModalStartBtn.disabled = true;
-        elements.dlModalStartBtn.textContent = 'Downloading...';
-        if (elements.dlModalProgressContainer) elements.dlModalProgressContainer.classList.remove('hidden');
-
-        if (window.api && window.api.onModelDownloadProgress) {
-          window.api.onModelDownloadProgress((data) => {
-            if (elements.dlModalLogs) {
-              elements.dlModalLogs.textContent += '\n' + data.text;
-              elements.dlModalLogs.scrollTop = elements.dlModalLogs.scrollHeight;
-            }
-          });
-        }
-
-        const res = await window.api.downloadLocalModel(pendingDownloadModelKey);
-        if (res.success) {
-          if (elements.dlModalStatusText) elements.dlModalStatusText.textContent = '✅ Download Completed Successfully!';
-          if (elements.dlModalStartBtn) elements.dlModalStartBtn.textContent = 'Done!';
-          checkModelStatusAndBadge(pendingDownloadModelKey);
-          setTimeout(() => {
-            elements.modelDownloadConfirmModal.close();
-          }, 1200);
-        } else {
-          if (elements.dlModalStatusText) elements.dlModalStatusText.textContent = '❌ Download Error';
-          if (elements.dlModalStartBtn) {
-            elements.dlModalStartBtn.disabled = false;
-            elements.dlModalStartBtn.textContent = 'Retry Download';
-          }
-        }
-      });
-    }
-
-    const setCurationEngine = (engineVal, modelKey = null) => {
-      if (elements.autoIndexCurationEngine) {
-        elements.autoIndexCurationEngine.value = engineVal;
-      }
-      localStorage.setItem('curation_engine', engineVal);
-
-      if (modelKey) {
-        selectedLocalModel = modelKey;
-        localStorage.setItem('local_slm_model', modelKey);
-      } else {
-        modelKey = localStorage.getItem('local_slm_model') || '1.5b';
-      }
-
-      if (elements.curationCardGemini) elements.curationCardGemini.classList.toggle('active', engineVal === 'gemini');
-      if (elements.curationCardLocal05b) elements.curationCardLocal05b.classList.toggle('active', engineVal === 'local-slm' && modelKey === '0.5b');
-      if (elements.curationCardLocal15b) elements.curationCardLocal15b.classList.toggle('active', engineVal === 'local-slm' && modelKey === '1.5b');
-      if (elements.curationCardLocal3b) elements.curationCardLocal3b.classList.toggle('active', engineVal === 'local-slm' && modelKey === '3b');
-
-      if (elements.geminiSettingsContainer) {
-        if (engineVal === 'gemini') {
-          elements.geminiSettingsContainer.classList.remove('hidden');
-        } else {
-          elements.geminiSettingsContainer.classList.add('hidden');
-        }
-      }
-      if (elements.localSlmInfoContainer) {
-        if (engineVal === 'local-slm') {
-          elements.localSlmInfoContainer.classList.remove('hidden');
-        } else {
-          elements.localSlmInfoContainer.classList.add('hidden');
-        }
-      }
-
-      if (elements.curationEngineBadge) {
-        if (engineVal === 'local-slm') {
-          const modelName = LOCAL_SLM_METADATA[modelKey] ? LOCAL_SLM_METADATA[modelKey].name.split(' ')[1] : modelKey.toUpperCase();
-          elements.curationEngineBadge.textContent = `⚡ Local Qwen ${modelName}`;
-          elements.curationEngineBadge.className = 'badge badge-info';
-        } else {
-          elements.curationEngineBadge.textContent = 'Cloud Gemini';
-          elements.curationEngineBadge.className = 'badge badge-success';
-        }
-      }
-
-      validateGeminiKey();
-    };
-
-    if (elements.curationCardGemini) {
-      elements.curationCardGemini.addEventListener('click', () => setCurationEngine('gemini'));
-    }
-    if (elements.curationCardLocal05b) {
-      elements.curationCardLocal05b.addEventListener('click', () => {
-        setCurationEngine('local-slm', '0.5b');
-        promptModelDownloadIfNeeded('0.5b');
-      });
-    }
-    if (elements.curationCardLocal15b) {
-      elements.curationCardLocal15b.addEventListener('click', () => {
-        setCurationEngine('local-slm', '1.5b');
-        promptModelDownloadIfNeeded('1.5b');
-      });
-    }
-    if (elements.curationCardLocal3b) {
-      elements.curationCardLocal3b.addEventListener('click', () => {
-        setCurationEngine('local-slm', '3b');
-        promptModelDownloadIfNeeded('3b');
-      });
-    }
-
-    if (elements.autoIndexCurationEngine) {
-      elements.autoIndexCurationEngine.addEventListener('change', () => {
-        setCurationEngine(elements.autoIndexCurationEngine.value);
-      });
-    }
-
-    if (elements.localSlmToggle && elements.localSlmContainer) {
-      elements.localSlmToggle.addEventListener('click', () => {
-        const isCollapsed = elements.localSlmContainer.classList.contains('hidden');
-        if (isCollapsed) {
-          elements.localSlmContainer.classList.remove('hidden');
-          elements.localSlmToggle.classList.add('active');
-          if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(90deg)';
-          if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Expanded';
-        } else {
-          elements.localSlmContainer.classList.add('hidden');
-          elements.localSlmToggle.classList.remove('active');
-          if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(0deg)';
-          if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Collapsed';
-        }
-      });
-    }
-
-    const savedEngine = localStorage.getItem('curation_engine') || 'gemini';
-    const savedModel = localStorage.getItem('local_slm_model') || '1.5b';
-    setCurationEngine(savedEngine, savedModel);
-
-    // If previously saved engine was local-slm, expand the container so user sees their selection
-    if (savedEngine === 'local-slm' && elements.localSlmContainer) {
-      elements.localSlmContainer.classList.remove('hidden');
-      if (elements.localSlmToggle) elements.localSlmToggle.classList.add('active');
-      if (elements.localSlmToggleIcon) elements.localSlmToggleIcon.style.transform = 'rotate(90deg)';
-      if (elements.localSlmToggleStatus) elements.localSlmToggleStatus.textContent = 'Expanded';
-    }
-
     const initialKey = localStorage.getItem('gemini_api_key') || '';
-    elements.autoIndexGeminiKey.value = initialKey;
+    syncGeminiKeyInputs(initialKey);
 
     // Checkbox restore
     const savedUseAi = localStorage.getItem('use_gemini_ai') === 'true';
@@ -7622,10 +7482,30 @@ Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]`;
     }
 
     elements.autoIndexGeminiKey.addEventListener('input', () => {
-      localStorage.setItem('gemini_api_key', elements.autoIndexGeminiKey.value.trim());
+      const keyVal = elements.autoIndexGeminiKey.value.trim();
+      localStorage.setItem('gemini_api_key', keyVal);
+      syncGeminiKeyInputs(keyVal);
       validateGeminiKey();
       updateLockUi();
     });
+
+    if (elements.pdfIndexGeminiKey) {
+      elements.pdfIndexGeminiKey.addEventListener('input', () => {
+        const keyVal = elements.pdfIndexGeminiKey.value.trim();
+        localStorage.setItem('gemini_api_key', keyVal);
+        syncGeminiKeyInputs(keyVal);
+        updateLockUi();
+      });
+    }
+
+    if (elements.combineAiGeminiKey) {
+      elements.combineAiGeminiKey.addEventListener('input', () => {
+        const keyVal = elements.combineAiGeminiKey.value.trim();
+        localStorage.setItem('gemini_api_key', keyVal);
+        syncGeminiKeyInputs(keyVal);
+        updateLockUi();
+      });
+    }
 
     elements.autoIndexUseAi.addEventListener('change', () => {
       localStorage.setItem('use_gemini_ai', elements.autoIndexUseAi.checked);
@@ -7875,8 +7755,7 @@ Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]`;
       const geminiRateLimitCard = document.getElementById('gemini-rate-limit-card');
       if (geminiRateLimitCard) {
         const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-        const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
-        if (useAi && !isLocalSlm && activeTier === 'free') {
+        if (useAi && activeTier === 'free') {
           geminiRateLimitCard.classList.remove('hidden');
         } else {
           geminiRateLimitCard.classList.add('hidden');
@@ -8053,9 +7932,6 @@ Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]`;
       if (elements.aiCurationErrorAlert) {
         elements.aiCurationErrorAlert.classList.add('hidden');
       }
-      if (elements.quizGenerationErrorAlert) {
-        elements.quizGenerationErrorAlert.classList.add('hidden');
-      }
       
       wizardCurrentStep = 1;
       updateWizardUI();
@@ -8217,56 +8093,6 @@ Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]`;
 
   // Initialize wizard logic
   initAutoIndexWizard();
-
-  // Practice Quiz button inside header
-  if (elements.practiceQuizBtn) {
-    const newQuizBtn = elements.practiceQuizBtn.cloneNode(true);
-    elements.practiceQuizBtn.parentNode.replaceChild(newQuizBtn, elements.practiceQuizBtn);
-    elements.practiceQuizBtn = newQuizBtn;
-    
-    elements.practiceQuizBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      alert("Practice Quiz - Feature Coming Soon!\n\nWe are currently optimizing the quiz engine for reduced token consumption and local AI model support.");
-    });
-  }
-
-  // Quiz config dialog bindings
-  if (elements.quizConfigForm) {
-    const newForm = elements.quizConfigForm.cloneNode(true);
-    elements.quizConfigForm.parentNode.replaceChild(newForm, elements.quizConfigForm);
-    elements.quizConfigForm = newForm;
-    elements.quizConfigForm.addEventListener('submit', handleQuizConfigSubmit);
-    
-    elements.quizConfigBooksChecklist = document.getElementById('quiz-config-books-checklist');
-    elements.quizConfigCount = document.getElementById('quiz-config-count');
-    elements.quizConfigDifficulty = document.getElementById('quiz-config-difficulty');
-    elements.quizConfigFeedback = document.getElementById('quiz-config-feedback');
-    elements.quizConfigCloseBtn = document.getElementById('quiz-config-close-btn');
-  }
-  
-  if (elements.quizConfigCloseBtn) {
-    elements.quizConfigCloseBtn.addEventListener('click', () => {
-      if (elements.quizConfigDialog) elements.quizConfigDialog.close();
-    });
-  }
-
-  // Quiz Practice View Exit & Next bindings
-  if (elements.quizExitBtn) {
-    elements.quizExitBtn.addEventListener('click', handleQuizExit);
-  }
-
-  if (elements.quizNextQuestionBtn) {
-    elements.quizNextQuestionBtn.addEventListener('click', handleQuizNextClick);
-  }
-
-  // Scorecard View retry & close bindings
-  if (elements.scorecardRetryBtn) {
-    elements.scorecardRetryBtn.addEventListener('click', retryQuizSession);
-  }
-
-  if (elements.scorecardCloseBtn) {
-    elements.scorecardCloseBtn.addEventListener('click', exitQuizMode);
-  }
 }
 
 async function runDependencyCheck() {
@@ -8332,16 +8158,11 @@ async function runDependencyCheck() {
       warnings.push(`<li><strong>pdftotext not found:</strong> The app will fall back to direct PDF text extraction. Click Install, or run <code>${popplerCmd}</code></li>`);
     }
 
-    // Update overall badge
+    // Update overall badge (OCR is optional, so Ready when Python + QPDF are installed)
     if (elements.depOverallBadge) {
       if (deps.python && deps.qpdf) {
-        if (deps.ocr) {
-          elements.depOverallBadge.textContent = 'Ready';
-          elements.depOverallBadge.className = 'badge badge-success';
-        } else {
-          elements.depOverallBadge.textContent = 'OCR Missing (Optional)';
-          elements.depOverallBadge.className = 'badge badge-warning';
-        }
+        elements.depOverallBadge.textContent = 'Ready';
+        elements.depOverallBadge.className = 'badge badge-success';
         
         // Auto-collapse dependency checker if everything is ready to save space
         if (elements.autoIndexDepToggle && elements.autoIndexDepContent && elements.autoIndexDepToggle.classList.contains('active')) {
@@ -8485,13 +8306,8 @@ async function handleAutoIndexSubmit(e) {
   const geminiApiTier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
   const geminiApiKey = useAi && elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
   
-  const curationEngine = elements.autoIndexCurationEngine ? elements.autoIndexCurationEngine.value : 'gemini';
-  const selectedLocalModel = localStorage.getItem('local_slm_model') || '1.5b';
-  
   const settings = {
-    curationEngine: useAi ? curationEngine : 'none',
-    localSlmModel: selectedLocalModel,
-    localSlmPrompt: elements.localSlmCustomPrompt ? elements.localSlmCustomPrompt.value.trim() : '',
+    curationEngine: useAi ? 'gemini' : 'none',
     geminiPrompt: elements.geminiCustomPrompt ? elements.geminiCustomPrompt.value.trim() : '',
     geminiApiTier: geminiApiTier,
     offset: parseInt(elements.autoIndexOffset.value) || 0,
@@ -8500,10 +8316,7 @@ async function handleAutoIndexSubmit(e) {
     minFrequency: parseInt(elements.autoIndexMinFreq.value) || 1,
     maxFrequency: parseInt(elements.autoIndexMaxFreq.value) || 10,
     zipf: parseFloat(elements.autoIndexZipf.value) || 4.0,
-    useOcr: elements.autoIndexUseOcr.checked,
-    generateQuiz: false,
-    quizCount: 10,
-    quizDifficulty: 'Conceptual'
+    useOcr: elements.autoIndexUseOcr.checked
   };
 
   const startProcess = () => {
@@ -8519,17 +8332,7 @@ async function handleAutoIndexSubmit(e) {
 
     window.api.onAutoIndexProgress((progress) => {
       updateChunkProgressConsole(progress);
-      // Dynamic loading warnings for AI curation/quiz step
-      if (progress.step === 'curating-slm') {
-        elements.indexingProgressStatus.innerHTML = `
-          <div style="font-size: 1.1rem; font-weight: 600; color: #38bdf8; line-height: 1.4;">
-            ⚡ Running Local 0.5B SLM Curation Engine...
-          </div>
-          <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 6px;">
-            Filtering noise words & merging duplicates 100% offline
-          </div>
-        `;
-      } else if (progress.step === 'curating') {
+      if (progress.step === 'curating') {
         if (progress.isOverloaded) {
           elements.indexingProgressStatus.innerHTML = `
             <div style="font-size: 1.1rem; font-weight: 600; color: #eab308; line-height: 1.4; max-width: 550px; margin-left: auto; margin-right: auto;">
@@ -8547,13 +8350,6 @@ async function handleAutoIndexSubmit(e) {
             </div>
           `;
         }
-      } else if (progress.step === 'quiz-generating') {
-        elements.indexingProgressStatus.innerHTML = `
-          Generating Practice Quiz...
-          <div style="font-size: 0.8rem; font-weight: normal; color: var(--text-secondary); margin-top: 8px; max-width: 500px; margin-left: auto; margin-right: auto; line-height: 1.4;">
-            ${progress.message || 'Prompting Gemini to write Cybersecurity Practice questions...'}
-          </div>
-        `;
       } else {
         elements.indexingProgressStatus.textContent = progress.message;
       }
@@ -8566,39 +8362,11 @@ async function handleAutoIndexSubmit(e) {
         
         if (result.success) {
           autoExtractedEntries = result.entries;
-          
-          let addedQuestions = false;
-          if (result.quizGenerated && result.quizQuestions && result.quizQuestions.length > 0) {
-            if (!state.quizzes) state.quizzes = [];
-            const newQuiz = {
-              id: 'quiz-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
-              courseId: state.currentCourseId,
-              bookId: bookId,
-              difficulty: settings.quizDifficulty,
-              questions: result.quizQuestions,
-              createdAt: new Date().toISOString()
-            };
-            state.quizzes.push(newQuiz);
-            saveState();
-            addedQuestions = true;
-          }
-          
-          lastQuizError = result.quizError;
 
           if (autoExtractedEntries.length === 0) {
             alert("Auto-indexing completed, but no words or phrases matched your filter settings. Try adjusting the parameters and try again.");
             elements.autoIndexForm.closest('section').classList.remove('hidden');
           } else {
-            if (addedQuestions && elements.quizNewQuestionsToast) {
-              elements.quizNewQuestionsToast.classList.remove('hidden');
-              
-              if (window.quizToastTimeout) {
-                clearTimeout(window.quizToastTimeout);
-              }
-              window.quizToastTimeout = setTimeout(() => {
-                elements.quizNewQuestionsToast.classList.add('hidden');
-              }, 8000);
-            }
             // Display AI curation error if it occurred
             if (elements.aiCurationErrorAlert && elements.aiCurationErrorText) {
               if (result.curationError) {
@@ -8617,16 +8385,6 @@ async function handleAutoIndexSubmit(e) {
               elements.partialCurationAlert.classList.remove('hidden');
             } else if (elements.partialCurationAlert) {
               elements.partialCurationAlert.classList.add('hidden');
-            }
-
-            // Display Quiz generation error if it occurred
-            if (elements.quizGenerationErrorAlert && elements.quizGenerationErrorText) {
-              if (result.quizError) {
-                elements.quizGenerationErrorText.textContent = result.quizError;
-                elements.quizGenerationErrorAlert.classList.remove('hidden');
-              } else {
-                elements.quizGenerationErrorAlert.classList.add('hidden');
-              }
             }
             
             elements.verificationPreviewSection.classList.remove('hidden');
@@ -8770,22 +8528,14 @@ async function handleImportCheckedEntries() {
   });
 
   if (importCount > 0) {
-    await saveState();
+    await saveState(true);
 
     alert(`Successfully imported ${importCount} auto-indexed entries!`);
-
-    if (lastQuizError) {
-      alert(`Friendly Notice:\nCuration succeeded and entries were imported, but practice quiz generation failed due to API limits/traffic:\n\n${lastQuizError}\n\nPlease try generating a quiz next time or tomorrow!`);
-      lastQuizError = null;
-    }
     
     elements.verificationPreviewSection.classList.add('hidden');
     elements.autoIndexForm.closest('section').classList.remove('hidden');
     if (elements.aiCurationErrorAlert) {
       elements.aiCurationErrorAlert.classList.add('hidden');
-    }
-    if (elements.quizGenerationErrorAlert) {
-      elements.quizGenerationErrorAlert.classList.add('hidden');
     }
     
     // Reset setup wizard steps
@@ -8883,8 +8633,7 @@ function validateWizardStep(step) {
     }
   } else if (step === 3) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
-    if (useAi && !isLocalSlm) {
+    if (useAi) {
       const key = elements.autoIndexGeminiKey ? elements.autoIndexGeminiKey.value.trim() : '';
       if (!key) {
         alert("Please enter a Gemini API Key to use Gemini Cloud AI Curation.");
@@ -8974,12 +8723,9 @@ function updateWizardSummary() {
 
   if (summaryGeminiModel) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
     const tier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
     if (useAi) {
-      if (isLocalSlm) {
-        summaryGeminiModel.textContent = 'Qwen 0.5B (Offline)';
-      } else if (elements.autoIndexModelSelect && elements.autoIndexModelSelect.selectedIndex >= 0) {
+      if (elements.autoIndexModelSelect && elements.autoIndexModelSelect.selectedIndex >= 0) {
         const selectedModelOpt = elements.autoIndexModelSelect.options[elements.autoIndexModelSelect.selectedIndex];
         const rawName = selectedModelOpt ? (selectedModelOpt.textContent || selectedModelOpt.value) : 'Gemini Flash';
         const shortName = rawName.split(' (')[0];
@@ -8997,376 +8743,13 @@ function updateWizardSummary() {
   const geminiRateLimitCard = document.getElementById('gemini-rate-limit-card');
   if (geminiRateLimitCard) {
     const useAi = elements.autoIndexUseAi ? elements.autoIndexUseAi.checked : false;
-    const isLocalSlm = elements.autoIndexCurationEngine && elements.autoIndexCurationEngine.value === 'local-slm';
     const tier = elements.autoIndexGeminiTierSelect ? elements.autoIndexGeminiTierSelect.value : (localStorage.getItem('gemini_api_tier') || 'free');
-    if (useAi && !isLocalSlm && tier === 'free') {
+    if (useAi && tier === 'free') {
       geminiRateLimitCard.classList.remove('hidden');
     } else {
       geminiRateLimitCard.classList.add('hidden');
     }
   }
-}
-
-// Quiz Hub Gameplay logic
-let quizSession = {
-  questions: [],
-  currentQuestionIndex: 0,
-  userAnswers: [],
-  score: 0,
-  feedbackMode: 'immediate',
-  selectedBooks: [],
-  difficulty: 'Conceptual'
-};
-
-function openQuizConfig() {
-  if (!state.currentCourseId) {
-    alert("Please select or create a course first!");
-    return;
-  }
-
-  if (elements.quizConfigBooksChecklist) {
-    elements.quizConfigBooksChecklist.innerHTML = '';
-    const courseBooks = state.books.filter(b => b.courseId === state.currentCourseId);
-    
-    // Filter books that actually have questions in state.quizzes
-    const booksWithQs = courseBooks.filter(book => {
-      const totalQs = state.quizzes
-        .filter(q => q.bookId === book.id)
-        .reduce((sum, q) => sum + (q.questions ? q.questions.length : 0), 0);
-      return totalQs > 0;
-    });
-
-    if (booksWithQs.length === 0) {
-      elements.quizConfigBooksChecklist.innerHTML = `
-        <div style="font-size: 0.88rem; color: var(--text-secondary); font-style: italic; line-height: 1.4; padding: 12px 8px; border: 1px dashed var(--border-color); border-radius: var(--radius-sm); text-align: center; width: 100%;">
-          You haven't generated any quiz questions yet. Visit the Auto-Indexer to get started!
-        </div>
-      `;
-    } else {
-      booksWithQs.forEach(book => {
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.alignItems = 'center';
-        div.style.gap = '8px';
-        
-        const totalQs = state.quizzes
-          .filter(q => q.bookId === book.id)
-          .reduce((sum, q) => sum + (q.questions ? q.questions.length : 0), 0);
-
-        div.innerHTML = `
-          <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; font-size: 0.85rem; width: 100%;">
-            <input type="checkbox" class="quiz-book-checkbox" value="${book.id}" checked style="flex-shrink: 0;">
-            <span class="book-indicator-dot" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${book.color || 'var(--color-accent)'}; flex-shrink: 0; display: inline-block;"></span>
-            <span style="line-height: 1.2;">${book.name} (${totalQs} Qs available)</span>
-          </label>
-        `;
-        elements.quizConfigBooksChecklist.appendChild(div);
-      });
-    }
-  }
-
-  if (elements.quizConfigDialog) {
-    elements.quizConfigDialog.showModal();
-  }
-}
-
-function handleQuizConfigSubmit(e) {
-  e.preventDefault();
-  
-  const checkedCheckboxes = elements.quizConfigBooksChecklist.querySelectorAll('.quiz-book-checkbox:checked');
-  const selectedBookIds = Array.from(checkedCheckboxes).map(cb => cb.value);
-  
-  if (selectedBookIds.length === 0) {
-    alert("Please select at least one book to pull questions from!");
-    return;
-  }
-
-  const questionCount = parseInt(elements.quizConfigCount.value) || 10;
-  const difficulty = elements.quizConfigDifficulty.value;
-  const feedbackMode = elements.quizConfigFeedback.value;
-
-  let pool = [];
-  state.quizzes.forEach(quiz => {
-    if (selectedBookIds.includes(quiz.bookId) && quiz.difficulty === difficulty) {
-      if (quiz.questions && Array.isArray(quiz.questions)) {
-        const bookObj = state.books.find(b => b.id === quiz.bookId);
-        quiz.questions.forEach(q => {
-          pool.push({
-            ...q,
-            bookName: bookObj ? bookObj.name : 'Unknown Book',
-            bookColor: bookObj ? bookObj.color : '#0d9488'
-          });
-        });
-      }
-    }
-  });
-
-  if (pool.length === 0) {
-    alert(`No questions found matching difficulty "${difficulty}" in the selected books. Please generate some questions first by auto-indexing a book and selecting "Generate Practice Quiz" in Step 4.`);
-    return;
-  }
-
-  pool = shuffleArray(pool);
-  const selectedQuestions = pool.slice(0, questionCount);
-
-  quizSession = {
-    questions: selectedQuestions,
-    currentQuestionIndex: 0,
-    userAnswers: new Array(selectedQuestions.length).fill(null),
-    score: 0,
-    feedbackMode: feedbackMode,
-    selectedBooks: selectedBookIds,
-    difficulty: difficulty
-  };
-
-  if (elements.quizConfigDialog) {
-    elements.quizConfigDialog.close();
-  }
-
-  enterQuizMode();
-}
-
-function shuffleArray(array) {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function enterQuizMode() {
-  document.querySelectorAll('.no-print-in-quiz').forEach(el => el.classList.add('hidden'));
-  elements.manualIndexView.classList.add('hidden');
-  elements.autoIndexView.classList.add('hidden');
-  
-  elements.quizPracticeView.classList.remove('hidden');
-  elements.quizScorecardView.classList.add('hidden');
-
-  if (quizSession.feedbackMode === 'immediate') {
-    elements.quizLiveScoreContainer.classList.remove('hidden');
-    elements.quizLiveScore.textContent = '0/0';
-  } else {
-    elements.quizLiveScoreContainer.classList.add('hidden');
-  }
-
-  displayQuizQuestion();
-}
-
-function displayQuizQuestion() {
-  const currentQ = quizSession.questions[quizSession.currentQuestionIndex];
-  
-  elements.quizProgressText.textContent = `Question ${quizSession.currentQuestionIndex + 1} of ${quizSession.questions.length}`;
-  if (elements.quizProgressFill) {
-    const fillPercent = ((quizSession.currentQuestionIndex + 1) / quizSession.questions.length) * 100;
-    elements.quizProgressFill.style.width = `${fillPercent}%`;
-  }
-
-  elements.quizQuestionBookBadge.textContent = currentQ.bookName || 'SANS Book';
-  elements.quizQuestionBookBadge.style.color = currentQ.bookColor || 'var(--color-accent)';
-  elements.quizQuestionBookBadge.style.borderColor = currentQ.bookColor || 'var(--color-accent)';
-  
-  elements.quizQuestionDiffBadge.textContent = quizSession.difficulty;
-  elements.quizQuestionText.textContent = currentQ.question;
-  elements.quizFeedbackPanel.classList.add('hidden');
-  elements.quizOptionsContainer.innerHTML = '';
-  
-  const isLastQuestion = quizSession.currentQuestionIndex === quizSession.questions.length - 1;
-  elements.quizNextQuestionBtn.innerHTML = isLastQuestion 
-    ? `<span>Submit Quiz</span><i data-lucide="check" style="width: 16px; height: 16px; margin-left: 4px;"></i>`
-    : `<span>Next Question</span><i data-lucide="chevron-right" style="width: 16px; height: 16px; margin-left: 4px;"></i>`;
-  lucide.createIcons({ nodeList: [elements.quizNextQuestionBtn] });
-
-  elements.quizNextQuestionBtn.classList.add('hidden');
-
-  currentQ.options.forEach((optText, index) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'quiz-choice-btn';
-    btn.innerHTML = `
-      <span class="option-letter">${String.fromCharCode(65 + index)}</span>
-      <span>${escapeHtml(optText)}</span>
-    `;
-
-    btn.addEventListener('click', () => handleQuizOptionClick(index));
-    elements.quizOptionsContainer.appendChild(btn);
-  });
-}
-
-function handleQuizOptionClick(selectedIndex) {
-  const currentQ = quizSession.questions[quizSession.currentQuestionIndex];
-  quizSession.userAnswers[quizSession.currentQuestionIndex] = selectedIndex;
-
-  const buttons = elements.quizOptionsContainer.querySelectorAll('.quiz-choice-btn');
-
-  if (quizSession.feedbackMode === 'immediate') {
-    buttons.forEach((btn, idx) => {
-      btn.disabled = true;
-      if (idx === currentQ.correctIndex) {
-        btn.classList.add('correct');
-      } else if (idx === selectedIndex) {
-        btn.classList.add('incorrect');
-      }
-    });
-
-    const isCorrect = selectedIndex === currentQ.correctIndex;
-    if (isCorrect) {
-      quizSession.score++;
-    }
-    
-    const answeredCount = quizSession.currentQuestionIndex + 1;
-    elements.quizLiveScore.textContent = `${quizSession.score}/${answeredCount}`;
-
-    elements.quizFeedbackPanel.classList.remove('hidden');
-    elements.quizFeedbackTitle.textContent = isCorrect ? 'Correct!' : 'Incorrect';
-    
-    if (elements.quizFeedbackIndicator) {
-      elements.quizFeedbackIndicator.style.color = isCorrect ? '#10b981' : '#ef4444';
-    }
-    
-    if (elements.quizFeedbackIcon) {
-      elements.quizFeedbackIcon.setAttribute('data-lucide', isCorrect ? 'check-circle-2' : 'alert-circle');
-      lucide.createIcons({ nodeList: [elements.quizFeedbackIcon] });
-    }
-
-    elements.quizExplanationText.textContent = currentQ.explanation;
-  } else {
-    buttons.forEach((btn, idx) => {
-      btn.classList.remove('selected');
-      if (idx === selectedIndex) {
-        btn.classList.add('selected');
-      }
-    });
-  }
-
-  elements.quizNextQuestionBtn.classList.remove('hidden');
-}
-
-function handleQuizNextClick() {
-  const isLastQuestion = quizSession.currentQuestionIndex === quizSession.questions.length - 1;
-  
-  if (isLastQuestion) {
-    showQuizScorecard();
-  } else {
-    quizSession.currentQuestionIndex++;
-    displayQuizQuestion();
-  }
-}
-
-function showQuizScorecard() {
-  elements.quizPracticeView.classList.add('hidden');
-  elements.quizScorecardView.classList.remove('hidden');
-
-  let correctCount = 0;
-  if (quizSession.feedbackMode === 'graded') {
-    quizSession.questions.forEach((q, idx) => {
-      if (quizSession.userAnswers[idx] === q.correctIndex) {
-        correctCount++;
-      }
-    });
-    quizSession.score = correctCount;
-  } else {
-    correctCount = quizSession.score;
-  }
-
-  const accuracy = Math.round((correctCount / quizSession.questions.length) * 100) || 0;
-
-  elements.scorecardRatio.textContent = `${correctCount}/${quizSession.questions.length}`;
-  elements.scorecardPercent.textContent = `${accuracy}%`;
-  
-  if (accuracy >= 80) {
-    elements.scorecardPercent.style.color = '#10b981';
-  } else if (accuracy >= 60) {
-    elements.scorecardPercent.style.color = '#eab308';
-  } else {
-    elements.scorecardPercent.style.color = '#ef4444';
-  }
-
-  elements.scorecardReviewContainer.innerHTML = '';
-  quizSession.questions.forEach((q, idx) => {
-    const userAns = quizSession.userAnswers[idx];
-    const isCorrect = userAns === q.correctIndex;
-    const itemDiv = document.createElement('div');
-    itemDiv.className = 'scorecard-review-item';
-    
-    const letter = userAns !== null ? String.fromCharCode(65 + userAns) : 'None';
-    const correctLetter = String.fromCharCode(65 + q.correctIndex);
-
-    itemDiv.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 12px;">
-        <span style="font-weight: 600; font-size: 0.88rem; color: var(--text-primary);">Q${idx + 1}: ${escapeHtml(q.question)}</span>
-        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 700; color: ${isCorrect ? '#10b981' : '#ef4444'}; flex-shrink: 0; padding: 2px 6px; background: ${isCorrect ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'}; border: 1px solid ${isCorrect ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}; border-radius: 4px;">
-          <i data-lucide="${isCorrect ? 'check' : 'x'}" style="width: 12px; height: 12px;"></i>
-          <span>${isCorrect ? 'Correct' : 'Incorrect'}</span>
-        </span>
-      </div>
-      
-      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
-        <span>Your Answer: <strong style="color: ${isCorrect ? '#10b981' : '#ef4444'};">${letter}</strong></span> | 
-        <span>Correct Answer: <strong style="color: #10b981;">${correctLetter}</strong></span>
-      </div>
-      
-      <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.45; padding: 10px; background: rgba(255, 255, 255, 0.02); border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-        <strong>Explanation:</strong> ${escapeHtml(q.explanation)}
-      </div>
-    `;
-    elements.scorecardReviewContainer.appendChild(itemDiv);
-  });
-  lucide.createIcons({ nodeList: elements.scorecardReviewContainer });
-}
-
-function handleQuizExit() {
-  if (confirm("Are you sure you want to exit the practice session? Your progress will not be saved.")) {
-    exitQuizMode();
-  }
-}
-
-function exitQuizMode() {
-  elements.quizPracticeView.classList.add('hidden');
-  elements.quizScorecardView.classList.add('hidden');
-
-  document.querySelectorAll('.no-print-in-quiz').forEach(el => el.classList.remove('hidden'));
-  
-  const activeTab = document.querySelector('.workspace-tabs .tab-btn.active');
-  const targetTab = activeTab ? activeTab.getAttribute('data-view-tab') : 'manual-index';
-  
-  if (targetTab === 'manual-index') {
-    elements.manualIndexView.classList.remove('hidden');
-    elements.autoIndexView.classList.add('hidden');
-    if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
-  } else if (targetTab === 'notes-editor') {
-    elements.manualIndexView.classList.add('hidden');
-    elements.autoIndexView.classList.add('hidden');
-    if (elements.notesEditorView) elements.notesEditorView.classList.remove('hidden');
-  } else {
-    elements.manualIndexView.classList.add('hidden');
-    elements.autoIndexView.classList.remove('hidden');
-    if (elements.notesEditorView) elements.notesEditorView.classList.add('hidden');
-  }
-}
-
-function retryQuizSession() {
-  const shuffled = shuffleArray(quizSession.questions);
-  
-  quizSession = {
-    ...quizSession,
-    questions: shuffled,
-    currentQuestionIndex: 0,
-    userAnswers: new Array(shuffled.length).fill(null),
-    score: 0
-  };
-
-  elements.quizPracticeView.classList.remove('hidden');
-  elements.quizScorecardView.classList.add('hidden');
-
-  if (quizSession.feedbackMode === 'immediate') {
-    elements.quizLiveScoreContainer.classList.remove('hidden');
-    elements.quizLiveScore.textContent = '0/0';
-  } else {
-    elements.quizLiveScoreContainer.classList.add('hidden');
-  }
-
-  displayQuizQuestion();
 }
 
 // ==========================================================================
@@ -9377,8 +8760,53 @@ let notesSaveTimeout = null;
 let currentNotesZoom = 100;
 let notesEditorInitialized = false;
 
+const DEFAULT_NOTES_TEMPLATE_HTML = `<h2>SANS Course Study Notes</h2><p>Start typing your course notes, command references, and exam strategies here. Use the toolbar above to format headings, highlight key concepts, insert tables, or add page breaks.</p>`;
+
+function loadCourseNotes() {
+  const docTitleInput = document.getElementById('notes-doc-title');
+  const docHeaderTitle = document.getElementById('page-header-doc-title');
+  const editor = document.getElementById('notes-content-editor');
+  if (!docTitleInput || !editor) return;
+
+  const activeCourse = state.courses.find(c => c && c.id === state.currentCourseId);
+  if (!activeCourse) {
+    docTitleInput.value = 'Untitled Notes';
+    if (docHeaderTitle) docHeaderTitle.textContent = 'Untitled Notes';
+    editor.innerHTML = DEFAULT_NOTES_TEMPLATE_HTML;
+    updateNotesStats();
+    return;
+  }
+
+  // Migrate legacy global localStorage notes into the active course once if course has no notes yet
+  const legacyContent = localStorage.getItem('sans_notes_content');
+  const legacyTitle = localStorage.getItem('sans_notes_title');
+  if (legacyContent && typeof activeCourse.noteContent !== 'string') {
+    activeCourse.noteContent = legacyContent;
+    activeCourse.noteTitle = legacyTitle || `${activeCourse.name.split(':')[0]} Study Notes`;
+    localStorage.removeItem('sans_notes_content');
+    localStorage.removeItem('sans_notes_title');
+    saveState();
+  }
+
+  const courseDefaultTitle = `${activeCourse.name.split(':')[0].trim()} Study Notes`;
+  const titleToUse = (typeof activeCourse.noteTitle === 'string' && activeCourse.noteTitle.trim())
+    ? activeCourse.noteTitle
+    : courseDefaultTitle;
+  const contentToUse = (typeof activeCourse.noteContent === 'string' && activeCourse.noteContent.trim())
+    ? activeCourse.noteContent
+    : DEFAULT_NOTES_TEMPLATE_HTML;
+
+  docTitleInput.value = titleToUse;
+  if (docHeaderTitle) docHeaderTitle.textContent = titleToUse;
+  editor.innerHTML = contentToUse;
+  updateNotesStats();
+}
+
 function initNotesEditor() {
-  if (notesEditorInitialized) return;
+  if (notesEditorInitialized) {
+    loadCourseNotes();
+    return;
+  }
 
   if (!elements.notesEditorView) {
     elements.notesEditorView = document.getElementById('notes-editor-view');
@@ -9416,17 +8844,8 @@ function initNotesEditor() {
   const savedTheme = localStorage.getItem('sans_notes_theme') || 'dark';
   setNotesEditorTheme(savedTheme);
 
-  // 2. Load persisted note title & content
-  const savedTitle = localStorage.getItem('sans_notes_title');
-  if (savedTitle && docTitleInput) {
-    docTitleInput.value = savedTitle;
-    if (docHeaderTitle) docHeaderTitle.textContent = savedTitle;
-  }
-
-  const savedContent = localStorage.getItem('sans_notes_content');
-  if (savedContent && editor) {
-    editor.innerHTML = savedContent;
-  }
+  // 2. Load per-course note title & content
+  loadCourseNotes();
 
   // 3. Document Title Change Listener
   if (docTitleInput) {
@@ -9689,7 +9108,7 @@ function updateNotesStats() {
   }
 }
 
-// Trigger Auto-Save to localStorage
+// Trigger Auto-Save to active course in state.courses (persisted in sans_index.json)
 function triggerNotesAutoSave() {
   const statusBadge = document.getElementById('notes-save-status');
   if (statusBadge) {
@@ -9702,12 +9121,16 @@ function triggerNotesAutoSave() {
   notesSaveTimeout = setTimeout(() => {
     const docTitleInput = document.getElementById('notes-doc-title');
     const editor = document.getElementById('notes-content-editor');
+    const activeCourse = state.courses.find(c => c && c.id === state.currentCourseId);
 
-    if (docTitleInput) {
-      localStorage.setItem('sans_notes_title', docTitleInput.value);
-    }
-    if (editor) {
-      localStorage.setItem('sans_notes_content', editor.innerHTML);
+    if (activeCourse) {
+      if (docTitleInput) {
+        activeCourse.noteTitle = docTitleInput.value;
+      }
+      if (editor) {
+        activeCourse.noteContent = editor.innerHTML;
+      }
+      saveState();
     }
 
     if (statusBadge) {
@@ -9788,7 +9211,7 @@ function renderAcronyms() {
         <td colspan="4" class="empty-state" style="text-align: center; padding: 32px 16px; color: var(--text-muted);">
           <i data-lucide="book-type" style="width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.5;"></i>
           <p style="margin: 0; font-size: 0.9rem;">No acronyms found ${query ? 'matching search' : 'for this course'}.</p>
-          <p style="margin: 4px 0 0 0; font-size: 0.78rem; opacity: 0.75;">Click "Parse Index for Acronyms" or "+ Add Acronym" to get started.</p>
+          <p style="margin: 4px 0 0 0; font-size: 0.78rem; opacity: 0.75;">Use the form above or click "Parse Index for Acronyms" to get started.</p>
         </td>
       </tr>
     `;
@@ -9936,12 +9359,6 @@ function deleteAcronym(acronymId) {
   const item = state.acronyms.find(a => a.id === acronymId);
   if (!item) return;
 
-  const confirmNeeded = elements.acronymsConfirmDelete ? elements.acronymsConfirmDelete.checked : true;
-  if (!confirmNeeded) {
-    performDeleteAcronym(acronymId);
-    return;
-  }
-
   // Show confirmation dialog (same modal as Index workspace)
   pendingDeleteAcronymId = acronymId;
   pendingDeleteAcronymIds = null;
@@ -9953,14 +9370,6 @@ function deleteAcronym(acronymId) {
     const dialogText = elements.deleteConfirmDialog.querySelector('p');
     if (dialogTitle) dialogTitle.textContent = 'Delete Acronym?';
     if (dialogText) dialogText.textContent = `This action cannot be undone. The acronym "${item.acronym}" will be permanently removed.`;
-
-    const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
-    if (checkboxWrapper) {
-      checkboxWrapper.style.display = 'flex';
-    }
-    if (elements.deleteConfirmDontShowAgain) {
-      elements.deleteConfirmDontShowAgain.checked = false;
-    }
 
     lucide.createIcons({
       attrs: { class: 'lucide-icon' },
@@ -9982,12 +9391,6 @@ function deleteSelectedAcronyms() {
   const count = selectedAcronymIds.size;
   if (count === 0) return;
 
-  const confirmNeeded = elements.acronymsConfirmDelete ? elements.acronymsConfirmDelete.checked : true;
-  if (!confirmNeeded) {
-    performDeleteAcronyms(Array.from(selectedAcronymIds));
-    return;
-  }
-
   pendingDeleteAcronymId = null;
   pendingDeleteAcronymIds = Array.from(selectedAcronymIds);
   pendingDeleteEntryId = null;
@@ -9998,14 +9401,6 @@ function deleteSelectedAcronyms() {
     const dialogText = elements.deleteConfirmDialog.querySelector('p');
     if (dialogTitle) dialogTitle.textContent = `Delete ${count} Acronyms?`;
     if (dialogText) dialogText.textContent = `Are you sure you want to delete these ${count} selected acronyms? This action cannot be undone.`;
-
-    const checkboxWrapper = elements.deleteConfirmDontShowAgain ? elements.deleteConfirmDontShowAgain.closest('label') : null;
-    if (checkboxWrapper) {
-      checkboxWrapper.style.display = 'none';
-    }
-    if (elements.deleteConfirmDontShowAgain) {
-      elements.deleteConfirmDontShowAgain.checked = false;
-    }
 
     lucide.createIcons({
       attrs: { class: 'lucide-icon' },
@@ -10222,7 +9617,7 @@ function confirmApplyAcronymDefinitions() {
   }
 
   if (updatedCount > 0) {
-    saveState();
+    saveState(true);
     renderEntries();
     renderStats();
     alert(`Successfully applied acronym definitions! Renamed ${updatedCount} index topic(s).`);
@@ -10587,7 +9982,7 @@ function renderAcronymReviewModal() {
   }
 }
 
-function confirmAcronymReview() {
+async function confirmAcronymReview() {
   if (!elements.acronymReviewTableBody) return;
 
   const rows = elements.acronymReviewTableBody.querySelectorAll('tr');
@@ -10621,7 +10016,8 @@ function confirmAcronymReview() {
   // Warning prompt if any selected items lack a definition
   if (emptyTermCount > 0) {
     const warningMsg = `${emptyTermCount} selected item(s) do not have a definition and will NOT be added.\n\nDo you want to proceed with importing the ${validToImport.length} valid acronym(s)?`;
-    if (!confirm(warningMsg)) {
+    const proceed = await showInAppConfirm(warningMsg, 'Missing Definitions', 'Import Valid Only', false);
+    if (!proceed) {
       return; // User cancelled to edit/fill in definitions
     }
   }
@@ -10641,7 +10037,7 @@ function confirmAcronymReview() {
     });
   });
 
-  saveState();
+  await saveState(true);
   if (elements.acronymReviewDialog) elements.acronymReviewDialog.close();
   renderAcronyms();
   showToast(`Added ${validToImport.length} acronym(s) to your course acronym list.`);
@@ -10650,27 +10046,6 @@ function confirmAcronymReview() {
 // --------------------------------------------------------------------------
 // MANUAL ACRONYM FORM CRUD
 // --------------------------------------------------------------------------
-function openAddAcronymModal(acronymToEdit = null) {
-  editAcronymId = acronymToEdit ? acronymToEdit.id : null;
-  if (elements.acronymIdInput) elements.acronymIdInput.value = editAcronymId || '';
-
-  const titleEl = document.getElementById('acronym-form-action-title');
-
-  if (acronymToEdit) {
-    if (titleEl) titleEl.textContent = 'Edit Acronym Entry';
-    if (elements.acronymCodeInput) elements.acronymCodeInput.value = acronymToEdit.acronym;
-    if (elements.acronymTermInput) elements.acronymTermInput.innerHTML = acronymToEdit.term || '';
-    if (elements.cancelEditAcronymBtn) elements.cancelEditAcronymBtn.classList.remove('hidden');
-  } else {
-    if (titleEl) titleEl.textContent = 'Add Acronym Entry';
-    if (elements.acronymCodeInput) elements.acronymCodeInput.value = '';
-    if (elements.acronymTermInput) elements.acronymTermInput.innerHTML = '';
-    if (elements.cancelEditAcronymBtn) elements.cancelEditAcronymBtn.classList.add('hidden');
-  }
-
-  if (elements.acronymCodeInput) elements.acronymCodeInput.focus();
-}
-
 function resetAcronymForm() {
   editAcronymId = null;
   const titleEl = document.getElementById('acronym-form-action-title');
@@ -11427,7 +10802,8 @@ async function executeRevertVersion() {
       `\nSAFEGUARD: A pre-revert safety snapshot of your current database will be saved automatically before reverting so you can always undo.`;
   }
 
-  if (!confirm(confirmMsg)) return;
+  const confirmedRevert = await showInAppConfirm(confirmMsg, 'Confirm Version Revert', 'Revert Now', true);
+  if (!confirmedRevert) return;
 
   // Set loading state on button
   if (elements.confirmRevertBtn) {
@@ -11454,7 +10830,6 @@ async function executeRevertVersion() {
 
       // Re-render entire application
       renderAll();
-      checkExamDateAlerts();
 
       if (elements.lastSaveTime) {
         elements.lastSaveTime.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });

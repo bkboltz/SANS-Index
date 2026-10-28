@@ -1,5 +1,6 @@
 @echo off
-set "targetDir=C:\Users\Public\SANS Indexing"
+set "targetDir=%~dp0"
+if "%targetDir:~-1%"=="\" set "targetDir=%targetDir:~0,-1%"
 set "shortcutPath=%USERPROFILE%\Desktop\SANS Study Indexer.lnk"
 set "iconPath=%targetDir%\icon.png"
 
