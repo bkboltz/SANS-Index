@@ -472,10 +472,12 @@ textarea {
   border-radius: var(--radius-sm);
   font-family: var(--font-sans);
   font-size: 0.9rem;
+  line-height: 1.4;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
-  min-height: 38px;
-  max-height: 200px;
+  min-height: 42px;
+  height: auto;
+  max-height: 220px;
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -490,7 +492,7 @@ textarea {
 .notes-textarea-replacement:empty::before {
   content: attr(data-placeholder);
   color: var(--text-muted);
-  opacity: 0.5;
+  opacity: 1;
   pointer-events: none;
 }
 
@@ -500,8 +502,8 @@ textarea {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
+  height: 24px;
+  margin-bottom: 0;
   gap: 6px;
 }
 
@@ -512,6 +514,7 @@ textarea {
 
 .formatting-toolbar {
   display: flex;
+  align-items: center;
   gap: 4px;
 }
 
@@ -521,12 +524,19 @@ textarea {
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  padding: 0;
+}
+
+.format-btn svg,
+.format-btn i {
+  width: 12px;
+  height: 12px;
 }
 
 .format-btn:hover {
@@ -882,7 +892,7 @@ select:focus, input[type="text"]:focus, input[type="password"]:focus, input[type
 .form-grid {
   display: flex;
   gap: 16px;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .form-group {
@@ -901,12 +911,23 @@ select:focus, input[type="text"]:focus, input[type="password"]:focus, input[type
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.entry-form-container select,
+.entry-form-container input[type="text"],
+.entry-form-container .btn {
+  height: 42px;
+  box-sizing: border-box;
 }
 
 .form-actions-row {
   display: flex;
   gap: 8px;
-  margin-top: 2px;
+  padding-top: 30px;
 }
 
 .hidden {
