@@ -20,7 +20,6 @@ const elements = {
   exportJsonBtn: document.getElementById('export-json-btn'),
   importBtn: document.getElementById('import-btn'),
   revertBackupBtn: document.getElementById('revert-backup-btn'),
-  autoIndexRevertBtn: document.getElementById('auto-index-revert-btn'),
   lastSaveTime: document.getElementById('last-save-time'),
   
   // Revert Version Modal
@@ -7136,9 +7135,6 @@ function generateTopicByBookPrintHTML(activeEntries) {
 
   if (elements.revertBackupBtn) {
     elements.revertBackupBtn.addEventListener('click', openRevertVersionModal);
-  }
-  if (elements.autoIndexRevertBtn) {
-    elements.autoIndexRevertBtn.addEventListener('click', openRevertVersionModal);
   }
   
   elements.confirmImportBtn.addEventListener('click', processImport);
