@@ -1186,10 +1186,6 @@ function renderBooks() {
   
   // Filter books for active course
   const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
-  elements.statBookCount.textContent = activeBooks.length;
-  if (elements.statAcronymBookCount) {
-    elements.statAcronymBookCount.textContent = activeBooks.length;
-  }
   if (elements.booksCountBadge) {
     elements.booksCountBadge.textContent = activeBooks.length;
   }
@@ -2017,11 +2013,6 @@ function renderStats() {
     elements.statLastAdded.title = "";
   }
 
-  // Keep Indexed Books stat cards strictly dedicated to book count
-  const activeBooks = state.books.filter(book => book && book.courseId === state.currentCourseId);
-  if (elements.statBookCount) elements.statBookCount.textContent = activeBooks.length;
-  if (elements.statAcronymBookCount) elements.statAcronymBookCount.textContent = activeBooks.length;
-
   // Update dedicated 4th Exam Countdown stat cards
   const activeCourse = state.courses.find(c => c.id === state.currentCourseId);
   const examCards = [
@@ -2051,7 +2042,7 @@ function renderStats() {
         label.innerHTML = `Exam (${activeCourse.testDate}) <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
       } else {
         val.textContent = diffDays;
-        label.innerHTML = `${diffDays === 1 ? "Day Until Exam" : "Days Until Exam"} <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
+        label.innerHTML = `${diffDays === 1 ? "Day Till Exam" : "Days Till Exam"} <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Adjust Date</span>`;
       }
       card.style.cursor = 'pointer';
       card.title = `Projected exam date: ${activeCourse.testDate}. Click to modify or remove.`;
@@ -2060,7 +2051,7 @@ function renderStats() {
     examCards.forEach(({ card, val, label }) => {
       if (!card || !val || !label) return;
       val.textContent = "—";
-      label.innerHTML = `Exam Countdown <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Set Exam Date</span>`;
+      label.innerHTML = `Days Till Exam <span class="adjust-date-link no-print" style="display: block; font-size: 0.7rem; color: var(--accent-light); text-decoration: underline; margin-top: 4px;">Set Exam Date</span>`;
       card.style.cursor = 'pointer';
       card.title = "Click to set your projected GIAC exam date.";
     });
