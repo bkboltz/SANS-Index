@@ -226,7 +226,6 @@ const elements = {
   depPython: document.getElementById('dep-python'),
   depQpdf: document.getElementById('dep-qpdf'),
   depPdftotext: document.getElementById('dep-pdftotext'),
-  depOcr: document.getElementById('dep-ocr'),
   depWarnings: document.getElementById('dep-warnings'),
   depInstallConsole: document.getElementById('dep-install-console'),
   depInstallActiveTxt: document.getElementById('dep-install-active-txt'),
@@ -287,7 +286,6 @@ const elements = {
   autoIndexZipf: document.getElementById('auto-index-zipf'),
   autoIndexMinFreq: document.getElementById('auto-index-min-freq'),
   autoIndexMaxFreq: document.getElementById('auto-index-max-freq'),
-  autoIndexUseOcr: document.getElementById('auto-index-use-ocr'),
   startIndexingBtn: document.getElementById('start-indexing-btn'),
 
   // Progress
@@ -411,7 +409,17 @@ const elements = {
   appConfirmOkText: document.getElementById('app-confirm-ok-text'),
   appConfirmCancelBtn: document.getElementById('app-confirm-cancel-btn'),
   appConfirmIconContainer: document.getElementById('app-confirm-icon-container'),
-  appConfirmIcon: document.getElementById('app-confirm-icon')
+  appConfirmIcon: document.getElementById('app-confirm-icon'),
+
+  // Global In-App Prompt Dialog
+  appPromptDialog: document.getElementById('app-prompt-dialog'),
+  appPromptTitle: document.getElementById('app-prompt-title'),
+  appPromptMessage: document.getElementById('app-prompt-message'),
+  appPromptForm: document.getElementById('app-prompt-form'),
+  appPromptInput: document.getElementById('app-prompt-input'),
+  appPromptOkBtn: document.getElementById('app-prompt-ok-btn'),
+  appPromptOkText: document.getElementById('app-prompt-ok-text'),
+  appPromptCancelBtn: document.getElementById('app-prompt-cancel-btn')
 };
 
 // ==========================================================================
@@ -631,6 +639,75 @@ function showInAppConfirm(message, customTitle = 'Confirm Action', confirmText =
   });
 }
 
+// In-App DOM Prompt Modal (Replaces native window.prompt to prevent Windows focus loss)
+function showInAppPrompt(message, defaultValue = '', customTitle = 'Input Required', confirmText = 'OK') {
+  return new Promise((resolve) => {
+    const dialog = elements.appPromptDialog || document.getElementById('app-prompt-dialog');
+    if (!dialog) {
+      resolve(window.prompt(message, defaultValue));
+      return;
+    }
+
+    const titleEl = elements.appPromptTitle || document.getElementById('app-prompt-title');
+    const msgEl = elements.appPromptMessage || document.getElementById('app-prompt-message');
+    const formEl = elements.appPromptForm || document.getElementById('app-prompt-form');
+    const inputEl = elements.appPromptInput || document.getElementById('app-prompt-input');
+    const okBtn = elements.appPromptOkBtn || document.getElementById('app-prompt-ok-btn');
+    const okTextEl = elements.appPromptOkText || document.getElementById('app-prompt-ok-text');
+    const cancelBtn = elements.appPromptCancelBtn || document.getElementById('app-prompt-cancel-btn');
+
+    if (titleEl) titleEl.textContent = customTitle || 'Input Required';
+    if (msgEl) msgEl.textContent = (message !== undefined && message !== null) ? String(message) : '';
+    if (okTextEl) okTextEl.textContent = confirmText || 'OK';
+    if (inputEl) inputEl.value = defaultValue || '';
+
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (okBtn) okBtn.removeEventListener('click', onOk);
+      if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+      if (formEl) formEl.removeEventListener('submit', onFormSubmit);
+      dialog.removeEventListener('close', onClose);
+      if (dialog.open) dialog.close();
+      resolve(result);
+    };
+
+    const onOk = (e) => {
+      if (e) e.preventDefault();
+      finish(inputEl ? inputEl.value : '');
+    };
+    const onFormSubmit = (e) => {
+      e.preventDefault();
+      onOk();
+    };
+    const onCancel = (e) => {
+      e.preventDefault();
+      finish(null);
+    };
+    const onClose = () => {
+      finish(null);
+    };
+
+    if (okBtn) okBtn.addEventListener('click', onOk);
+    if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+    if (formEl) formEl.addEventListener('submit', onFormSubmit);
+    dialog.addEventListener('close', onClose);
+
+    try {
+      dialog.showModal();
+      if (inputEl) {
+        inputEl.focus();
+        inputEl.select();
+      }
+    } catch (err) {
+      console.error('[InAppPrompt] Error showing modal:', err);
+      finish(window.prompt(message, defaultValue));
+    }
+  });
+}
+
+
 // Application State Store
 let state = {
   courses: [],
@@ -638,7 +715,6 @@ let state = {
   entries: [],
   acronyms: [],
   todos: [],
-  quizzes: [],
   currentCourseId: null
 };
 
@@ -805,7 +881,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.entries = loadedData.entries || [];
     state.acronyms = loadedData.acronyms || [];
     state.todos = loadedData.todos || [];
-    state.quizzes = loadedData.quizzes || [];
     
     // Migrate existing entries to compress pages
     let migrated = false;
@@ -7264,7 +7339,7 @@ const CYBER_FACTS = [
   "Cybersecurity expert SANS courses are widely considered the gold standard of technical training in the industry.",
   "Google's Gemini model uses a mixture-of-experts (MoE) architecture to route queries to specialized sub-networks.",
   "An average SANS textbook page can contain up to 500 potential index candidate words.",
-  "OCR (Optical Character Recognition) technology has been in development since the 1920s to help read text for the blind.",
+  "Organizing index topics alphabetically with exact book colors dramatically speeds up recall during GIAC open-book exams.",
   "The first compiler was created by Grace Hopper in 1952 for the A-0 system.",
   "More than 50% of people use the same password for multiple accounts, despite knowing the security risks.",
   "The most common password in the world is still '123456', followed closely by 'password'.",
@@ -7683,10 +7758,10 @@ function initAutoIndexingBindings() {
       }
     }
 
-    function handleModelSelectChange(selectEl, otherSelectEl) {
+    async function handleModelSelectChange(selectEl, otherSelectEl) {
       const val = selectEl.value;
       if (val === '__custom__') {
-        const customName = prompt('Enter the exact Google Gemini model name (e.g. gemini-2.5-flash-preview):');
+        const customName = await showInAppPrompt('Enter the exact Google Gemini model name (e.g. gemini-2.5-flash-preview):', '', 'Custom Gemini Model');
         if (customName && customName.trim()) {
           const cleaned = customName.trim().replace(/^models\//, '');
           localStorage.setItem('gemini_model', cleaned);
@@ -7703,7 +7778,7 @@ function initAutoIndexingBindings() {
     }
 
     if (elements.autoIndexModelSelect) {
-      elements.autoIndexModelSelect.addEventListener('change', () => {
+      elements.autoIndexModelSelect.addEventListener('change', async () => {
         handleModelSelectChange(elements.autoIndexModelSelect, elements.aiCurationRetryModelSelect);
       });
     }
@@ -8103,7 +8178,6 @@ async function runDependencyCheck() {
   updateDependencyUI(elements.depPython, 'Checking...', 'circle-help', 'warning');
   updateDependencyUI(elements.depQpdf, 'Checking...', 'circle-help', 'warning');
   updateDependencyUI(elements.depPdftotext, 'Checking...', 'circle-help', 'warning');
-  updateDependencyUI(elements.depOcr, 'Checking...', 'circle-help', 'warning');
   
   elements.depWarnings.classList.add('hidden');
   elements.startIndexingBtn.disabled = true;
@@ -8132,16 +8206,6 @@ async function runDependencyCheck() {
       updateDependencyUI(elements.depPdftotext, 'Not Found (Fallback active)', 'alert-triangle', 'warning', true, 'pdftotext');
     }
 
-    // OCR
-    if (deps.ocr) {
-      updateDependencyUI(elements.depOcr, 'Ready', 'check-circle-2', 'success', false, 'ocr');
-      elements.autoIndexUseOcr.disabled = false;
-    } else {
-      updateDependencyUI(elements.depOcr, 'Not Installed', 'alert-triangle', 'warning', deps.python, 'ocr');
-      elements.autoIndexUseOcr.disabled = true;
-      elements.autoIndexUseOcr.checked = false;
-    }
-
     // Setup Warnings Alerts
     const isMac = (navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0) || (navigator.userAgent && navigator.userAgent.includes('Mac'));
     const warnings = [];
@@ -8158,7 +8222,7 @@ async function runDependencyCheck() {
       warnings.push(`<li><strong>pdftotext not found:</strong> The app will fall back to direct PDF text extraction. Click Install, or run <code>${popplerCmd}</code></li>`);
     }
 
-    // Update overall badge (OCR is optional, so Ready when Python + QPDF are installed)
+    // Update overall badge (Ready when Python + QPDF are installed)
     if (elements.depOverallBadge) {
       if (deps.python && deps.qpdf) {
         elements.depOverallBadge.textContent = 'Ready';
@@ -8316,7 +8380,6 @@ async function handleAutoIndexSubmit(e) {
     minFrequency: parseInt(elements.autoIndexMinFreq.value) || 1,
     maxFrequency: parseInt(elements.autoIndexMaxFreq.value) || 10,
     zipf: parseFloat(elements.autoIndexZipf.value) || 4.0,
-    useOcr: elements.autoIndexUseOcr.checked
   };
 
   const startProcess = () => {
@@ -8579,7 +8642,7 @@ async function handleImportCheckedEntries() {
 }
 
 // ==========================================================================
-// AUTO-INDEX MULTI-STEP SETUP WIZARD & QUIZ HUB
+// AUTO-INDEX MULTI-STEP SETUP WIZARD
 // ==========================================================================
 let wizardCurrentStep = 1;
 
@@ -8980,11 +9043,11 @@ function initNotesEditor() {
 
   // 12. Insert Link
   if (insertLinkBtn) {
-    insertLinkBtn.addEventListener('click', (e) => {
+    insertLinkBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      const url = prompt('Enter link URL (e.g. https://sans.org):');
-      if (url) {
-        document.execCommand('createLink', false, url);
+      const url = await showInAppPrompt('Enter link URL (e.g. https://sans.org):', 'https://', 'Insert Link');
+      if (url && url.trim()) {
+        document.execCommand('createLink', false, url.trim());
         triggerNotesAutoSave();
       }
     });

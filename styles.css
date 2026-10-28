@@ -1984,44 +1984,6 @@ input[type="color"]::-webkit-color-swatch {
   animation: saveFlash 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-/* 4. Quiz Gameplay option clicks */
-.quiz-choice-btn {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-.quiz-choice-btn:hover:not(:disabled) {
-  transform: translateX(6px);
-  border-color: var(--accent-light) !important;
-  box-shadow: 0 2px 10px rgba(20, 184, 166, 0.12);
-  background-color: rgba(20, 184, 166, 0.03) !important;
-}
-.quiz-choice-btn:active:not(:disabled) {
-  transform: translateX(4px) scale(0.995);
-}
-
-/* Correct answer celebrate bounce */
-@keyframes correctCelebrate {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.025); }
-  70% { transform: scale(0.99); }
-  100% { transform: scale(1); }
-}
-.quiz-choice-btn.correct {
-  animation: correctCelebrate 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-}
-
-/* Incorrect answer shake */
-@keyframes incorrectShake {
-  0% { transform: translateX(0); }
-  20% { transform: translateX(-5px); }
-  40% { transform: translateX(5px); }
-  60% { transform: translateX(-5px); }
-  80% { transform: translateX(5px); }
-  100% { transform: translateX(0); }
-}
-.quiz-choice-btn.incorrect {
-  animation: incorrectShake 0.4s ease-in-out forwards;
-}
-
 /* ==========================================================================
    PRINT PREVIEW MODAL STYLES
    ========================================================================== */
@@ -3366,8 +3328,8 @@ tr.starred-row td:first-child {
   margin-bottom: 4px;
 }
 
-/* OCR Download / Install UI */
-.ocr-download-container {
+/* Dependency Download / Install UI */
+.dep-download-container {
   background: rgba(20, 184, 166, 0.04);
   border: 1px dashed rgba(20, 184, 166, 0.3);
   border-radius: var(--radius-md);
@@ -3375,7 +3337,7 @@ tr.starred-row td:first-child {
   margin-top: 20px;
 }
 
-.ocr-download-text {
+.dep-download-text {
   font-size: 0.85rem;
   color: var(--text-secondary);
   margin: 0 0 16px 0;
@@ -3672,7 +3634,7 @@ tr.auto-row:hover {
 }
 
 /* ==========================================================================
-   AUTO-INDEX WIZARD & QUIZ HUB STYLES
+   AUTO-INDEX WIZARD STYLES
    ========================================================================== */
 
 /* Wizard Progress Bar */
@@ -3765,79 +3727,6 @@ tr.auto-row:hover {
   background-color: rgba(20, 184, 166, 0.1) !important;
   color: var(--color-accent) !important;
   border-color: var(--color-accent) !important;
-}
-
-/* Quiz Option Button List */
-.quiz-option-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-/* Choice Buttons */
-.quiz-choice-btn {
-  width: 100%;
-  text-align: left;
-  padding: 14px 18px;
-  background: rgba(30, 41, 59, 0.3);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  line-height: 1.45;
-}
-.quiz-choice-btn .option-letter {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-  transition: all 0.2s;
-}
-.quiz-choice-btn:hover:not(:disabled) .option-letter {
-  background: rgba(20, 184, 166, 0.15);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-.quiz-choice-btn.selected {
-  border-color: var(--color-accent) !important;
-  background: rgba(20, 184, 166, 0.06) !important;
-}
-.quiz-choice-btn.selected .option-letter {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: #0f172a;
-}
-.quiz-choice-btn.correct {
-  border-color: #10b981 !important;
-  background: rgba(16, 185, 129, 0.08) !important;
-}
-.quiz-choice-btn.correct .option-letter {
-  background: #10b981;
-  border-color: #10b981;
-  color: #0f172a;
-}
-.quiz-choice-btn.incorrect {
-  border-color: #ef4444 !important;
-  background: rgba(239, 68, 68, 0.08) !important;
-}
-.quiz-choice-btn.incorrect .option-letter {
-  background: #ef4444;
-  border-color: #ef4444;
-  color: #ffffff;
 }
 
 /* Animations */

@@ -18,7 +18,6 @@ A high-density, professional study indexing and exam preparation tool designed s
 * **Automated PDF Indexing:** Ingest SANS course PDFs or existing index documents to extract topics, books, page numbers, and concise summaries.
 * **Google Gemini Integration:** Dynamic model discovery with support for Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, and custom prompt templates.
 * **Smart Batch Chunking & Pacing:** Automatic batch queuing, quota-tier pacing, and real-time live progress console.
-* **Local OCR Fallback:** Optional local extraction engine powered by Python, PyMuPDF, and doctr OCR.
 
 ### 🛡️ Course-Scoped Version History & Revert
 * **100 Version Auto-Backups:** Automatically snapshots your database locally after changes.
@@ -61,7 +60,7 @@ A high-density, professional study indexing and exam preparation tool designed s
 1. **[Node.js](https://nodejs.org/)** (v18.x or higher / LTS recommended)
 2. **Git** (for automatic in-app updates)
 3. *(Optional)* **Google Gemini API Key:** Required only if using AI Auto-Indexing. You can generate a free API key at [Google AI Studio](https://aistudio.google.com/).
-4. *(Optional)* **Python 3.10+:** Required only if using the optional local Python OCR extraction engine instead of Gemini AI.
+4. **Python 3.10+:** Required for fast local PDF text extraction and keyword frequency analysis.
 
 ---
 

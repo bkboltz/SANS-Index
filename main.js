@@ -1115,41 +1115,10 @@ ipcMain.handle('check-dependencies', async () => {
   const venvPath = path.join(__dirname, 'engine', '.venv');
   const venvExists = fs.existsSync(venvPath);
   
-  let ocr = false;
-  if (python) {
-    ocr = await new Promise((resolve) => {
-      exec(`${sysPython} -c "import doctr, torch; print('ok')"`, (error, stdout) => {
-        if (!error && stdout.trim() === 'ok') {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      });
-    });
-  }
-  
-  let venvOcr = false;
-  if (venvExists) {
-    const venvPython = process.platform === 'win32' 
-      ? path.join(venvPath, 'Scripts', 'python.exe')
-      : path.join(venvPath, 'bin', 'python');
-    
-    venvOcr = await new Promise((resolve) => {
-      exec(`"${venvPython}" -c "import doctr, torch; print('ok')"`, (error, stdout) => {
-        if (!error && stdout.trim() === 'ok') {
-          resolve(true);
-        } else {
-          resolve(false);
-        }
-      });
-    });
-  }
-  
   return {
     python,
     qpdf,
     pdftotext,
-    ocr: ocr || venvOcr,
     venvExists,
   };
 });
@@ -1169,141 +1138,9 @@ ipcMain.handle('select-pdf-file', async () => {
   return result.filePaths[0];
 });
 
-// IPC Handler: Install OCR Dependencies (virtual environment creation and pip install)
-ipcMain.handle('install-ocr', async (event) => {
-  return new Promise(async (resolve, reject) => {
-    const engineDir = path.join(__dirname, 'engine');
-    const venvPath = path.join(engineDir, '.venv');
-    const sysPython = await getSystemPythonCommand();
-    
-    event.sender.send('ocr-install-status', 'Creating virtual environment (engine/.venv)...');
-    
-    const venvSpawn = spawn(sysPython, ['-m', 'venv', '.venv'], { cwd: engineDir });
-    
-    venvSpawn.on('close', (code) => {
-      if (code !== 0) {
-        event.sender.send('ocr-install-status', 'Failed to create virtual environment.');
-        reject(new Error('Failed to create virtual environment'));
-        return;
-      }
-      
-      event.sender.send('ocr-install-status', 'Installing libraries (PyTorch, DocTR, and requirements.txt)... This can take 5-10 minutes.');
-      
-      const pipPath = process.platform === 'win32'
-        ? path.join(venvPath, 'Scripts', 'pip.exe')
-        : path.join(venvPath, 'bin', 'pip');
-        
-      const pipSpawn = spawn(pipPath, ['install', '-r', 'requirements.txt', 'python-doctr', 'torch', 'torchvision'], { cwd: engineDir });
-      
-      pipSpawn.stdout.on('data', (data) => {
-        event.sender.send('ocr-install-log', data.toString());
-      });
-      
-      pipSpawn.stderr.on('data', (data) => {
-        event.sender.send('ocr-install-log', data.toString());
-      });
-      
-      pipSpawn.on('close', (pipCode) => {
-        if (pipCode !== 0) {
-          event.sender.send('ocr-install-status', 'Failed to install requirements.');
-          reject(new Error('Failed to install requirements'));
-        } else {
-          event.sender.send('ocr-install-status', 'OCR dependencies successfully installed!');
-          resolve({ success: true });
-        }
-      });
-    });
-  });
-});
-
-// IPC Handler: Install System Dependencies (Python, qpdf, Poppler pdftotext, OCR)
+// IPC Handler: Install System Dependencies (Python, qpdf, Poppler pdftotext)
 ipcMain.handle('install-dependency', async (event, dependencyName) => {
   return new Promise(async (resolve, reject) => {
-    if (dependencyName === 'ocr') {
-      const engineDir = path.join(__dirname, 'engine');
-      const venvPath = path.join(engineDir, '.venv');
-      const sysPython = await getSystemPythonCommand();
-      
-      event.sender.send('dep-install-status', {
-        dependency: 'ocr',
-        status: 'Creating virtual environment (engine/.venv)...',
-        percent: 10
-      });
-      
-      const venvSpawn = spawn(sysPython, ['-m', 'venv', '.venv'], { cwd: engineDir });
-      
-      venvSpawn.stdout.on('data', (data) => {
-        event.sender.send('dep-install-log', data.toString());
-      });
-      venvSpawn.stderr.on('data', (data) => {
-        event.sender.send('dep-install-log', data.toString());
-      });
-      
-      venvSpawn.on('close', (code) => {
-        if (code !== 0) {
-          event.sender.send('dep-install-status', {
-            dependency: 'ocr',
-            status: 'Failed to create virtual environment.',
-            percent: 0
-          });
-          reject(new Error('Failed to create virtual environment'));
-          return;
-        }
-        
-        event.sender.send('dep-install-status', {
-          dependency: 'ocr',
-          status: 'Installing libraries (PyTorch, DocTR, and requirements.txt)... This can take 5-10 minutes.',
-          percent: 40
-        });
-        
-        const pipPath = process.platform === 'win32'
-          ? path.join(venvPath, 'Scripts', 'pip.exe')
-          : path.join(venvPath, 'bin', 'pip');
-          
-        const pipSpawn = spawn(pipPath, ['install', '-r', 'requirements.txt', 'python-doctr', 'torch', 'torchvision'], { cwd: engineDir });
-        
-        pipSpawn.stdout.on('data', (data) => {
-          const text = data.toString();
-          event.sender.send('dep-install-log', text);
-          if (text.includes('Downloading')) {
-            event.sender.send('dep-install-status', {
-              dependency: 'ocr',
-              status: 'Downloading Python OCR libraries...',
-              percent: 50
-            });
-          } else if (text.includes('Installing collected packages')) {
-            event.sender.send('dep-install-status', {
-              dependency: 'ocr',
-              status: 'Installing/Building Python packages...',
-              percent: 85
-            });
-          }
-        });
-        
-        pipSpawn.stderr.on('data', (data) => {
-          event.sender.send('dep-install-log', data.toString());
-        });
-        
-        pipSpawn.on('close', (pipCode) => {
-          if (pipCode !== 0) {
-            event.sender.send('dep-install-status', {
-              dependency: 'ocr',
-              status: 'Failed to install OCR packages.',
-              percent: 0
-            });
-            reject(new Error('Failed to install requirements'));
-          } else {
-            event.sender.send('dep-install-status', {
-              dependency: 'ocr',
-              status: 'OCR dependencies successfully installed!',
-              percent: 100
-            });
-            resolve({ success: true });
-          }
-        });
-      });
-      return;
-    }
 
     if (process.platform === 'win32') {
       let command = 'winget';
@@ -1849,24 +1686,6 @@ ipcMain.handle('run-auto-index', async (event, args) => {
     let sourceFile = decryptedPdf;
     const pythonExe = await ensurePythonEnvironment(event);
       
-    // OCR if enabled
-    if (settings.useOcr) {
-      event.sender.send('auto-index-progress', { step: 'ocr', message: 'Running OCR on images (this will take a while)...' });
-      const ocrScript = path.join(__dirname, 'engine', 'extract_img_text.py');
-      await new Promise((resolve, reject) => {
-        const ocrProc = spawn(pythonExe, [ocrScript, decryptedPdf, processedPdf]);
-        let stderr = '';
-        ocrProc.stderr.on('data', (data) => stderr += data.toString());
-        ocrProc.on('close', (code) => {
-          if (code !== 0) {
-            reject(new Error(`OCR failed: ${stderr}`));
-          } else {
-            resolve();
-          }
-        });
-      });
-      sourceFile = processedPdf;
-    }
     
     // Extract Text (pdftotext)
     const resolvedPdftotext = resolvePdftotextPath();

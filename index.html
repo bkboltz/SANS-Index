@@ -208,8 +208,8 @@
         </div>
       </section>
 
-      <!-- Sticky Fast Entry Section (Hidden in Quiz mode) -->
-      <section class="entry-form-container no-print no-print-in-quiz">
+      <!-- Sticky Fast Entry Section -->
+      <section class="entry-form-container no-print">
         <h2 class="form-title">
           <i data-lucide="sparkles" class="title-icon"></i>
           <span id="form-action-title">Add Index Entry</span>
@@ -366,8 +366,8 @@
           </div>
         </section>
 
-        <!-- Sticky Fast Entry Section (Hidden in Quiz mode) -->
-        <section class="entry-form-container no-print no-print-in-quiz">
+        <!-- Sticky Fast Entry Section -->
+        <section class="entry-form-container no-print">
           <h2 class="form-title">
             <i data-lucide="sparkles" class="title-icon"></i>
             <span id="acronym-form-action-title">Add Acronym Entry</span>
@@ -481,7 +481,7 @@
 
       <!-- Auto-Indexing Workspace View -->
       <div id="auto-index-view" class="workspace-view hidden no-print">
-        <!-- Dependency Status Banner / OCR Info -->
+        <!-- Dependency Status Banner -->
         <section class="auto-index-header" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap;">
           <div>
             <h2>Auto-Index SANS Book PDF</h2>
@@ -567,32 +567,13 @@
               </div>
             </div>
 
-            <!-- OCR -->
-            <div class="dependency-item" id="dep-ocr" style="padding: 12px; border-radius: var(--radius-md); background: rgba(30, 41, 59, 0.3); border: 1px solid var(--border-color);">
-              <div class="dep-item-header" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
-                <i data-lucide="circle-help" class="status-icon" style="width: 16px; height: 16px;"></i>
-                <span class="dep-name" style="font-weight: 500;">OCR Text Engine</span>
-                <span class="status-label" style="font-size: 0.75rem; margin-left: auto; color: var(--text-secondary);">Checking...</span>
-              </div>
-              <div class="dep-action-container" style="margin-top: 8px; display: flex; justify-content: flex-end;">
-                <button id="install-ocr-btn" class="btn btn-xs btn-primary hidden" style="padding: 3px 8px; font-size: 0.75rem;">
-                  <i data-lucide="download-cloud" style="width: 12px; height: 12px; margin-right: 4px;"></i>Install
-                </button>
-              </div>
-              <div class="dep-progress-container hidden" style="margin-top: 8px;">
-                <div class="progress-bar-track" style="height: 4px; background: var(--bg-card); border-radius: 2px; overflow: hidden; position: relative;">
-                  <div class="progress-bar-fill" style="width: 0%; height: 100%; background: var(--color-accent); transition: width 0.1s;"></div>
-                </div>
-                <div class="dep-progress-label" style="font-size: 0.7rem; text-align: right; margin-top: 2px; color: var(--text-muted);">0%</div>
-              </div>
-            </div>
-          </div>
+                      </div>
           <div id="dep-warnings" class="dep-warnings-container hidden" style="margin-top: 12px; padding: 8px 12px; font-size: 0.78rem;">
             <!-- Warnings or installation tips go here -->
           </div>
           <!-- Installation log console -->
-          <div id="dep-install-console" class="ocr-download-container hidden" style="margin-top: 16px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #0b0f19;">
-            <p class="ocr-download-text" style="margin-bottom: 8px; font-size: 0.8rem;"><strong>Installation Progress Console:</strong> <span id="dep-install-active-txt">Idle</span></p>
+          <div id="dep-install-console" class="dep-download-container hidden" style="margin-top: 16px; padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #0b0f19;">
+            <p class="dep-download-text" style="margin-bottom: 8px; font-size: 0.8rem;"><strong>Installation Progress Console:</strong> <span id="dep-install-active-txt">Idle</span></p>
             <pre id="dep-install-log-terminal" class="terminal-log" style="margin-top: 8px; max-height: 120px; font-family: monospace; font-size: 0.75rem; color: #a3e635;"></pre>
           </div>
         </section>
@@ -713,12 +694,7 @@
                       </div>
                     </div>
 
-                    <div class="form-group" style="margin-top: 15px;">
-                      <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer;">
-                        <input type="checkbox" id="auto-index-use-ocr">
-                        <span>Use OCR Engine to scan image-only / scanned pages (Slow, requires OCR dependencies)</span>
-                      </label>
-                    </div>
+                    
                   </div>
                 </div>
               </div>
@@ -2566,6 +2542,34 @@
       </div>
     </div>
   </dialog>
+  <!-- Global In-App Prompt Dialog (Replaces native window.prompt to prevent Windows Electron focus drops) -->
+  <dialog id="app-prompt-dialog" class="custom-dialog" style="max-width: 440px;">
+    <div class="dialog-content" style="padding: 22px 24px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div id="app-prompt-icon-container" style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); color: #38bdf8; flex-shrink: 0;">
+          <i data-lucide="edit-3" id="app-prompt-icon" style="width: 22px; height: 22px;"></i>
+        </div>
+        <h3 id="app-prompt-title" style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-primary);">Input Required</h3>
+      </div>
+
+      <div id="app-prompt-message" style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55; margin-bottom: 14px; white-space: pre-wrap; word-break: break-word;">
+      </div>
+
+      <form id="app-prompt-form" autocomplete="off" style="margin-bottom: 20px;">
+        <input type="text" id="app-prompt-input" style="width: 100%; padding: 8px 12px; background: var(--bg-app); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm); font-family: inherit; font-size: 0.9rem; box-sizing: border-box;">
+      </form>
+
+      <div class="dialog-actions" style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 0;">
+        <button type="button" id="app-prompt-cancel-btn" class="btn btn-secondary" style="min-width: 90px;">
+          <span>Cancel</span>
+        </button>
+        <button type="button" id="app-prompt-ok-btn" class="btn btn-accent" style="min-width: 90px;">
+          <span id="app-prompt-ok-text">OK</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
 
   <!-- Print only container -->
   <div id="print-only-container" class="print-only"></div>
