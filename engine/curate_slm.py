@@ -42,9 +42,29 @@ DEFAULT_SYSTEM_PROMPT = (
     "- Standalone generic English words unless part of a technical phrase (e.g., reject 'system', 'process', 'method', 'data', 'user' alone; keep 'Access Control List' or 'System Call')\n\n"
     "### FEW-SHOT EXAMPLES:\n"
     'Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Turned Off", "Mimikatz", "Following Steps", "Event ID 4624", "Setting Up"]\n'
-    'Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]\n\n'
-    "Output ONLY a raw JSON array of strings containing the kept terms. Do NOT include any markdown code fences, preambles, or conversational commentary."
+    'Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]'
 )
+
+DEFAULT_MANDATORY_OUTPUT_INSTRUCTION = (
+    'MANDATORY OUTPUT FORMAT (SYSTEM OVERRIDE): Regardless of any formatting preferences above, '
+    'output ONLY a valid, raw JSON array of strings containing the kept terms (e.g., ["Term 1", "Term 2"]). '
+    'Do NOT include any markdown code fences (```), preambles, or conversational commentary.'
+)
+
+def load_mandatory_output_instruction():
+    manifest_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ai_output_manifest.json")
+    try:
+        if os.path.exists(manifest_path):
+            with open(manifest_path, "r", encoding="utf-8") as mf:
+                data = json.load(mf)
+                inst = data.get("localSlm", {}).get("appendedInstruction")
+                if inst and isinstance(inst, str):
+                    return inst.strip()
+    except Exception:
+        pass
+    return DEFAULT_MANDATORY_OUTPUT_INSTRUCTION
+
+MANDATORY_OUTPUT_INSTRUCTION = load_mandatory_output_instruction()
 
 def ensure_slm_dependencies():
     packages = {
@@ -258,9 +278,10 @@ def neural_filter_batch(batch_terms, system_prompt):
     try:
         import torch
         topics_list = [item["topic"] for item in batch_terms]
+        full_system_prompt = f"{system_prompt.strip()}\n\n{MANDATORY_OUTPUT_INSTRUCTION}"
         prompt = (
-            f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
-            f"<|im_start|>user\nCandidate terms list:\n{json.dumps(topics_list)}\n<|im_end|>\n"
+            f"<|im_start|>system\n{full_system_prompt}<|im_end|>\n"
+            f"<|im_start|>user\nCandidate terms list:\n{json.dumps(topics_list)}\n\n{MANDATORY_OUTPUT_INSTRUCTION}\n<|im_end|>\n"
             "<|im_start|>assistant\n"
         )
 

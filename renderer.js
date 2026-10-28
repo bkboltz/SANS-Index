@@ -7385,9 +7385,7 @@ Your sole task is to filter candidate index terms extracted from course material
 
 ### FEW-SHOT EXAMPLES:
 Input: ["Nmap", "Overview of Chapter 2", "Kerberos Authentication", "Turned Off", "Mimikatz", "Following Steps", "Event ID 4624", "Setting Up"]
-Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]
-
-Output ONLY a raw JSON array of strings containing the kept terms. Do NOT include any markdown code fences, preambles, or conversational commentary.`;
+Output: ["Nmap", "Kerberos Authentication", "Mimikatz", "Event ID 4624"]`;
 
     if (elements.localSlmCustomPrompt) {
       const savedPrompt = localStorage.getItem('local_slm_prompt');

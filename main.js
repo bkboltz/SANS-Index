@@ -1441,6 +1441,31 @@ ipcMain.handle('install-dependency', async (event, dependencyName) => {
   });
 });
 
+// Helper: Load Mandatory AI Output Manifest Instructions
+const AI_OUTPUT_MANIFEST_PATH = path.join(__dirname, 'engine', 'ai_output_manifest.json');
+const DEFAULT_AI_OUTPUT_MANIFEST = {
+  gemini: {
+    appendedInstruction: 'MANDATORY OUTPUT FORMAT (SYSTEM OVERRIDE): Regardless of any formatting preferences above (such as markdown, plain text, or tables), you MUST return ONLY a valid, raw JSON array of objects matching the exact input structure: [{"topic": "...", "pages": "...", "notes": "", "source": "auto"}]. Do NOT include markdown code fences (```), preambles, or commentary.'
+  },
+  localSlm: {
+    appendedInstruction: 'MANDATORY OUTPUT FORMAT (SYSTEM OVERRIDE): Regardless of any formatting preferences above, output ONLY a valid, raw JSON array of strings containing the kept terms (e.g., ["Term 1", "Term 2"]). Do NOT include any markdown code fences (```), preambles, or conversational commentary.'
+  }
+};
+
+function getAiOutputManifest() {
+  try {
+    if (fs.existsSync(AI_OUTPUT_MANIFEST_PATH)) {
+      const parsed = JSON.parse(fs.readFileSync(AI_OUTPUT_MANIFEST_PATH, 'utf8'));
+      if (parsed && parsed.gemini && parsed.gemini.appendedInstruction) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    logDebug(`[AI Output Manifest] Warning: Could not read manifest file (${err.message}). Using default fallback.`);
+  }
+  return DEFAULT_AI_OUTPUT_MANIFEST;
+}
+
 // Helper: Curate Index with Gemini AI (Chunked Dynamic Concurrency Engine)
 async function curateIndexWithGemini(entries, geminiApiKey, event, geminiModel, customPrompt, options = {}) {
   const isRetry = options && options.isRetry && Array.isArray(options.failedChunks) && options.failedChunks.length > 0;
@@ -1451,6 +1476,10 @@ Review the JSON array of terms below. Filter out noise terms (generic English wo
 Also, if there are minor spelling/capitalization variations of the same term (e.g. "active directory", "Active Directory"), merge them by keeping the capitalized proper noun form and combining their pages into a single comma-separated list of pages (remove duplicates and sort pages in ascending numeric order).`;
 
   const systemInstruction = (customPrompt && customPrompt.trim()) ? customPrompt.trim() : defaultInstruction;
+  const outputManifest = getAiOutputManifest();
+  const geminiOutputInstruction = (outputManifest.gemini && outputManifest.gemini.appendedInstruction)
+    ? outputManifest.gemini.appendedInstruction
+    : DEFAULT_AI_OUTPUT_MANIFEST.gemini.appendedInstruction;
 
   const chunks = [];
   const chunkPreviousAttempts = [];
@@ -1546,10 +1575,7 @@ Also, if there are minor spelling/capitalization variations of the same term (e.
 Input list:
 ${JSON.stringify(chunkEntries)}
 
-Return a JSON array of objects with the exact same structure as the input:
-[
-  { "topic": "...", "pages": "...", "notes": "", "source": "auto" }
-]`;
+${geminiOutputInstruction}`;
 
     let chunkSuccess = false;
 
@@ -1606,16 +1632,60 @@ Return a JSON array of objects with the exact same structure as the input:
         }
 
         const responseText = resData.candidates[0].content.parts[0].text;
-        const parsedResult = JSON.parse(responseText);
-        let items = Array.isArray(parsedResult) ? parsedResult : (parsedResult && Array.isArray(parsedResult.filtered_terms) ? parsedResult.filtered_terms : null);
+        let items = null;
+        try {
+          const parsedResult = JSON.parse(responseText);
+          items = Array.isArray(parsedResult)
+            ? parsedResult
+            : (parsedResult && Array.isArray(parsedResult.filtered_terms)
+              ? parsedResult.filtered_terms
+              : (parsedResult && Array.isArray(parsedResult.entries) ? parsedResult.entries : null));
+        } catch (parseErr) {
+          items = tryParseJSONArray(responseText);
+        }
+        if (!Array.isArray(items)) {
+          items = tryParseJSONArray(responseText);
+        }
 
         if (Array.isArray(items)) {
-          allCuratedEntries.push(...items);
+          const fallbackLookup = new Map();
+          chunkEntries.forEach(ce => {
+            if (ce && ce.topic) {
+              fallbackLookup.set(ce.topic.toLowerCase().trim(), ce);
+            }
+          });
+          const normalizedItems = items.map(item => {
+            if (typeof item === 'string') {
+              const matched = fallbackLookup.get(item.toLowerCase().trim());
+              return {
+                topic: item.trim(),
+                pages: matched ? matched.pages : '',
+                notes: matched && matched.notes ? matched.notes : '',
+                source: 'auto'
+              };
+            }
+            if (item && typeof item === 'object') {
+              const rawTopic = String(item.topic || item.term || item.name || '').trim();
+              const matched = fallbackLookup.get(rawTopic.toLowerCase());
+              const rawPages = item.pages !== undefined && item.pages !== null && String(item.pages).trim() !== ''
+                ? String(item.pages).trim()
+                : (matched ? matched.pages : '');
+              return {
+                topic: rawTopic,
+                pages: rawPages,
+                notes: typeof item.notes === 'string' ? item.notes : '',
+                source: item.source || 'auto'
+              };
+            }
+            return null;
+          }).filter(item => item && item.topic && item.pages);
+
+          allCuratedEntries.push(...normalizedItems);
           chunkSuccess = true;
           statusObj.status = 'success';
-          statusObj.message = `Completed (${items.length} kept)`;
+          statusObj.message = `Completed (${normalizedItems.length} kept)`;
           statusObj.lastErrorMessage = null;
-          emitApiDebugLog(`✅ [HTTP 200] Batch ${statusObj.chunkIndex}/${statusObj.totalChunks} succeeded on Attempt ${attempt}/${chunkMaxAttempts}! Returned ${items.length} curated terms.`);
+          emitApiDebugLog(`✅ [HTTP 200] Batch ${statusObj.chunkIndex}/${statusObj.totalChunks} succeeded on Attempt ${attempt}/${chunkMaxAttempts}! Returned ${normalizedItems.length} curated terms.`);
           emitProgress();
           break;
         } else {
